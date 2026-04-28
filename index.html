@@ -3817,29 +3817,9 @@ function renderActivityLog(){
 // ══════════════════════════════════════════════════════════════════════════════
 // SERVICE WORKER REGISTRATION (Offline Support)
 // ══════════════════════════════════════════════════════════════════════════════
-function registerServiceWorker(){
-  if(!('serviceWorker' in navigator)) return;
-  // Inline service worker via blob URL
-  const swCode=`
-const CACHE='env-cache-v1';
-const ASSETS=['/'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS).catch(()=>{})));self.skipWaiting();});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
-self.addEventListener('fetch',e=>{
-  if(e.request.method!=='GET')return;
-  e.respondWith(fetch(e.request).then(r=>{const rc=r.clone();caches.open(CACHE).then(c=>c.put(e.request,rc));return r;}).catch(()=>caches.match(e.request)));
-});
-`;
-  const blob=new Blob([swCode],{type:'application/javascript'});
-  const swUrl=URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl,{scope:'/'}).then(()=>{
-    console.log('SW registered (offline support active)');
-  }).catch(e=>console.warn('SW registration failed:',e));
-}
 window.onload = async function(){
   syncInventoryFromProducts();
   updateOnlineStatus();
-  registerServiceWorker();
   // Apply saved colors
   const biz=DB.bizSettings||{};
   if(biz.colorGreen) document.documentElement.style.setProperty('--green',biz.colorGreen);
