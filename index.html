@@ -3275,7 +3275,10 @@ function renderInventory(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${['inventory','history','alerts'].map(t=>`<button class="btn btn-sm ${invTab===t?'btn-primary':'btn-ghost'}" onclick="setInvTab('${t}')">${t==='inventory'?'<i class="fas fa-boxes-stacked"></i> Inventory':t==='history'?'<i class="fas fa-history"></i> Stock History':'<i class="fas fa-triangle-exclamation"></i> Low Stock'}</button>`).join('')}
       </div>
-      <input id="invSearch" placeholder="Search product…" oninput="renderInvTab()" style="width:220px;padding:8px 14px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="invSearch" placeholder="Search product…" oninput="renderInvTab()" style="width:180px;padding:8px 14px">
+        <button class="btn btn-primary" onclick="openAddProductModal('inventory')"><i class="fas fa-plus"></i> Add Product</button>
+      </div>
     </div>
     <div id="invTabContent" class="tbl-wrap"></div>
   </div>`;
@@ -3311,6 +3314,7 @@ function renderInvTable(search){
             <button class="btn btn-sm btn-primary" onclick="openStockModal(${p.id},'add')"><i class="fas fa-plus"></i>Add</button>
             <button class="btn btn-sm btn-amber" onclick="openStockModal(${p.id},'sale')">Sale</button>
             <button class="btn btn-sm btn-danger" onclick="openStockModal(${p.id},'damage')">Damage</button>
+            ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'inventory')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
           </div>
         </td>
       </tr>`;}).join('')||`<tr><td colspan="5"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products</p></div></td></tr>`}
@@ -3432,8 +3436,11 @@ let bulkForId=null;
 function renderPrice(){
   document.getElementById('content').innerHTML=`
   <div style="display:flex;flex-direction:column;gap:16px">
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${['prices','bulk','history'].map(t=>`<button class="btn btn-sm ${priceTab===t?'btn-primary':'btn-ghost'}" onclick="setPriceTab('${t}')">${t==='prices'?'<i class="fas fa-tag"></i> Product Prices':t==='bulk'?'<i class="fas fa-layer-group"></i> Bulk Rules':'<i class="fas fa-clock-rotate-left"></i> Price History'}</button>`).join('')}
+    <div class="flex-between" style="flex-wrap:wrap;gap:10px">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${['prices','bulk','history'].map(t=>`<button class="btn btn-sm ${priceTab===t?'btn-primary':'btn-ghost'}" onclick="setPriceTab('${t}')">${t==='prices'?'<i class="fas fa-tag"></i> Product Prices':t==='bulk'?'<i class="fas fa-layer-group"></i> Bulk Rules':'<i class="fas fa-clock-rotate-left"></i> Price History'}</button>`).join('')}
+      </div>
+      <button class="btn btn-primary" onclick="openAddProductModal('price')"><i class="fas fa-plus"></i> Add New Product</button>
     </div>
     <div id="priceTabContent"></div>
   </div>`;
@@ -3451,14 +3458,19 @@ function renderPriceTab(){
 function renderPriceTable(){
   const el=document.getElementById('priceTabContent');if(!el)return;
   el.innerHTML=`<div class="tbl-wrap"><table>
-    <thead><tr><th>Product</th><th>Category</th><th>Retail (₦)</th><th>Wholesale (₦)</th><th>Unit</th><th style="text-align:right">Edit</th></tr></thead>
+    <thead><tr><th>Product</th><th>Category</th><th>Retail (₦)</th><th>Wholesale (₦)</th><th>Unit</th><th style="text-align:right">Actions</th></tr></thead>
     <tbody>${DB.products.map(p=>`<tr>
       <td class="td-name">${p.name}</td>
       <td style="color:var(--text3)">${p.category}</td>
       <td class="mono" style="color:var(--green-light)">${N(p.retail)}</td>
       <td class="mono" style="color:var(--gold-light)">${N(p.wholesale)}</td>
       <td style="color:var(--text3)">${p.unit}</td>
-      <td style="text-align:right"><button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-edit"></i>Edit</button></td>
+      <td style="text-align:right">
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-edit"></i>Edit</button>
+          ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'price')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
+        </div>
+      </td>
     </tr>`).join('')}
     </tbody>
   </table></div>`;
@@ -4248,6 +4260,156 @@ window.onload = async function(){
     }
   });
 };
+</script>
+<!-- ══ ADD NEW PRODUCT MODAL ══ -->
+<div class="modal-overlay" id="addProductModal">
+  <div class="modal-box md">
+    <div class="modal-head">
+      <h3><i class="fas fa-box-open" style="color:var(--gold);margin-right:6px"></i>Add New Product</h3>
+      <button class="modal-close" onclick="closeModal('addProductModal')">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      <div class="grid-2" style="gap:14px">
+        <div>
+          <label>Product Name <span style="color:var(--red)">*</span></label>
+          <input type="text" id="apName" placeholder="e.g. Bigi Cola 50cl">
+        </div>
+        <div>
+          <label>Category <span style="color:var(--red)">*</span></label>
+          <input type="text" id="apCategory" placeholder="e.g. Drinks" list="apCategoryList">
+          <datalist id="apCategoryList">
+            <option value="Drinks"><option value="Groceries"><option value="Provisions">
+            <option value="Beverages"><option value="Toiletries"><option value="Frozen Foods">
+          </datalist>
+        </div>
+        <div>
+          <label>Unit Type <span style="color:var(--red)">*</span></label>
+          <select id="apUnit">
+            <option value="piece">Piece</option>
+            <option value="bottle">Bottle</option>
+            <option value="pack">Pack</option>
+            <option value="carton">Carton</option>
+            <option value="crate">Crate</option>
+            <option value="bag">Bag</option>
+            <option value="tin">Tin</option>
+            <option value="box">Box</option>
+            <option value="sachet">Sachet</option>
+            <option value="kg">Kg</option>
+          </select>
+        </div>
+        <div>
+          <label>Initial Stock Quantity</label>
+          <input type="number" id="apStock" value="0" min="0" placeholder="e.g. 50">
+        </div>
+        <div>
+          <label>Retail Price (₦) <span style="color:var(--red)">*</span></label>
+          <input type="number" id="apRetail" value="0" min="0" step="0.01">
+        </div>
+        <div>
+          <label>Wholesale Price (₦)</label>
+          <input type="number" id="apWholesale" value="0" min="0" step="0.01">
+        </div>
+        <div>
+          <label>Cost Price (₦)</label>
+          <input type="number" id="apCostPrice" value="0" min="0" step="0.01">
+        </div>
+        <div>
+          <label>Low Stock Threshold</label>
+          <input type="number" id="apLowStock" value="10" min="0" placeholder="e.g. 10">
+        </div>
+      </div>
+      <div style="background:rgba(26,92,46,.07);border:1px solid rgba(26,92,46,.2);border-radius:var(--radius);padding:12px 16px;font-size:.8rem;color:var(--text2)">
+        <i class="fas fa-info-circle" style="color:var(--green-light);margin-right:6px"></i>
+        This product will appear immediately in Inventory, POS, and Price Configuration.
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('addProductModal')">Cancel</button>
+      <button class="btn btn-primary btn-lg" onclick="saveNewProduct()"><i class="fas fa-plus"></i>Add Product</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let _addProductCalledFrom = 'inventory';
+
+function openAddProductModal(from){
+  _addProductCalledFrom = from || 'inventory';
+  document.getElementById('apName').value = '';
+  document.getElementById('apCategory').value = '';
+  document.getElementById('apUnit').value = 'piece';
+  document.getElementById('apStock').value = '0';
+  document.getElementById('apRetail').value = '0';
+  document.getElementById('apWholesale').value = '0';
+  document.getElementById('apCostPrice').value = '0';
+  document.getElementById('apLowStock').value = '10';
+  openModal('addProductModal');
+  setTimeout(()=>document.getElementById('apName').focus(), 200);
+}
+
+function deleteProduct(id, from){
+  if(!isAdmin()){showToast('Only Admin or Super Admin can delete products.', false); return;}
+  const p = DB.products.find(x => x.id === id);
+  if(!p){showToast('Product not found.', false); return;}
+  const stockWarn = p.stock > 0 ? `\n⚠️ This product still has ${p.stock} ${p.unit}(s) in stock.` : '';
+  if(!confirm(`Delete "${p.name}"?${stockWarn}\n\nThis removes it from Inventory, POS, and Price Configuration permanently.`)) return;
+  DB.products  = DB.products.filter(x => x.id !== id);
+  DB.inventory = DB.inventory.filter(x => x.id !== id);
+  persist('products');
+  persist('inventory');
+  logActivity('Product', `Product deleted: ${p.name} — by ${currentUserName||'Admin'}`);
+  showToast(`"${p.name}" has been deleted.`);
+  if(from === 'price') renderPrice();
+  else renderInventory();
+}
+
+function saveNewProduct(){
+  const name = document.getElementById('apName').value.trim();
+  const category = document.getElementById('apCategory').value.trim();
+  const unit = document.getElementById('apUnit').value;
+  const stock = parseInt(document.getElementById('apStock').value) || 0;
+  const retail = parseFloat(document.getElementById('apRetail').value) || 0;
+  const wholesale = parseFloat(document.getElementById('apWholesale').value) || 0;
+  const costPrice = parseFloat(document.getElementById('apCostPrice').value) || 0;
+  const lowStock = parseInt(document.getElementById('apLowStock').value) || 10;
+
+  if(!name){ alert('Product name is required.'); return; }
+  if(!category){ alert('Category is required.'); return; }
+  if(retail <= 0){ alert('Please enter a retail price greater than 0.'); return; }
+
+  const dup = DB.products.find(p => p.name.toLowerCase() === name.toLowerCase());
+  if(dup){ alert(`A product named "${dup.name}" already exists.`); return; }
+
+  const newId = Date.now();
+  const newProd = {
+    id: newId, name, category, emoji: '📦',
+    retail, wholesale, costPrice,
+    unit, stock, lowStock, conversions: {}
+  };
+
+  DB.products.push(newProd);
+  DB.inventory.push({...newProd});
+  persist('products');
+  persist('inventory');
+
+  if(stock > 0){
+    DB.stockHistory.unshift({
+      id: uid(), productId: newId, productName: name,
+      timestamp: new Date().toISOString(),
+      action: 'add', delta: stock,
+      newStock: stock, unit,
+      reason: 'Initial stock — product created'
+    });
+    persist('stockHistory');
+  }
+
+  logActivity('Product', `New product added: ${name} — Retail: ${N(retail)} — Stock: ${stock} ${unit}`);
+  closeModal('addProductModal');
+  showToast(`✅ "${name}" added successfully!`);
+
+  if(_addProductCalledFrom === 'price') renderPrice();
+  else renderInventory();
+}
 </script>
 </body>
 </html>
