@@ -3817,9 +3817,17 @@ function renderActivityLog(){
 // ══════════════════════════════════════════════════════════════════════════════
 // SERVICE WORKER REGISTRATION (Offline Support)
 // ══════════════════════════════════════════════════════════════════════════════
+function registerServiceWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  // SW requires same-origin .js file — skip in embedded/preview environments
+  const swUrl = new URL('./sw.js', window.location.href).href;
+  if(swUrl.startsWith('blob:') || swUrl.startsWith('data:')) return;
+  navigator.serviceWorker.register(swUrl, {scope:'./'}).catch(()=>{});
+}
 window.onload = async function(){
   syncInventoryFromProducts();
   updateOnlineStatus();
+  registerServiceWorker();
   // Apply saved colors
   const biz=DB.bizSettings||{};
   if(biz.colorGreen) document.documentElement.style.setProperty('--green',biz.colorGreen);
