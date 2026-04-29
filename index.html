@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Emanicel Nigerian Venture — Business Portal</title>
 <meta name="theme-color" content="#1a5c2e">
 <meta name="description" content="Emanicel Nigerian Venture — POS, Inventory, Sales & Business Management">
@@ -30,8 +30,8 @@
   --shadow:0 4px 24px rgba(0,0,0,.12);
   --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
 }
-html{scroll-behavior:smooth}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;overflow:hidden}
+html{scroll-behavior:smooth;height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;overflow:hidden;height:100vh;height:100dvh}
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -42,7 +42,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 #sidebar{
   width:240px;min-width:240px;background:var(--surface);
   border-right:1px solid var(--border);display:flex;flex-direction:column;
-  height:100vh;overflow-y:auto;flex-shrink:0;transition:width .25s;z-index:100;
+  height:100vh;height:100dvh;overflow-y:auto;flex-shrink:0;transition:width .25s;z-index:100;
 }
 .sidebar-logo{padding:20px 18px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
 .sidebar-logo-text{flex:1;min-width:0}
@@ -65,7 +65,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sidebar-footer .biz-name strong{color:var(--green)}
 
 /* ── MAIN ── */
-#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+#main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
 #topbar{
   height:58px;background:var(--surface);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
@@ -78,7 +78,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .topbar-badge{font-size:.72rem;color:var(--text2);display:flex;align-items:center;gap:5px}
 
-#content{flex:1;overflow-y:auto;padding:20px 24px}
+#content{flex:1;overflow-y:auto;padding:20px 24px;padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px))}
 
 /* ── CARDS ── */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px}
@@ -165,7 +165,7 @@ tbody td{padding:12px 16px;color:var(--text2);vertical-align:middle}
 .modal-foot{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0}
 
 /* ── POS SPECIFIC ── */
-#pos-wrap{display:grid;grid-template-columns:1fr 400px;gap:16px;height:calc(100vh - 110px)}
+#pos-wrap{display:grid;grid-template-columns:1fr 400px;gap:16px;height:calc(100vh - 110px);height:calc(100dvh - 110px)}
 .products-panel{overflow-y:auto;display:flex;flex-direction:column;gap:14px}
 .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
 .product-card{
@@ -194,7 +194,7 @@ tbody td{padding:12px 16px;color:var(--text2);vertical-align:middle}
 .cart-total-section{padding:14px 16px;border-top:1px solid var(--border);flex-shrink:0}
 .total-row{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;color:var(--text2);margin-bottom:6px}
 .grand-total{font-size:1.5rem;font-weight:800;color:var(--gold);font-family:var(--mono)}
-.cart-actions{padding:12px 16px;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 2fr;gap:10px;flex-shrink:0}
+.cart-actions{padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom, 0px));border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 2fr;gap:10px;flex-shrink:0}
 
 /* ── RECEIPT ── */
 .receipt-print{
@@ -331,13 +331,15 @@ body{font-display:swap;}
   .sidebar-logo-text,.nav-item span,.sidebar-footer .biz-name,.nav-label{display:none}
   .nav-item{justify-content:center;padding:12px 0}
   .nav-item i{width:auto;font-size:1rem}
-  #pos-wrap{grid-template-columns:1fr;height:auto}
+  #pos-wrap{grid-template-columns:1fr;height:auto;overflow:visible}
+  .cart-panel{min-height:320px;max-height:none;height:auto}
+  .products-panel{max-height:50vh;max-height:50dvh}
   .grid-4{grid-template-columns:repeat(2,1fr)}
   .grid-3{grid-template-columns:1fr 1fr}
   .pay-methods{grid-template-columns:repeat(2,1fr)}
 }
 @media(max-width:600px){
-  #content{padding:14px}
+  #content{padding:14px;padding-bottom:calc(14px + env(safe-area-inset-bottom, 20px))}
   .grid-2{grid-template-columns:1fr}
   #pos-wrap{gap:10px}
 }
