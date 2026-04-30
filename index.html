@@ -440,14 +440,6 @@ body{font-display:swap;}
 .user-role{font-size:.62rem;color:var(--text3)}
 .logout-btn{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;border-radius:6px;font-size:.85rem;transition:color .15s}
 .logout-btn:hover{color:var(--red)}
-.nav-retail-toggle{cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);color:var(--text2);font-size:.875rem;font-weight:500;transition:background .15s,color .15s;user-select:none}
-.nav-retail-toggle:hover,.nav-retail-toggle.active{background:var(--surface2);color:var(--green)}
-.nav-retail-toggle .retail-chevron{margin-left:auto;font-size:.7rem;transition:transform .2s}
-.nav-retail-toggle.open .retail-chevron{transform:rotate(180deg)}
-.nav-retail-sub{display:none;flex-direction:column;gap:2px;padding-left:12px;margin-top:2px}
-.nav-retail-sub.open{display:flex}
-.nav-retail-sub .nav-item{font-size:.82rem;padding:8px 12px}
-.nav-retail-sub .nav-item i{font-size:.8rem}
 
 /* ── DARK MODE ── */
 .dark{
@@ -551,56 +543,75 @@ body{font-display:swap;}
     </div>
   </div>
   <div class="sidebar-nav">
-    <div class="nav-label">Core Modules</div>
-    <div class="nav-item active" onclick="showModule('pos')" id="nav-pos">
+    <div class="nav-label nav-main-label">Core Modules</div>
+    <div class="nav-item nav-main-item active" onclick="showModule('pos')" id="nav-pos">
       <i class="fas fa-cash-register"></i><span>POS & Sales</span>
     </div>
-    <div class="nav-item" onclick="showModule('purchase')" id="nav-purchase">
+    <div class="nav-item nav-main-item" onclick="showModule('purchase')" id="nav-purchase">
       <i class="fas fa-truck-ramp-box"></i><span>Purchase / Restock</span>
     </div>
-    <div class="nav-item" onclick="showModule('debt')" id="nav-debt">
+    <div class="nav-item nav-main-item" onclick="showModule('debt')" id="nav-debt">
       <i class="fas fa-file-invoice-dollar"></i><span>Debt & Deposits</span>
     </div>
-    <div class="nav-item" onclick="showModule('inventory')" id="nav-inventory">
+    <div class="nav-item nav-main-item" onclick="showModule('inventory')" id="nav-inventory">
       <i class="fas fa-boxes-stacked"></i><span>Inventory</span>
     </div>
-    <div class="nav-item" onclick="showModule('price')" id="nav-price">
+    <div class="nav-item nav-main-item" onclick="showModule('price')" id="nav-price">
       <i class="fas fa-tags"></i><span>Price Config</span>
     </div>
-    <div class="nav-label nav-admin-label" style="display:none">Management</div>
-    <div class="nav-item nav-admin-item" onclick="showModule('staff')" id="nav-staff" style="display:none">
+    <div class="nav-label nav-admin-label nav-main-label" style="display:none">Management</div>
+    <div class="nav-item nav-admin-item nav-main-item" onclick="showModule('staff')" id="nav-staff" style="display:none">
       <i class="fas fa-users-gear"></i><span>Staff Management</span>
     </div>
-    <div class="nav-item nav-superadmin-item" onclick="showModule('settings')" id="nav-settings" style="display:none">
+    <div class="nav-item nav-superadmin-item nav-main-item" onclick="showModule('settings')" id="nav-settings" style="display:none">
       <i class="fas fa-sliders"></i><span>Settings</span>
     </div>
-    <div class="nav-label">Analytics</div>
-    <div class="nav-item" onclick="showModule('dashboard')" id="nav-dashboard">
+    <div class="nav-label nav-main-label">Analytics</div>
+    <div class="nav-item nav-main-item" onclick="showModule('dashboard')" id="nav-dashboard">
       <i class="fas fa-chart-line"></i><span>Dashboard</span>
     </div>
-    <div class="nav-item" onclick="showModule('analytics')" id="nav-analytics">
+    <div class="nav-item nav-main-item" onclick="showModule('analytics')" id="nav-analytics">
       <i class="fas fa-chart-pie"></i><span>Analytics</span>
     </div>
-    <div class="nav-item" onclick="showModule('accounting')" id="nav-accounting">
+    <div class="nav-item nav-main-item" onclick="showModule('accounting')" id="nav-accounting">
       <i class="fas fa-coins"></i><span>Accounting</span>
     </div>
-    <div class="nav-item" onclick="showModule('reports')" id="nav-reports">
+    <div class="nav-item nav-main-item" onclick="showModule('reports')" id="nav-reports">
       <i class="fas fa-file-chart-column"></i><span>Records & Reports</span>
     </div>
-    <div class="nav-item nav-admin-item" onclick="showModule('activitylog')" id="nav-activitylog" style="display:none">
+    <div class="nav-item nav-admin-item nav-main-item" onclick="showModule('activitylog')" id="nav-activitylog" style="display:none">
       <i class="fas fa-shield-check"></i><span>Activity Log</span>
     </div>
-    <div class="nav-label" id="nav-retail-label" style="display:none">Retail Store</div>
-    <div class="nav-retail-toggle" id="nav-retail-toggle" onclick="toggleRetailNav()" style="display:none">
-      <i class="fas fa-store"></i><span>Retail Store</span><i class="fas fa-chevron-down retail-chevron"></i>
-    </div>
-    <div class="nav-retail-sub" id="nav-retail-sub">
-      <div class="nav-item" onclick="showModule('retail_pos')" id="nav-retail_pos"><i class="fas fa-cash-register"></i><span>Retail POS</span></div>
-      <div class="nav-item" onclick="showModule('retail_purchase')" id="nav-retail_purchase"><i class="fas fa-truck-ramp-box"></i><span>Retail Purchase</span></div>
-      <div class="nav-item" onclick="showModule('retail_debt')" id="nav-retail_debt"><i class="fas fa-file-invoice-dollar"></i><span>Retail Debt</span></div>
-      <div class="nav-item" onclick="showModule('retail_inventory')" id="nav-retail_inventory"><i class="fas fa-boxes-stacked"></i><span>Retail Inventory</span></div>
-      <div class="nav-item" onclick="showModule('retail_price')" id="nav-retail_price"><i class="fas fa-tags"></i><span>Retail Price Config</span></div>
-      <div class="nav-item" onclick="showModule('retail_accounting')" id="nav-retail_accounting"><i class="fas fa-coins"></i><span>Retail Accounting</span></div>
+
+    <!-- ── RETAIL STORE SECTION ── -->
+    <div id="retailNavSection" style="display:none">
+      <div class="nav-label" style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-right:8px" onclick="toggleRetailNav()">
+        <span>Retail Store</span>
+        <i class="fas fa-chevron-right" id="retailNavArrow" style="font-size:.6rem;transition:transform .2s;color:var(--gold)"></i>
+      </div>
+      <div id="retailNavSub" style="display:none">
+        <div class="nav-item" onclick="showModule('r_dashboard')" id="nav-r_dashboard">
+          <i class="fas fa-chart-line"></i><span>Retail Dashboard</span>
+        </div>
+        <div class="nav-item" onclick="showModule('r_pos')" id="nav-r_pos">
+          <i class="fas fa-cash-register"></i><span>Retail POS</span>
+        </div>
+        <div class="nav-item" onclick="showModule('r_purchase')" id="nav-r_purchase">
+          <i class="fas fa-truck-ramp-box"></i><span>Retail Purchase</span>
+        </div>
+        <div class="nav-item" onclick="showModule('r_debt')" id="nav-r_debt">
+          <i class="fas fa-file-invoice-dollar"></i><span>Retail Debt</span>
+        </div>
+        <div class="nav-item" onclick="showModule('r_inventory')" id="nav-r_inventory">
+          <i class="fas fa-boxes-stacked"></i><span>Retail Inventory</span>
+        </div>
+        <div class="nav-item" onclick="showModule('r_price')" id="nav-r_price">
+          <i class="fas fa-tags"></i><span>Retail Price Config</span>
+        </div>
+        <div class="nav-item" onclick="showModule('r_accounting')" id="nav-r_accounting">
+          <i class="fas fa-coins"></i><span>Retail Accounting</span>
+        </div>
+      </div>
     </div>
   </div>
   <div class="sidebar-user" id="sidebarUser">
@@ -623,15 +634,15 @@ body{font-display:swap;}
     <div class="topbar-right">
       <div class="topbar-badge" id="topbarUserBadge" style="display:none"><i class="fas fa-circle-user" style="color:var(--gold)"></i><span id="topbarUserName">—</span></div>
       <div class="topbar-badge"><div class="status-dot" id="onlineDot"></div><span id="onlineLabel">Live · Ready</span></div>
-      <button class="topbar-logout" onclick="doLogout()" title="Sign out">
-        <i class="fas fa-right-from-bracket"></i><span style="font-size:.72rem;font-weight:600">Sign Out</span>
-      </button>
       <button class="theme-toggle" id="themeToggleBtn" onclick="toggleDarkMode()" title="Toggle dark mode">
         <i class="fas fa-moon" id="themeIcon"></i><span id="themeLabel" style="font-size:.72rem;font-weight:600">Dark</span>
       </button>
       <button class="notif-bell" onclick="toggleNotifPanel()" title="Notifications">
         <i class="fas fa-bell"></i>
         <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+      </button>
+      <button class="topbar-logout" onclick="doLogout()" title="Sign out">
+        <i class="fas fa-right-from-bracket"></i><span style="font-size:.72rem;font-weight:600">Logout</span>
       </button>
     </div>
   </div>
@@ -1158,7 +1169,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
-let currentRole = null; // 'super_admin' | 'admin' | 'staff'
+let currentRole = null; // 'super_admin' | 'admin' | 'staff' | 'retail_staff'
 let currentUserName = '';
 
 // Role helpers
@@ -1265,6 +1276,7 @@ async function onAuthSuccess(user){
   applyRoleUI();
   document.getElementById('loginOverlay').classList.add('hidden');
   showToast('Welcome back, '+currentUserName+'!');
+  if(!isRetailStaff()) showModule('pos');
 }
 
 // Apply role-based UI
@@ -1277,20 +1289,6 @@ function applyRoleUI(){
   // Topbar
   document.getElementById('topbarUserBadge').style.display='flex';
   document.getElementById('topbarUserName').textContent = currentUserName;
-  if(isRetailStaff()){
-    // Retail staff: hide all main nav, show only retail dropdown
-    document.querySelector('.sidebar-nav').querySelectorAll('.nav-item,.nav-label').forEach(el=>el.style.display='none');
-    document.getElementById('nav-retail-label').style.display='';
-    document.getElementById('nav-retail-toggle').style.display='flex';
-    // Auto-open retail dropdown and navigate to retail POS
-    document.getElementById('nav-retail-sub').classList.add('open');
-    document.getElementById('nav-retail-toggle').classList.add('open');
-    showModule('retail_pos');
-    return;
-  }
-  // Show retail store section for all other roles
-  document.getElementById('nav-retail-label').style.display='';
-  document.getElementById('nav-retail-toggle').style.display='flex';
   // Show admin nav items
   if(canAddStaff()){
     document.querySelectorAll('.nav-admin-label,.nav-admin-item').forEach(el=>el.style.display='');
@@ -1300,18 +1298,26 @@ function applyRoleUI(){
   if(canSeeSettings()){
     document.getElementById('nav-settings').style.display='flex';
   }
-  // Show super admin role option
   if(isSuperAdmin()){
     const opt=document.getElementById('staffRoleSuperAdminOption');
     if(opt) opt.style.display='';
   }
-}
-
-function toggleRetailNav(){
-  const toggle=document.getElementById('nav-retail-toggle');
-  const sub=document.getElementById('nav-retail-sub');
-  toggle.classList.toggle('open');
-  sub.classList.toggle('open');
+  // Retail staff: hide main store nav, show only retail nav, auto-expand retail section
+  if(isRetailStaff()){
+    document.querySelectorAll('.nav-main-item,.nav-main-label').forEach(el=>el.style.display='none');
+    const rSection=document.getElementById('retailNavSection');
+    if(rSection) rSection.style.display='';
+    retailNavOpen=true;
+    const sub=document.getElementById('retailNavSub');
+    const arrow=document.getElementById('retailNavArrow');
+    if(sub) sub.style.display='block';
+    if(arrow) arrow.style.transform='rotate(90deg)';
+    showModule('r_dashboard');
+  } else {
+    // For admin/superadmin show retail section too
+    const rSection=document.getElementById('retailNavSection');
+    if(rSection) rSection.style.display='';
+  }
 }
 
 // Logout
@@ -1330,16 +1336,16 @@ async function doLogout(){
   document.getElementById('nav-staff').style.display='none';
   document.getElementById('nav-activitylog').style.display='none';
   document.getElementById('topbarUserBadge').style.display='none';
-  // Hide retail nav
-  const rLabel=document.getElementById('nav-retail-label');if(rLabel)rLabel.style.display='none';
-  const rToggle=document.getElementById('nav-retail-toggle');if(rToggle)rToggle.style.display='none';
-  const rSub=document.getElementById('nav-retail-sub');if(rSub){rSub.classList.remove('open');}
-  // Restore any hidden main nav items for retail staff
-  document.querySelector('.sidebar-nav').querySelectorAll('.nav-item,.nav-label').forEach(el=>el.style.display='');
-  document.querySelectorAll('.nav-admin-label,.nav-admin-item').forEach(el=>el.style.display='none');
-  document.getElementById('nav-settings').style.display='none';
-  document.getElementById('nav-staff').style.display='none';
-  document.getElementById('nav-activitylog').style.display='none';
+  // Restore main nav visibility for next login
+  document.querySelectorAll('.nav-main-item,.nav-main-label').forEach(el=>el.style.display='');
+  // Hide retail section until next login resolves role
+  const rSection=document.getElementById('retailNavSection');
+  if(rSection) rSection.style.display='none';
+  retailNavOpen=false;
+  const sub=document.getElementById('retailNavSub');
+  const arrow=document.getElementById('retailNavArrow');
+  if(sub) sub.style.display='none';
+  if(arrow) arrow.style.transform='';
 }
 
 // Forgot password
@@ -1720,7 +1726,7 @@ async function loadStaffTable(){
       <td class="td-name">${s.name||'—'}</td>
       <td style="color:var(--text2)">${s.email||'—'}</td>
       <td style="color:var(--text3)">${s.phone||'—'}</td>
-      <td><span class="badge ${s.role==='super_admin'?'badge-gold':s.role==='admin'?'badge-blue':'badge-green'}">${roleLabelText(s.role)}</span></td>
+      <td><span class="badge ${s.role==='super_admin'?'badge-gold':s.role==='admin'?'badge-blue':s.role==='retail_staff'?'badge-amber':'badge-green'}">${roleLabelText(s.role)}</span></td>
       <td>${s.user_id!==currentUser?.id?`<button class="btn btn-sm btn-danger" onclick="removeStaff('${s.user_id}','${(s.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-user-minus"></i>Remove</button>`:`<span style="font-size:.72rem;color:var(--text3)">You</span>`}</td>
     </tr>`).join('')}
     </tbody>
@@ -1843,6 +1849,27 @@ let DB = {
 };
 
 function persist(key){save(KEYS[key],DB[key]);}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RETAIL STORE — STANDALONE DATA LAYER (no sync with main store)
+// ══════════════════════════════════════════════════════════════════════════════
+const KEYS_R={
+  products:'env_r_products',inventory:'env_r_inventory',
+  stockHistory:'env_r_stock_history',priceHistory:'env_r_price_history',
+  purchases:'env_r_purchases',expenses:'env_r_expenses',
+  sales:'env_r_sales',debt:'env_r_debt',
+};
+let DB_R={
+  products:load(KEYS_R.products,()=>[]),
+  inventory:load(KEYS_R.inventory,()=>[]),
+  stockHistory:load(KEYS_R.stockHistory,()=>[]),
+  priceHistory:load(KEYS_R.priceHistory,()=>[]),
+  purchases:load(KEYS_R.purchases,()=>[]),
+  expenses:load(KEYS_R.expenses,()=>[]),
+  sales:load(KEYS_R.sales,()=>[]),
+  debt:load(KEYS_R.debt,()=>[]),
+};
+function persistR(k){save(KEYS_R[k],DB_R[k]);}
 
 // ── ACTIVITY LOG ──
 function logActivity(action, detail){
@@ -2012,12 +2039,13 @@ const moduleTitles = {
   reports:'<i class="fas fa-file-chart-column"></i>Records & Reports',
   analytics:'<i class="fas fa-chart-pie"></i>Analytics',
   activitylog:'<i class="fas fa-shield-check"></i>Activity Log',
-  retail_pos:'<i class="fas fa-store"></i>Retail POS',
-  retail_purchase:'<i class="fas fa-truck-ramp-box"></i>Retail Purchase / Restock',
-  retail_debt:'<i class="fas fa-file-invoice-dollar"></i>Retail Debt & Deposits',
-  retail_inventory:'<i class="fas fa-boxes-stacked"></i>Retail Inventory',
-  retail_price:'<i class="fas fa-tags"></i>Retail Price Config',
-  retail_accounting:'<i class="fas fa-coins"></i>Retail Accounting',
+  r_dashboard:'<i class="fas fa-store-alt"></i>Retail Dashboard',
+  r_pos:'<i class="fas fa-cash-register"></i>Retail POS & Sales',
+  r_purchase:'<i class="fas fa-truck-ramp-box"></i>Retail Purchase / Restock',
+  r_debt:'<i class="fas fa-file-invoice-dollar"></i>Retail Debt & Deposits',
+  r_inventory:'<i class="fas fa-boxes-stacked"></i>Retail Inventory',
+  r_price:'<i class="fas fa-tags"></i>Retail Price Configuration',
+  r_accounting:'<i class="fas fa-coins"></i>Retail Expenditure & Accounting',
 };
 
 let navHistory = [];
@@ -2043,30 +2071,26 @@ function showModuleInternal(m){
   // Access control
   if(m==='settings'&&!canSeeSettings()){showToast('Access denied — Super Admin only.',false);return;}
   if(m==='staff'&&!canAddStaff()){showToast('Access denied.',false);return;}
-  // Retail staff cannot access main modules
-  const retailModules=['retail_pos','retail_purchase','retail_debt','retail_inventory','retail_price','retail_accounting'];
-  if(isRetailStaff()&&!retailModules.includes(m)){showToast('Access denied — Retail Staff only.',false);return;}
-  currentModule = m;
+  // Retail staff can only access retail modules
+  const retailMods=['r_dashboard','r_pos','r_purchase','r_debt','r_inventory','r_price','r_accounting'];
+  if(isRetailStaff()&&!retailMods.includes(m)){showToast('Access restricted to Retail Store.',false);return;}
+  currentModule=m;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const navEl=document.getElementById('nav-'+m);
-  if(navEl) navEl.classList.add('active');
-  // Highlight retail toggle if a retail sub-module is active
-  const retailToggle=document.getElementById('nav-retail-toggle');
-  const retailSub=document.getElementById('nav-retail-sub');
-  const isRetailMod=['retail_pos','retail_purchase','retail_debt','retail_inventory','retail_price','retail_accounting'].includes(m);
-  if(retailToggle){
-    retailToggle.classList.toggle('active', isRetailMod);
-    if(isRetailMod && retailSub && !retailSub.classList.contains('open')){
-      retailSub.classList.add('open');
-      retailToggle.classList.add('open');
-    }
-  }
-  document.getElementById('topbar-title').innerHTML = moduleTitles[m]||'';
-  // Show/hide back button
-  const backBtn = document.getElementById('topbarBackBtn');
-  if(backBtn) backBtn.style.display = navHistory.length > 0 ? 'flex' : 'none';
-  const renders={pos:renderPOS,purchase:renderPurchase,debt:renderDebt,inventory:renderInventory,price:renderPrice,staff:renderStaffModule,settings:renderSettings,dashboard:renderDashboard,accounting:renderAccounting,reports:renderReports,analytics:renderAnalytics,activitylog:renderActivityLog,retail_pos:renderRetailPOS,retail_purchase:renderRetailPurchase,retail_debt:renderRetailDebt,retail_inventory:renderRetailInventory,retail_price:renderRetailPrice,retail_accounting:renderRetailAccounting};
-  if(renders[m]) renders[m]();
+  if(navEl)navEl.classList.add('active');
+  document.getElementById('topbar-title').innerHTML=moduleTitles[m]||'';
+  const backBtn=document.getElementById('topbarBackBtn');
+  if(backBtn)backBtn.style.display=navHistory.length>0?'flex':'none';
+  const renders={
+    pos:renderPOS,purchase:renderPurchase,debt:renderDebt,inventory:renderInventory,
+    price:renderPrice,staff:renderStaffModule,settings:renderSettings,
+    dashboard:renderDashboard,accounting:renderAccounting,reports:renderReports,
+    analytics:renderAnalytics,activitylog:renderActivityLog,
+    r_dashboard:renderR_Dashboard,r_pos:renderR_POS,r_purchase:renderR_Purchase,
+    r_debt:renderR_Debt,r_inventory:renderR_Inventory,r_price:renderR_Price,
+    r_accounting:renderR_Accounting,
+  };
+  if(renders[m])renders[m]();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2296,6 +2320,7 @@ function selectPayType(btn){
   document.querySelectorAll('.pay-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   selectedPayType=btn.dataset.type;
+  const activeTotal=retailCheckoutMode?currentPayTotalR:currentPayTotal;
   const tDet=document.getElementById('transferDetails');
   const pDet=document.getElementById('paystackDetails');
   if(tDet){tDet.style.display='none';}
@@ -2304,11 +2329,10 @@ function selectPayType(btn){
     document.getElementById('amtCollected').value=0;
     document.getElementById('customerFields').style.display='block';
   } else if(selectedPayType==='transfer'){
-    document.getElementById('amtCollected').value=currentPayTotal;
+    document.getElementById('amtCollected').value=activeTotal;
     document.getElementById('customerFields').style.display='none';
     if(tDet){
       tDet.style.display='flex';
-      // Populate bank accounts dropdown
       const accts=(DB.bizSettings.bankAccounts||[]);
       const sel=document.getElementById('transferAcctSelect');
       sel.innerHTML='<option value="">— Choose bank account —</option>'+accts.map((a,i)=>`<option value="${i}">${a.bankName} — ${a.accountNumber}</option>`).join('');
@@ -2323,11 +2347,11 @@ function selectPayType(btn){
       };
     }
   } else if(selectedPayType==='paystack'){
-    document.getElementById('amtCollected').value=currentPayTotal;
+    document.getElementById('amtCollected').value=activeTotal;
     document.getElementById('customerFields').style.display='none';
     if(pDet){pDet.style.display='flex';}
   } else {
-    document.getElementById('amtCollected').value=currentPayTotal;
+    document.getElementById('amtCollected').value=activeTotal;
     document.getElementById('customerFields').style.display='none';
   }
   recalcModal();
@@ -2341,7 +2365,8 @@ function toggleDepositField(){
 }
 
 function recalcModal(){
-  const total=currentPayTotal+(parseFloat(document.getElementById('depositAmt').value)||0);
+  const baseTotal=retailCheckoutMode?currentPayTotalR:currentPayTotal;
+  const total=baseTotal+(parseFloat(document.getElementById('depositAmt').value)||0);
   document.getElementById('modalTotal').textContent=N(total);
   const collected=parseFloat(document.getElementById('amtCollected').value)||0;
   const diff=collected-total;
@@ -2351,6 +2376,7 @@ function recalcModal(){
 }
 
 function processCheckout(){
+  if(retailCheckoutMode){processCheckoutR();return;}
   const depositAmt=parseFloat(document.getElementById('depositAmt').value)||0;
   const collected=parseFloat(document.getElementById('amtCollected').value)||0;
   const total=currentPayTotal+depositAmt;
@@ -3318,11 +3344,10 @@ function savePurchase(){
     if(!p){alert('Product not found.');return;}
     productName=p.name; category=p.category; unit=p.unit;
 
-    // Update inventory stock AND sync latest cost price to product
+    // Update inventory stock
     const inv=DB.inventory.find(i=>i.id===productId);
-    if(inv){inv.stock+=qty; inv.costPrice=costPrice;}
+    if(inv){inv.stock+=qty;}
     p.stock=(p.stock||0)+qty;
-    p.costPrice=costPrice; // ← keep cost price current for accurate margin
     persist('products'); persist('inventory');
 
     // Record stock history
@@ -3354,7 +3379,7 @@ function savePurchase(){
     const newId=Date.now();
     const newProd={
       id:newId, name:newName, category:newCat, emoji:'📦',
-      retail:newRetail, wholesale:newWholesale, costPrice:costPrice,
+      retail:newRetail, wholesale:newWholesale,
       unit:newUnit, stock:qty, lowStock:newLow, conversions:{}
     };
     DB.products.push(newProd);
@@ -3617,48 +3642,20 @@ function renderPriceTab(){
 function renderPriceTable(){
   const el=document.getElementById('priceTabContent');if(!el)return;
   el.innerHTML=`<div class="tbl-wrap"><table>
-    <thead><tr><th>Product</th><th>Category</th><th>Cost (₦)</th><th>Retail (₦)</th><th>Wholesale (₦)</th><th>Margin</th><th>Unit</th><th style="text-align:right">Actions</th></tr></thead>
-    <tbody>${DB.products.map(p=>{
-      const cost=p.costPrice||0;
-      const retailMargin = p.retail>0&&cost>0 ? Math.round(((p.retail-cost)/p.retail)*100) : null;
-      const wsMargin     = p.wholesale>0&&cost>0 ? Math.round(((p.wholesale-cost)/p.wholesale)*100) : null;
-      const marginColor  = m => m===null?'var(--text3)':m>=30?'var(--green-light)':m>=10?'var(--amber)':'var(--red)';
-      const marginBar    = m => m===null
-        ? `<span style="color:var(--text3);font-size:.72rem">—</span>`
-        : `<div style="display:flex;align-items:center;gap:5px">
-             <div style="width:46px;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
-               <div style="height:100%;width:${Math.min(100,Math.max(0,m))}%;background:${marginColor(m)};transition:width .3s"></div>
-             </div>
-             <span style="font-size:.72rem;font-family:var(--mono);color:${marginColor(m)};font-weight:700">${m}%</span>
-           </div>`;
-      return `<tr>
-        <td class="td-name">${p.name}</td>
-        <td style="color:var(--text3)">${p.category}</td>
-        <td class="mono" style="color:${cost>0?'var(--amber)':'var(--text3)'}">${cost>0?N(cost):'—'}</td>
-        <td>
-          <div class="mono" style="color:var(--green-light)">${N(p.retail)}</div>
-          <div style="margin-top:3px">${marginBar(retailMargin)}</div>
-        </td>
-        <td>
-          <div class="mono" style="color:var(--gold-light)">${N(p.wholesale)}</div>
-          <div style="margin-top:3px">${marginBar(wsMargin)}</div>
-        </td>
-        <td>
-          ${retailMargin!==null
-            ? `<div style="font-size:.72rem;color:var(--text3);line-height:1.6">
-                 Retail GP: <strong style="color:${marginColor(retailMargin)}">${N(p.retail-cost)}</strong><br>
-                 ${p.wholesale>0?`WS GP: <strong style="color:${marginColor(wsMargin)}">${N(p.wholesale-cost)}</strong>`:''}
-               </div>`
-            : `<span style="font-size:.7rem;color:var(--text3);font-style:italic">Set cost price</span>`}
-        </td>
-        <td style="color:var(--text3)">${p.unit}</td>
-        <td style="text-align:right">
-          <div style="display:flex;gap:6px;justify-content:flex-end">
-            <button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-edit"></i>Edit</button>
-            ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'price')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
-          </div>
-        </td>
-      </tr>`;}).join('')||`<tr><td colspan="8"><div class="empty-state"><i class="fas fa-tags"></i><p>No products yet</p></div></td></tr>`}
+    <thead><tr><th>Product</th><th>Category</th><th>Retail (₦)</th><th>Wholesale (₦)</th><th>Unit</th><th style="text-align:right">Actions</th></tr></thead>
+    <tbody>${DB.products.map(p=>`<tr>
+      <td class="td-name">${p.name}</td>
+      <td style="color:var(--text3)">${p.category}</td>
+      <td class="mono" style="color:var(--green-light)">${N(p.retail)}</td>
+      <td class="mono" style="color:var(--gold-light)">${N(p.wholesale)}</td>
+      <td style="color:var(--text3)">${p.unit}</td>
+      <td style="text-align:right">
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-edit"></i>Edit</button>
+          ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'price')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
+        </div>
+      </td>
+    </tr>`).join('')}
     </tbody>
   </table></div>`;
 }
@@ -4532,6 +4529,60 @@ window.onload = async function(){
   </div>
 </div>
 
+<!-- Retail Price Edit Modal -->
+<div class="modal-overlay" id="rPriceModal">
+  <div class="modal-box sm">
+    <div class="modal-head">
+      <h3 class="modal-title"><i class="fas fa-tags"></i>Edit Retail Price</h3>
+      <button class="modal-close" onclick="closeModal('rPriceModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:1rem;font-weight:700;margin-bottom:16px" id="rPriceModalName"></div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div><label>Retail Price (₦)</label><input type="number" id="rPriceRetail" min="0" step="0.01" style="font-size:1.4rem;font-weight:700"></div>
+        <div><label>Cost Price (₦) <span style="font-size:.68rem;color:var(--text3)">— used for profit calculation</span></label><input type="number" id="rPriceCost" min="0" step="0.01" style="font-size:1.4rem;font-weight:700"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('rPriceModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRPriceEdit()"><i class="fas fa-save"></i>Save Price</button>
+    </div>
+  </div>
+</div>
+
+<!-- Retail Add Product Modal -->
+<div class="modal-overlay" id="rAddProductModal">
+  <div class="modal-box sm">
+    <div class="modal-head">
+      <h3 class="modal-title"><i class="fas fa-plus-circle"></i>Add Retail Product</h3>
+      <button class="modal-close" onclick="closeModal('rAddProductModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="grid-2" style="gap:12px">
+        <div><label>Product Name <span style="color:var(--red)">*</span></label><input type="text" id="rAddProdName" placeholder="e.g. Ribena 50cl"></div>
+        <div><label>Category</label><input type="text" id="rAddProdCat" placeholder="e.g. Drinks"></div>
+        <div><label>Emoji</label><input type="text" id="rAddProdEmoji" value="📦" style="font-size:1.4rem;width:60px"></div>
+        <div><label>Unit</label>
+          <select id="rAddProdUnit">
+            <option value="piece">Piece</option><option value="bottle">Bottle</option>
+            <option value="pack">Pack</option><option value="carton">Carton</option>
+            <option value="bag">Bag</option><option value="tin">Tin</option>
+            <option value="sachet">Sachet</option><option value="kg">Kg</option>
+          </select>
+        </div>
+        <div><label>Retail Price (₦)</label><input type="number" id="rAddProdRetail" min="0" step="0.01" value="0"></div>
+        <div><label>Cost Price (₦)</label><input type="number" id="rAddProdCost" min="0" step="0.01" value="0"></div>
+        <div><label>Opening Stock</label><input type="number" id="rAddProdStock" min="0" value="0"></div>
+        <div><label>Low Stock Alert</label><input type="number" id="rAddProdLow" min="0" value="5"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('rAddProductModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveRAddProduct()"><i class="fas fa-save"></i>Add Product</button>
+    </div>
+  </div>
+</div>
+
 <script>
 function toggleDarkMode(){
   const isDark = document.body.classList.toggle('dark');
@@ -4652,25 +4703,680 @@ function saveNewProduct(){
   if(_addProductCalledFrom === 'price') renderPrice();
   else renderInventory();
 }
+
 // ══════════════════════════════════════════════════════════════════════════════
-// RETAIL STORE — Stub renderers (full implementation to be added)
-// These display a placeholder until each retail module is built out.
+// RETAIL STORE — ALL MODULES
 // ══════════════════════════════════════════════════════════════════════════════
-function renderRetailStub(title, icon, color){
-  document.getElementById('content').innerHTML = `
-  <div class="card" style="text-align:center;padding:48px 24px">
-    <i class="${icon}" style="font-size:3rem;color:${color};margin-bottom:16px"></i>
-    <h2 style="color:var(--text1);margin-bottom:8px">${title}</h2>
-    <p style="color:var(--text3);font-size:.9rem">This retail module is ready and wired up.<br>Full UI will render here.</p>
+let retailNavOpen=false;
+let retailCheckoutMode=false;
+let cartR=[];
+let currentPayTotalR=0;
+let lastReceiptR=null;
+let rEditingPriceId=null;
+let rPurchTab='new';
+let rDebtFilter='all';
+let rInvTab='products';
+let rPriceTab='products';
+let rAccTab='overview';
+
+function toggleRetailNav(){
+  retailNavOpen=!retailNavOpen;
+  const sub=document.getElementById('retailNavSub');
+  const arrow=document.getElementById('retailNavArrow');
+  if(sub)sub.style.display=retailNavOpen?'block':'none';
+  if(arrow)arrow.style.transform=retailNavOpen?'rotate(90deg)':'';
+}
+
+// ── RETAIL POS ──
+function renderR_POS(){
+  document.getElementById('content').innerHTML=`
+  <div id="pos-wrap">
+    <div id="pos-left">
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <input type="text" id="rPosSearch" placeholder="🔍 Search retail products…" oninput="renderProductGridR()" style="flex:1">
+        <div class="badge" style="background:rgba(184,134,11,.15);color:var(--gold-dim);padding:6px 12px;border-radius:20px;font-size:.72rem;font-weight:700">RETAIL</div>
+      </div>
+      <div id="rProductGrid" class="product-grid"></div>
+    </div>
+    <div id="pos-right">
+      <div class="card" style="display:flex;flex-direction:column;height:100%;gap:0">
+        <div class="flex-between" style="padding:12px 14px;border-bottom:1px solid var(--border)">
+          <h3 style="font-size:.95rem;font-weight:700">Cart <span id="rCartCount" style="font-size:.72rem;color:var(--text3);font-weight:400">0 items</span></h3>
+          <button class="btn btn-sm btn-ghost" onclick="cartR=[];renderCartR();renderProductGridR()">Clear</button>
+        </div>
+        <div id="rCartItems" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px"></div>
+        <div style="padding:12px 14px;border-top:1px solid var(--border)">
+          <div class="flex-between" style="margin-bottom:10px">
+            <span style="color:var(--text2);font-size:.85rem">Total</span>
+            <span id="rCartTotal" style="font-size:1.4rem;font-weight:800;color:var(--gold-light);font-family:var(--mono)">₦0</span>
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:13px" onclick="showPaymentModalR()"><i class="fas fa-check-circle"></i>Charge Customer</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  renderProductGridR();renderCartR();
+}
+
+function renderProductGridR(){
+  const g=document.getElementById('rProductGrid');if(!g)return;
+  const q=(document.getElementById('rPosSearch')?.value||'').toLowerCase();
+  const list=DB_R.products.filter(p=>!q||p.name.toLowerCase().includes(q)||p.category.toLowerCase().includes(q));
+  if(!list.length){g.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><p>No products found. Add products via Retail Inventory.</p></div>';return;}
+  g.innerHTML=list.map(p=>{
+    const inv=DB_R.inventory.find(i=>i.id===p.id);
+    const stock=inv!==undefined?inv.stock:(p.stock||0);
+    const ci=cartR.find(x=>x.id===p.id);const cq=ci?ci.qty:0;
+    const isOut=stock<=0;const isMaxed=!isOut&&cq>=stock;
+    const cs=isOut?'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed':isMaxed?'border-color:var(--red);background:rgba(192,57,43,.06)':'';
+    const sl=isOut?`<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`:isMaxed?`<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`:`<div class="product-ws">Retail · ${stock} left${cq>0?` (${cq} in cart)`:''}</div>`;
+    return `<div class="product-card" style="${cs}" onclick="${isOut?`showToast('❌ Out of stock!',false)`:`addToCartR(${p.id})`}">
+      <div class="product-emoji">${p.emoji||'📦'}</div>
+      <div class="product-name">${p.name}</div>
+      <div class="product-cat">${p.category} · ${p.unit}</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px">
+        <div><div class="product-price" style="${isOut||isMaxed?'color:var(--red)':''}">${N(p.retail||0)}</div>${sl}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function addToCartR(id){
+  const p=DB_R.products.find(x=>x.id===id);if(!p)return;
+  const inv=DB_R.inventory.find(i=>i.id===id);
+  const stock=inv!==undefined?inv.stock:(p.stock||0);
+  if(stock<=0){showToast(`❌ "${p.name}" is out of stock!`,false);return;}
+  const ex=cartR.find(x=>x.id===id);
+  if(ex){if(ex.qty>=stock){showToast(`⚠️ Only ${stock} available`,false);return;}ex.qty++;}
+  else{cartR.push({...p,qty:1,price:p.retail||0});}
+  renderCartR();renderProductGridR();
+}
+
+function changeQtyR(i,d){
+  if(d>0){
+    const item=cartR[i];
+    const inv=DB_R.inventory.find(x=>x.id===item.id);
+    const stock=inv!==undefined?inv.stock:(item.stock||0);
+    if(item.qty>=stock){showToast(`⚠️ Only ${stock} available`,false);return;}
+  }
+  cartR[i].qty=Math.max(1,cartR[i].qty+d);
+  renderCartR();renderProductGridR();
+}
+
+function removeFromCartR(i){cartR.splice(i,1);renderCartR();renderProductGridR();}
+
+function renderCartR(){
+  const el=document.getElementById('rCartItems');if(!el)return;
+  const cc=document.getElementById('rCartCount');
+  if(!cartR.length){
+    el.innerHTML='<div class="empty-state" style="padding:24px 0"><i class="fas fa-shopping-cart"></i><p>Cart is empty</p></div>';
+    if(cc)cc.textContent='0 items';
+    const t=document.getElementById('rCartTotal');if(t)t.textContent='₦0';
+    currentPayTotalR=0;return;
+  }
+  el.innerHTML=cartR.map((item,i)=>{
+    const inv=DB_R.inventory.find(x=>x.id===item.id);
+    const stock=inv!==undefined?inv.stock:(item.stock||0);
+    const isOver=item.qty>stock;
+    return `<div class="cart-item" style="${isOver?'border:1px solid var(--red);background:rgba(192,57,43,.06)':''}">
+      <div class="flex-between">
+        <div><div class="cart-item-name" style="${isOver?'color:var(--red)':''}">${item.name}${isOver?` <span style="font-size:.65rem;color:var(--red);font-weight:700">(only ${stock} left!)</span>`:''}</div><div class="cart-item-unit">${item.unit}</div></div>
+        <button class="btn btn-icon" style="color:var(--text3);background:none;border:none;cursor:pointer;font-size:.9rem" onclick="removeFromCartR(${i})"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="cart-qty-row">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="qty-btn" onclick="changeQtyR(${i},-1)">−</button>
+          <span class="qty-val" style="${isOver?'color:var(--red)':''}">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQtyR(${i},1)" ${isOver?'disabled style="opacity:.4;cursor:not-allowed"':''}>+</button>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--mono);font-weight:700;color:var(--green-light)">${N(item.price)}</div>
+          <div style="font-size:.68rem;color:var(--text3)">× ${item.qty} = ${N(item.price*item.qty)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  if(cc)cc.textContent=cartR.length+' item'+(cartR.length!==1?'s':'');
+  const total=cartR.reduce((s,x)=>s+x.price*x.qty,0);
+  const t=document.getElementById('rCartTotal');if(t)t.textContent=N(total);
+  currentPayTotalR=total;
+}
+
+function showPaymentModalR(){
+  if(!cartR.length){alert('Cart is empty!');return;}
+  const over=cartR.filter(item=>{const inv=DB_R.inventory.find(x=>x.id===item.id);const stock=inv!==undefined?inv.stock:(item.stock||0);return item.qty>stock;});
+  if(over.length){
+    alert('⚠️ Cannot complete sale!\n\nItems exceed available stock:\n'+over.map(item=>{const inv=DB_R.inventory.find(x=>x.id===item.id);const s=inv!==undefined?inv.stock:0;return `• ${item.name}: ${item.qty} requested, only ${s} in stock`;}).join('\n'));
+    return;
+  }
+  retailCheckoutMode=true;
+  const total=cartR.reduce((s,x)=>s+x.price*x.qty,0);
+  currentPayTotalR=total;
+  selectedPayType='cash';
+  document.querySelectorAll('.pay-btn').forEach(b=>b.classList.toggle('active',b.dataset.type==='cash'));
+  document.getElementById('modalTotal').textContent=N(total);
+  document.getElementById('amtCollected').value=total;
+  document.getElementById('depositChk').checked=false;
+  document.getElementById('depositAmtRow').style.display='none';
+  document.getElementById('depositAmt').value=0;
+  document.getElementById('custName').value='';
+  document.getElementById('custPhone').value='';
+  document.getElementById('customerFields').style.display='none';
+  const tDet=document.getElementById('transferDetails');if(tDet)tDet.style.display='none';
+  const pDet=document.getElementById('paystackDetails');if(pDet)pDet.style.display='none';
+  recalcModal();
+  openModal('paymentModal');
+}
+
+function processCheckoutR(){
+  const depositAmt=parseFloat(document.getElementById('depositAmt').value)||0;
+  const collected=parseFloat(document.getElementById('amtCollected').value)||0;
+  const total=currentPayTotalR+depositAmt;
+  const custName=document.getElementById('custName').value.trim();
+  const custPhone=document.getElementById('custPhone').value.trim();
+  if(selectedPayType==='credit'&&!custName){alert('Customer name required for credit sales.');return;}
+  const balance=total-collected;
+  const code=uid();
+  const transferRef=(selectedPayType==='transfer'?document.getElementById('transferRef')?.value.trim():'')||'';
+  // Deduct from retail inventory
+  cartR.forEach(item=>{
+    const inv=DB_R.inventory.find(i=>i.id===item.id);
+    if(inv){
+      inv.stock=Math.max(0,inv.stock-item.qty);
+      DB_R.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,timestamp:new Date().toISOString(),action:'sale',delta:-item.qty,newStock:inv.stock,unit:item.unit,reason:'Retail Sale · '+code});
+    }
+    const prod=DB_R.products.find(p=>p.id===item.id);
+    if(prod)prod.stock=Math.max(0,(prod.stock||0)-item.qty);
+  });
+  persistR('inventory');persistR('stockHistory');persistR('products');
+  // Record debt if needed
+  if(depositAmt>0||selectedPayType==='credit'||collected<currentPayTotalR){
+    DB_R.debt.unshift({id:uid(),code,customerName:custName||'Walk-in',customerPhone:custPhone,type:selectedPayType==='credit'?'credit':'deposit',totalAmount:currentPayTotalR,paidAmount:collected,balance:Math.max(0,currentPayTotalR-collected),depositAmount:depositAmt,depositCleared:false,status:balance<=0?'cleared':'active',date:new Date().toISOString(),items:cartR.map(i=>({name:i.name,qty:i.qty,price:i.price})),paymentMethod:selectedPayType,notes:'',history:[{date:new Date().toISOString(),action:selectedPayType==='credit'?'Credit opened':'Sale',amount:collected,balanceAfter:Math.max(0,currentPayTotalR-collected)}]});
+    persistR('debt');
+  }
+  // Record sale with COGS
+  const cogs=cartR.reduce((s,item)=>{const p=DB_R.products.find(x=>x.id===item.id);return s+(p?(item.qty*(p.costPrice||0)):0);},0);
+  DB_R.sales.unshift({id:uid(),code,date:new Date().toISOString(),total:currentPayTotalR,collected,payType:selectedPayType,custName:custName||'Walk-in',soldBy:currentUserName||'Staff',transferRef,cogs,items:cartR.map(i=>({name:i.name,qty:i.qty,price:i.price,id:i.id,costPrice:DB_R.products.find(x=>x.id===i.id)?.costPrice||0}))});
+  persistR('sales');
+  lastReceiptR={code,items:[...cartR],total:currentPayTotalR,collected,depositAmt,balance:Math.max(0,total-collected),payType:selectedPayType,custName,date:new Date(),soldBy:currentUserName||'Staff'};
+  retailCheckoutMode=false;
+  closeModal('paymentModal');
+  generateReceiptR(lastReceiptR);
+  openModal('receiptModal');
+  cartR=[];renderCartR();
+}
+
+function generateReceiptR(r){
+  const biz=DB.bizSettings||{};
+  const logoHtml=biz.logo?`<div class="receipt-logo-wrap"><img src="${biz.logo}" alt="Logo"></div>`:`<div class="receipt-logo-wrap"><div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,#1a5c2e,#2d8a50);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:1.4rem">🏪</div></div>`;
+  const changeAmt=r.collected-(r.total+r.depositAmt);
+  const isChange=changeAmt>=0&&r.balance<=0;
+  document.getElementById('receiptContent').innerHTML=`
+  <div class="receipt-print" id="receiptPrintArea">
+    <div class="receipt-header">
+      ${logoHtml}<h2>${biz.name||'Emanicel'}</h2>
+      <p style="font-weight:600;color:var(--gold)">RETAIL STORE RECEIPT</p>
+      <p style="font-size:.7rem;color:var(--text3)">${biz.address||''}</p>
+    </div>
+    <div class="receipt-meta">
+      <div class="receipt-row"><span>Receipt #</span><span>${r.code}</span></div>
+      <div class="receipt-row"><span>Date</span><span>${r.date.toLocaleDateString('en-NG',{day:'2-digit',month:'short',year:'numeric'})}</span></div>
+      <div class="receipt-row"><span>Cashier</span><span>${r.soldBy}</span></div>
+      ${r.custName&&r.custName!=='Walk-in'?`<div class="receipt-row"><span>Customer</span><span>${r.custName}</span></div>`:''}
+      <div class="receipt-row"><span>Payment</span><span style="text-transform:capitalize">${r.payType}</span></div>
+    </div>
+    <div class="receipt-items">
+      <div class="receipt-item-header"><span>Item</span><span>Qty</span><span>Price</span><span>Total</span></div>
+      ${r.items.map(i=>`<div class="receipt-item-row"><span>${i.name}</span><span>${i.qty}</span><span>${N(i.price)}</span><span>${N(i.price*i.qty)}</span></div>`).join('')}
+    </div>
+    <div class="receipt-totals">
+      <div class="receipt-row"><span>Subtotal</span><span>${N(r.total)}</span></div>
+      ${r.depositAmt>0?`<div class="receipt-row"><span>Deposit</span><span>${N(r.depositAmt)}</span></div>`:''}
+      <div class="receipt-row" style="font-weight:700;font-size:1.05rem"><span>TOTAL</span><span>${N(r.total+(r.depositAmt||0))}</span></div>
+      <div class="receipt-row"><span>Amount Paid</span><span>${N(r.collected)}</span></div>
+      ${isChange?`<div class="receipt-row" style="color:var(--green-light)"><span>Change</span><span>${N(changeAmt)}</span></div>`:r.balance>0?`<div class="receipt-row" style="color:var(--red)"><span>Balance Due</span><span>${N(r.balance)}</span></div>`:''}
+    </div>
+    <div class="receipt-footer"><p>Thank you for shopping with us!</p></div>
   </div>`;
 }
-function renderRetailPOS(){ renderRetailStub('Retail POS','fas fa-store','var(--green)'); }
-function renderRetailPurchase(){ renderRetailStub('Retail Purchase / Restock','fas fa-truck-ramp-box','var(--blue)'); }
-function renderRetailDebt(){ renderRetailStub('Retail Debt & Deposits','fas fa-file-invoice-dollar','var(--amber)'); }
-function renderRetailInventory(){ renderRetailStub('Retail Inventory','fas fa-boxes-stacked','var(--blue)'); }
-function renderRetailPrice(){ renderRetailStub('Retail Price Config','fas fa-tags','var(--gold)'); }
-function renderRetailAccounting(){ renderRetailStub('Retail Accounting','fas fa-coins','var(--green)'); }
 
+// ── RETAIL DASHBOARD ──
+function renderR_Dashboard(){
+  const el=document.getElementById('content');
+  const now=new Date();
+  const tod=new Date();tod.setHours(0,0,0,0);
+  const mo=new Date(now.getFullYear(),now.getMonth(),1);
+  const todSales=DB_R.sales.filter(s=>new Date(s.date)>=tod);
+  const moSales=DB_R.sales.filter(s=>new Date(s.date)>=mo);
+  const todRev=todSales.reduce((s,x)=>s+x.total,0);
+  const moRev=moSales.reduce((s,x)=>s+x.total,0);
+  const moCogs=moSales.reduce((s,sale)=>s+(sale.cogs||0),0);
+  const totalExp=DB_R.expenses.filter(e=>new Date(e.date)>=mo).reduce((s,e)=>s+e.amount,0);
+  const moProfit=moRev-moCogs-totalExp;
+  const lowStock=DB_R.inventory.filter(p=>p.stock>0&&p.stock<=(p.lowStock||5));
+  const outStock=DB_R.inventory.filter(p=>p.stock<=0);
+  const productSales={};
+  moSales.forEach(s=>(s.items||[]).forEach(i=>{if(!productSales[i.name])productSales[i.name]={name:i.name,qty:0,rev:0};productSales[i.name].qty+=i.qty;productSales[i.name].rev+=i.price*i.qty;}));
+  const topProds=Object.values(productSales).sort((a,b)=>b.rev-a.rev).slice(0,5);
+  const maxRev=topProds[0]?.rev||1;
+  el.innerHTML=`
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="flex-between"><h2 class="section-title"><i class="fas fa-store-alt"></i>Retail Dashboard</h2><span class="badge" style="background:rgba(184,134,11,.15);color:var(--gold-dim);padding:6px 14px;border-radius:20px">Retail Store</span></div>
+    <div class="grid-4">
+      <div class="stat-card"><div class="stat-label">TODAY'S SALES</div><div class="stat-value" style="color:var(--green-light)">${N(todRev)}</div><div class="stat-sub">${todSales.length} transaction(s)</div></div>
+      <div class="stat-card"><div class="stat-label">MONTHLY REVENUE</div><div class="stat-value" style="color:var(--gold-light)">${N(moRev)}</div><div class="stat-sub">${moSales.length} sales</div></div>
+      <div class="stat-card"><div class="stat-label">COST OF GOODS SOLD</div><div class="stat-value" style="color:${moCogs>0?'var(--amber)':'var(--text2)'}">- ${N(moCogs)}</div><div class="stat-sub">This month</div></div>
+      <div class="stat-card"><div class="stat-label">TOTAL EXPENSES</div><div class="stat-value" style="color:${totalExp>0?'var(--red)':'var(--text2)'}">- ${N(totalExp)}</div><div class="stat-sub">This month</div></div>
+    </div>
+    <div class="card" style="background:linear-gradient(135deg,rgba(26,92,46,.08),rgba(184,134,11,.06));border:1px solid rgba(26,92,46,.2)">
+      <div class="flex-between">
+        <div>
+          <div style="font-size:.78rem;font-weight:600;color:var(--text3);letter-spacing:.06em">RETAIL PROFIT = SALES − COGS − EXPENSES</div>
+          <div style="font-size:2rem;font-weight:800;font-family:var(--mono);color:${moProfit>=0?'var(--green-light)':'var(--red)'};margin-top:4px">${N(moProfit)}</div>
+        </div>
+        <i class="fas fa-store-alt" style="font-size:2.5rem;color:rgba(26,92,46,.2)"></i>
+      </div>
+    </div>
+    ${topProds.length?`<div class="card"><h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-star"></i>Top-Selling Products</h3>${topProds.map((p,i)=>`<div style="margin-bottom:12px"><div class="flex-between" style="margin-bottom:4px"><span style="font-weight:600">${i+1}. ${p.name}</span><span style="color:var(--gold-light);font-family:var(--mono)">${N(p.rev)}</span></div><div style="background:var(--border);border-radius:4px;height:5px"><div style="width:${Math.round(p.rev/maxRev*100)}%;background:linear-gradient(90deg,var(--green-dark),var(--gold));height:5px;border-radius:4px"></div></div><div style="font-size:.68rem;color:var(--text3);margin-top:2px">${p.qty} units sold</div></div>`).join('')}</div>`:''}
+    ${outStock.length||lowStock.length?`<div class="card" style="border:1px solid rgba(184,134,11,.3)"><h3 class="section-title" style="margin-bottom:12px;color:var(--amber)"><i class="fas fa-triangle-exclamation"></i>Low Stock Alerts</h3>${[...outStock.map(p=>`<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><span class="badge" style="background:rgba(192,57,43,.15);color:var(--red)">OUT OF STOCK</span></div>`), ...lowStock.map(p=>`<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><span class="badge" style="background:rgba(184,134,11,.15);color:var(--amber)">${p.stock} left</span></div>`)].join('')}</div>`:''}
+  </div>`;
+}
+
+// ── RETAIL PURCHASE ──
+function renderR_Purchase(){
+  document.getElementById('content').innerHTML=`
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="flex-between"><h2 class="section-title"><i class="fas fa-truck-ramp-box"></i>Retail Purchase / Restock</h2></div>
+    <div class="settings-tab-bar">
+      <button class="btn btn-sm ${rPurchTab==='new'?'btn-primary':'btn-ghost'}" onclick="rPurchTab='new';renderR_Purchase()"><i class="fas fa-plus"></i>New Purchase</button>
+      <button class="btn btn-sm ${rPurchTab==='history'?'btn-primary':'btn-ghost'}" onclick="rPurchTab='history';renderR_Purchase()"><i class="fas fa-history"></i>History</button>
+    </div>
+    <div id="rPurchContent"></div>
+  </div>`;
+  rPurchTab==='new'?renderRPurchNew():renderRPurchHistory();
+}
+
+function renderRPurchNew(){
+  const el=document.getElementById('rPurchContent');if(!el)return;
+  el.innerHTML=`
+  <div class="card">
+    <h3 class="section-title" style="margin-bottom:16px"><i class="fas fa-boxes-stacked"></i>Record Stock Purchase</h3>
+    <div class="grid-2" style="gap:14px">
+      <div>
+        <label>Product <span style="color:var(--red)">*</span></label>
+        <select id="rPurchProd" onchange="onRPurchSelect()" style="margin-top:4px">
+          <option value="">— select product —</option>
+          ${DB_R.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')}
+          <option value="__new__">+ Add New Product</option>
+        </select>
+      </div>
+      <div><label>Quantity <span style="color:var(--red)">*</span></label><input type="number" id="rPurchQty" min="1" value="1" oninput="onRPurchCostChange()"></div>
+      <div><label>Cost Price per Unit (₦)</label><input type="number" id="rPurchCost" min="0" step="0.01" value="0" oninput="onRPurchCostChange()"></div>
+      <div><label>Total Purchase Cost (₦)</label><input type="number" id="rPurchTotal" readonly value="0" style="background:var(--surface2);color:var(--text3)"></div>
+      <div><label>Supplier / Source</label><input type="text" id="rPurchSupplier" placeholder="Supplier name or market"></div>
+      <div><label>Purchase Date</label><input type="date" id="rPurchDate" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div id="rPurchNewFields" style="display:none;grid-column:1/-1">
+        <div class="grid-2" style="gap:12px;padding:14px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border2)">
+          <div><label>New Product Name <span style="color:var(--red)">*</span></label><input type="text" id="rPurchNewName" placeholder="e.g. Bigi Cola 50cl"></div>
+          <div><label>Category</label><input type="text" id="rPurchNewCat" placeholder="e.g. Drinks"></div>
+          <div><label>Unit</label><select id="rPurchNewUnit"><option value="piece">Piece</option><option value="bottle">Bottle</option><option value="pack">Pack</option><option value="carton">Carton</option><option value="bag">Bag</option><option value="tin">Tin</option></select></div>
+          <div><label>Retail Price (₦)</label><input type="number" id="rPurchNewRetail" min="0" step="0.01" value="0"></div>
+        </div>
+      </div>
+      <div style="grid-column:1/-1"><label>Notes</label><input type="text" id="rPurchNotes" placeholder="Optional notes"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px" onclick="saveRPurch()"><i class="fas fa-save"></i>Save Purchase & Update Stock</button>
+  </div>`;
+}
+
+function onRPurchSelect(){
+  const v=document.getElementById('rPurchProd').value;
+  document.getElementById('rPurchNewFields').style.display=v==='__new__'?'block':'none';
+  if(v&&v!=='__new__'){const p=DB_R.products.find(x=>x.id==v);if(p){document.getElementById('rPurchCost').value=p.costPrice||0;onRPurchCostChange();}}
+}
+
+function onRPurchCostChange(){
+  const c=parseFloat(document.getElementById('rPurchCost')?.value)||0;
+  const q=parseFloat(document.getElementById('rPurchQty')?.value)||0;
+  const t=document.getElementById('rPurchTotal');
+  if(t)t.value=(c*q).toFixed(2);
+}
+
+function saveRPurch(){
+  const prodVal=document.getElementById('rPurchProd').value;
+  const qty=parseFloat(document.getElementById('rPurchQty').value)||0;
+  const cost=parseFloat(document.getElementById('rPurchCost').value)||0;
+  const supplier=document.getElementById('rPurchSupplier').value.trim();
+  const date=document.getElementById('rPurchDate').value||new Date().toISOString().slice(0,10);
+  const notes=document.getElementById('rPurchNotes').value.trim();
+  if(!prodVal){alert('Select a product.');return;}
+  if(qty<=0){alert('Quantity must be greater than 0.');return;}
+  let productId,productName,unit;
+  if(prodVal==='__new__'){
+    const name=document.getElementById('rPurchNewName').value.trim();
+    const cat=document.getElementById('rPurchNewCat').value.trim()||'General';
+    const u=document.getElementById('rPurchNewUnit').value;
+    const retail=parseFloat(document.getElementById('rPurchNewRetail').value)||0;
+    if(!name){alert('Product name required.');return;}
+    const newId=Date.now();
+    const np={id:newId,name,category:cat,emoji:'📦',retail,wholesale:retail,costPrice:cost,unit:u,stock:qty,lowStock:5,conversions:{}};
+    DB_R.products.push(np);DB_R.inventory.push({...np});
+    persistR('products');persistR('inventory');
+    productId=newId;productName=name;unit=u;
+  } else {
+    const p=DB_R.products.find(x=>x.id==prodVal);if(!p){alert('Product not found.');return;}
+    productId=p.id;productName=p.name;unit=p.unit;
+    p.costPrice=cost;p.stock=(p.stock||0)+qty;
+    const inv=DB_R.inventory.find(i=>i.id==prodVal);
+    if(inv){inv.stock=(inv.stock||0)+qty;inv.costPrice=cost;}
+    else DB_R.inventory.push({...p});
+    persistR('products');persistR('inventory');
+  }
+  DB_R.purchases.unshift({id:uid(),productId,productName,unit,qty,costPerUnit:cost,totalCost:cost*qty,supplier,date:new Date(date).toISOString(),notes,recordedBy:currentUserName||'Staff'});
+  DB_R.stockHistory.unshift({id:uid(),productId,productName,timestamp:new Date().toISOString(),action:'purchase',delta:qty,unit,reason:`Purchase from ${supplier||'supplier'}`});
+  persistR('purchases');persistR('stockHistory');
+  showToast(`✅ ${productName} — ${qty} units added to retail stock!`);
+  renderR_Purchase();
+}
+
+function renderRPurchHistory(){
+  const el=document.getElementById('rPurchContent');if(!el)return;
+  if(!DB_R.purchases.length){el.innerHTML='<div class="card"><div class="empty-state"><i class="fas fa-box-open"></i><p>No purchases recorded yet</p></div></div>';return;}
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Product</th><th>Qty</th><th>Cost/Unit</th><th>Total Cost</th><th>Supplier</th><th>By</th></tr></thead><tbody>${DB_R.purchases.map(p=>`<tr><td>${dateStr(p.date)}</td><td>${p.productName}</td><td>${p.qty} ${p.unit||''}</td><td>${N(p.costPerUnit||0)}</td><td>${N(p.totalCost||0)}</td><td>${p.supplier||'—'}</td><td>${p.recordedBy||'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+// ── RETAIL DEBT ──
+function renderR_Debt(){
+  document.getElementById('content').innerHTML=`
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="flex-between"><h2 class="section-title"><i class="fas fa-file-invoice-dollar"></i>Retail Debt & Deposits</h2></div>
+    <div class="settings-tab-bar">
+      ${['all','active','cleared'].map(f=>`<button class="btn btn-sm ${rDebtFilter===f?'btn-primary':'btn-ghost'}" onclick="rDebtFilter='${f}';renderR_Debt()">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`).join('')}
+    </div>
+    <div id="rDebtContent"></div>
+  </div>`;
+  const list=rDebtFilter==='all'?DB_R.debt:DB_R.debt.filter(d=>d.status===rDebtFilter);
+  const el=document.getElementById('rDebtContent');
+  if(!list.length){el.innerHTML='<div class="card"><div class="empty-state"><i class="fas fa-check-circle"></i><p>No records found</p></div></div>';return;}
+  const totalBal=list.filter(d=>d.status==='active').reduce((s,d)=>s+(d.balance||0),0);
+  el.innerHTML=`
+  ${totalBal>0?`<div class="card" style="border:1px solid rgba(192,57,43,.3);background:rgba(192,57,43,.05)"><div class="flex-between"><span style="color:var(--text2);font-size:.85rem">Total Outstanding Balance</span><span style="font-size:1.3rem;font-weight:800;color:var(--red);font-family:var(--mono)">${N(totalBal)}</span></div></div>`:''}
+  <div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Customer</th><th>Total</th><th>Paid</th><th>Balance</th><th>Type</th><th>Status</th><th>Action</th></tr></thead><tbody>
+  ${list.map(d=>`<tr>
+    <td>${dateStr(d.date)}</td>
+    <td><strong>${d.customerName}</strong>${d.customerPhone?`<br><span style="font-size:.68rem;color:var(--text3)">${d.customerPhone}</span>`:''}</td>
+    <td>${N(d.totalAmount)}</td><td>${N(d.paidAmount)}</td>
+    <td style="font-weight:700;color:${(d.balance||0)>0?'var(--red)':'var(--green-light)'}">${N(d.balance||0)}</td>
+    <td><span class="badge badge-blue">${d.type}</span></td>
+    <td><span class="badge ${d.status==='cleared'?'badge-green':'badge-amber'}">${d.status}</span></td>
+    <td>${d.status==='active'?`<button class="btn btn-sm btn-primary" onclick="clearRDebt('${d.id}')"><i class="fas fa-check"></i>Clear</button>`:'—'}</td>
+  </tr>`).join('')}
+  </tbody></table></div></div>`;
+}
+
+function clearRDebt(id){
+  const d=DB_R.debt.find(x=>x.id===id);if(!d)return;
+  const input=prompt(`Clear debt for ${d.customerName}\nBalance: ${N(d.balance)}\n\nEnter payment amount:`);
+  if(input===null||input.trim()==='')return;
+  const amt=parseFloat(input);
+  if(isNaN(amt)||amt<=0){alert('Invalid amount.');return;}
+  d.paidAmount=(d.paidAmount||0)+amt;
+  d.balance=Math.max(0,(d.balance||0)-amt);
+  if(d.balance<=0)d.status='cleared';
+  d.history=d.history||[];
+  d.history.push({date:new Date().toISOString(),action:'Payment received',amount:amt,balanceAfter:d.balance});
+  persistR('debt');
+  showToast(`Payment of ${N(amt)} recorded.`);
+  renderR_Debt();
+}
+
+// ── RETAIL INVENTORY ──
+function renderR_Inventory(){
+  document.getElementById('content').innerHTML=`
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="flex-between">
+      <h2 class="section-title"><i class="fas fa-boxes-stacked"></i>Retail Inventory</h2>
+      <button class="btn btn-primary" onclick="openRAddProductModal()"><i class="fas fa-plus"></i>Add Product</button>
+    </div>
+    <div class="settings-tab-bar">
+      <button class="btn btn-sm ${rInvTab==='products'?'btn-primary':'btn-ghost'}" onclick="rInvTab='products';renderR_Inventory()"><i class="fas fa-boxes-stacked"></i>Products</button>
+      <button class="btn btn-sm ${rInvTab==='history'?'btn-primary':'btn-ghost'}" onclick="rInvTab='history';renderR_Inventory()"><i class="fas fa-history"></i>Stock History</button>
+    </div>
+    <div id="rInvContent"></div>
+  </div>`;
+  rInvTab==='products'?renderRInvProducts():renderRInvHistory();
+}
+
+function renderRInvProducts(){
+  const el=document.getElementById('rInvContent');if(!el)return;
+  if(!DB_R.inventory.length){el.innerHTML=`<div class="card"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products in retail inventory</p><button class="btn btn-primary" style="margin-top:12px" onclick="openRAddProductModal()"><i class="fas fa-plus"></i>Add First Product</button></div></div>`;return;}
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Product</th><th>Category</th><th>Unit</th><th>Stock</th><th>Low Alert</th><th>Retail Price</th><th>Cost Price</th><th>Actions</th></tr></thead><tbody>
+  ${DB_R.inventory.map(p=>{
+    const isLow=p.stock>0&&p.stock<=(p.lowStock||5);const isOut=p.stock<=0;
+    return `<tr style="${isOut?'background:rgba(192,57,43,.04)':isLow?'background:rgba(184,134,11,.03)':''}">
+      <td><strong>${p.emoji||'📦'} ${p.name}</strong></td>
+      <td>${p.category||'—'}</td><td>${p.unit||'—'}</td>
+      <td><span style="font-weight:700;color:${isOut?'var(--red)':isLow?'var(--amber)':'var(--green-light)'}">${p.stock||0}</span>${isOut?' <span style="font-size:.65rem;color:var(--red)">(OUT)</span>':isLow?' <span style="font-size:.65rem;color:var(--amber)">(LOW)</span>':''}</td>
+      <td>${p.lowStock||5}</td>
+      <td style="font-family:var(--mono)">${N(p.retail||0)}</td>
+      <td style="font-family:var(--mono)">${N(p.costPrice||0)}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-sm btn-ghost" onclick="openRAdjustStock(${p.id})" title="Adjust stock"><i class="fas fa-plus-minus"></i></button>
+        <button class="btn btn-sm btn-danger" onclick="deleteRProduct(${p.id})" title="Delete"><i class="fas fa-trash"></i></button>
+      </td>
+    </tr>`;
+  }).join('')}
+  </tbody></table></div></div>`;
+}
+
+function renderRInvHistory(){
+  const el=document.getElementById('rInvContent');if(!el)return;
+  if(!DB_R.stockHistory.length){el.innerHTML='<div class="card"><div class="empty-state"><i class="fas fa-history"></i><p>No stock movements recorded</p></div></div>';return;}
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Product</th><th>Action</th><th>Change</th><th>New Stock</th><th>Reason</th></tr></thead><tbody>${DB_R.stockHistory.slice(0,200).map(h=>`<tr><td>${dateStr(h.timestamp)}</td><td>${h.productName}</td><td><span class="badge ${h.action==='sale'?'badge-amber':h.action==='purchase'?'badge-green':'badge-blue'}">${h.action}</span></td><td style="color:${h.delta<0?'var(--red)':'var(--green-light)'};font-weight:700">${h.delta>0?'+':''}${h.delta}</td><td>${h.newStock!=null?h.newStock:'—'}</td><td>${h.reason||'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openRAddProductModal(){
+  ['rAddProdName','rAddProdCat'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const emoji=document.getElementById('rAddProdEmoji');if(emoji)emoji.value='📦';
+  ['rAddProdRetail','rAddProdCost'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='0';});
+  const s=document.getElementById('rAddProdStock');if(s)s.value='0';
+  const l=document.getElementById('rAddProdLow');if(l)l.value='5';
+  const u=document.getElementById('rAddProdUnit');if(u)u.value='piece';
+  openModal('rAddProductModal');
+}
+
+function saveRAddProduct(){
+  const name=document.getElementById('rAddProdName').value.trim();
+  const cat=document.getElementById('rAddProdCat').value.trim()||'General';
+  const emoji=document.getElementById('rAddProdEmoji').value.trim()||'📦';
+  const retail=parseFloat(document.getElementById('rAddProdRetail').value)||0;
+  const cost=parseFloat(document.getElementById('rAddProdCost').value)||0;
+  const stock=parseFloat(document.getElementById('rAddProdStock').value)||0;
+  const low=parseFloat(document.getElementById('rAddProdLow').value)||5;
+  const unit=document.getElementById('rAddProdUnit').value;
+  if(!name){alert('Product name is required.');return;}
+  const id=Date.now();
+  const prod={id,name,category:cat,emoji,retail,wholesale:retail,costPrice:cost,unit,stock,lowStock:low,conversions:{}};
+  DB_R.products.push(prod);DB_R.inventory.push({...prod});
+  if(stock>0)DB_R.stockHistory.unshift({id:uid(),productId:id,productName:name,timestamp:new Date().toISOString(),action:'add',delta:stock,newStock:stock,unit,reason:'Initial stock'});
+  persistR('products');persistR('inventory');persistR('stockHistory');
+  closeModal('rAddProductModal');
+  showToast(`✅ "${name}" added to retail inventory!`);
+  renderR_Inventory();
+}
+
+function openRAdjustStock(id){
+  const p=DB_R.inventory.find(x=>x.id===id);if(!p)return;
+  const input=prompt(`Adjust stock for "${p.name}"\nCurrent: ${p.stock||0}\n\nEnter amount (+add / -remove):`);
+  if(input===null||input.trim()==='')return;
+  const delta=parseInt(input);
+  if(isNaN(delta)||delta===0){alert('Enter a non-zero number.');return;}
+  p.stock=Math.max(0,(p.stock||0)+delta);
+  const prod=DB_R.products.find(x=>x.id===id);if(prod)prod.stock=p.stock;
+  DB_R.stockHistory.unshift({id:uid(),productId:id,productName:p.name,timestamp:new Date().toISOString(),action:'adjustment',delta,newStock:p.stock,unit:p.unit,reason:'Manual adjustment'});
+  persistR('inventory');persistR('products');persistR('stockHistory');
+  showToast(`Stock updated for ${p.name}: ${p.stock} ${p.unit}`);
+  renderR_Inventory();
+}
+
+function deleteRProduct(id){
+  const p=DB_R.products.find(x=>x.id===id);if(!p)return;
+  if(!confirm(`Delete "${p.name}" from retail inventory? This cannot be undone.`))return;
+  DB_R.products=DB_R.products.filter(x=>x.id!==id);
+  DB_R.inventory=DB_R.inventory.filter(x=>x.id!==id);
+  persistR('products');persistR('inventory');
+  showToast(`"${p.name}" removed.`);
+  renderR_Inventory();
+}
+
+// ── RETAIL PRICE CONFIG ──
+function renderR_Price(){
+  document.getElementById('content').innerHTML=`
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="flex-between">
+      <h2 class="section-title"><i class="fas fa-tags"></i>Retail Price Configuration</h2>
+      <button class="btn btn-primary" onclick="openRAddProductModal()"><i class="fas fa-plus"></i>Add Product</button>
+    </div>
+    <div class="settings-tab-bar">
+      <button class="btn btn-sm ${rPriceTab==='products'?'btn-primary':'btn-ghost'}" onclick="rPriceTab='products';renderR_Price()"><i class="fas fa-boxes-stacked"></i>Products</button>
+      <button class="btn btn-sm ${rPriceTab==='history'?'btn-primary':'btn-ghost'}" onclick="rPriceTab='history';renderR_Price()"><i class="fas fa-history"></i>Price History</button>
+    </div>
+    <div id="rPriceContent"></div>
+  </div>`;
+  rPriceTab==='products'?renderRPriceProducts():renderRPriceHistory();
+}
+
+function renderRPriceProducts(){
+  const el=document.getElementById('rPriceContent');if(!el)return;
+  if(!DB_R.products.length){el.innerHTML='<div class="card"><div class="empty-state"><i class="fas fa-tags"></i><p>No products. Add products first.</p></div></div>';return;}
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Product</th><th>Retail Price</th><th>Cost Price</th><th>Margin</th><th>Action</th></tr></thead><tbody>
+  ${DB_R.products.map(p=>{
+    const margin=(p.retail>0&&p.costPrice>0)?Math.round((p.retail-p.costPrice)/p.retail*100):null;
+    return `<tr>
+      <td><strong>${p.emoji||'📦'} ${p.name}</strong><br><span style="font-size:.68rem;color:var(--text3)">${p.category} · ${p.unit}</span></td>
+      <td style="font-family:var(--mono);font-weight:700;color:var(--gold-light)">${N(p.retail||0)}</td>
+      <td style="font-family:var(--mono)">${N(p.costPrice||0)}</td>
+      <td>${margin!==null?`<span style="color:${margin>=30?'var(--green-light)':margin>=15?'var(--amber)':'var(--red)'};font-weight:700">${margin}%</span>`:'—'}</td>
+      <td><button class="btn btn-sm btn-primary" onclick="openRPriceEditor(${p.id})"><i class="fas fa-edit"></i>Edit</button></td>
+    </tr>`;
+  }).join('')}
+  </tbody></table></div></div>`;
+}
+
+function renderRPriceHistory(){
+  const el=document.getElementById('rPriceContent');if(!el)return;
+  if(!DB_R.priceHistory.length){el.innerHTML='<div class="card"><div class="empty-state"><i class="fas fa-history"></i><p>No price changes recorded</p></div></div>';return;}
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Product</th><th>Changes</th><th>By</th></tr></thead><tbody>${DB_R.priceHistory.slice(0,100).map(h=>`<tr><td>${dateStr(h.timestamp)}</td><td>${h.productName}</td><td>${h.changes}</td><td>${h.user||'—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+
+function openRPriceEditor(id){
+  const p=DB_R.products.find(x=>x.id===id);if(!p)return;
+  rEditingPriceId=id;
+  const nm=document.getElementById('rPriceModalName');if(nm)nm.textContent=p.name;
+  const rr=document.getElementById('rPriceRetail');if(rr)rr.value=p.retail||0;
+  const rc=document.getElementById('rPriceCost');if(rc)rc.value=p.costPrice||0;
+  openModal('rPriceModal');
+}
+
+function saveRPriceEdit(){
+  const p=DB_R.products.find(x=>x.id===rEditingPriceId);if(!p)return;
+  const r=parseFloat(document.getElementById('rPriceRetail').value)||0;
+  const c=parseFloat(document.getElementById('rPriceCost').value)||0;
+  const changes=[];
+  if(r!==p.retail)changes.push(`Retail: ${N(p.retail||0)} → ${N(r)}`);
+  if(c!==(p.costPrice||0))changes.push(`Cost: ${N(p.costPrice||0)} → ${N(c)}`);
+  if(!changes.length){alert('No changes detected.');closeModal('rPriceModal');return;}
+  DB_R.priceHistory.unshift({id:uid(),productId:p.id,productName:p.name,timestamp:new Date().toISOString(),user:currentUserName||'Staff',changes:changes.join(' · ')});
+  p.retail=r;p.wholesale=r;p.costPrice=c;
+  const inv=DB_R.inventory.find(x=>x.id===rEditingPriceId);
+  if(inv){inv.retail=r;inv.wholesale=r;inv.costPrice=c;}
+  persistR('products');persistR('inventory');persistR('priceHistory');
+  closeModal('rPriceModal');
+  showToast('✅ Retail prices updated!');
+  renderR_Price();
+}
+
+// ── RETAIL ACCOUNTING ──
+function renderR_Accounting(){
+  document.getElementById('content').innerHTML=`
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="flex-between"><h2 class="section-title"><i class="fas fa-coins"></i>Retail Expenditure & Accounting</h2></div>
+    <div class="settings-tab-bar">
+      <button class="btn btn-sm ${rAccTab==='overview'?'btn-primary':'btn-ghost'}" onclick="rAccTab='overview';renderR_Accounting()"><i class="fas fa-chart-bar"></i>Overview</button>
+      <button class="btn btn-sm ${rAccTab==='expenses'?'btn-primary':'btn-ghost'}" onclick="rAccTab='expenses';renderR_Accounting()"><i class="fas fa-receipt"></i>Expenses</button>
+      <button class="btn btn-sm ${rAccTab==='sales'?'btn-primary':'btn-ghost'}" onclick="rAccTab='sales';renderR_Accounting()"><i class="fas fa-bag-shopping"></i>Sales Log</button>
+    </div>
+    <div id="rAccContent"></div>
+  </div>`;
+  if(rAccTab==='overview')renderRAccOverview();
+  else if(rAccTab==='expenses')renderRAccExpenses();
+  else renderRAccSales();
+}
+
+function renderRAccOverview(){
+  const el=document.getElementById('rAccContent');if(!el)return;
+  const now=new Date();const mo=new Date(now.getFullYear(),now.getMonth(),1);
+  const moSales=DB_R.sales.filter(s=>new Date(s.date)>=mo);
+  const totalRev=moSales.reduce((s,x)=>s+x.total,0);
+  const totalCogs=moSales.reduce((s,sale)=>s+(sale.cogs||0),0);
+  const totalExp=DB_R.expenses.filter(e=>new Date(e.date)>=mo).reduce((s,e)=>s+e.amount,0);
+  const totalPurch=DB_R.purchases.filter(p=>new Date(p.date)>=mo).reduce((s,p)=>s+(p.totalCost||0),0);
+  const profit=totalRev-totalCogs-totalExp;
+  const invValue=DB_R.inventory.reduce((s,p)=>s+(p.stock||0)*(p.costPrice||p.retail||0),0);
+  el.innerHTML=`
+  <div class="grid-2" style="gap:14px;margin-bottom:16px">
+    <div class="stat-card"><div class="stat-label">MONTHLY REVENUE</div><div class="stat-value" style="color:var(--green-light)">${N(totalRev)}</div><div class="stat-sub">${moSales.length} sales</div></div>
+    <div class="stat-card"><div class="stat-label">COST OF GOODS SOLD</div><div class="stat-value" style="color:var(--amber)">- ${N(totalCogs)}</div><div class="stat-sub">Actual sold cost</div></div>
+    <div class="stat-card"><div class="stat-label">TOTAL EXPENSES</div><div class="stat-value" style="color:var(--red)">- ${N(totalExp)}</div><div class="stat-sub">This month</div></div>
+    <div class="stat-card"><div class="stat-label">INVENTORY VALUE</div><div class="stat-value" style="color:var(--blue)">${N(invValue)}</div><div class="stat-sub">At cost price</div></div>
+  </div>
+  <div class="card" style="background:linear-gradient(135deg,rgba(26,92,46,.08),rgba(184,134,11,.06));border:1px solid rgba(26,92,46,.2)">
+    <div style="font-size:.78rem;font-weight:600;color:var(--text3);letter-spacing:.06em">RETAIL PROFIT = REVENUE − COGS − EXPENSES</div>
+    <div style="font-size:2rem;font-weight:800;font-family:var(--mono);color:${profit>=0?'var(--green-light)':'var(--red)'};margin-top:8px">${N(profit)}</div>
+    <div style="font-size:.75rem;color:var(--text3);margin-top:6px">Stock purchases this month: ${N(totalPurch)}</div>
+  </div>`;
+}
+
+function renderRAccExpenses(){
+  const el=document.getElementById('rAccContent');if(!el)return;
+  el.innerHTML=`
+  <div class="card" style="margin-bottom:14px">
+    <h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-plus-circle"></i>Log Retail Expense</h3>
+    <div class="grid-2" style="gap:12px">
+      <div><label>Description <span style="color:var(--red)">*</span></label><input type="text" id="rExpDesc" placeholder="e.g. Shop rent, electricity"></div>
+      <div><label>Amount (₦) <span style="color:var(--red)">*</span></label><input type="number" id="rExpAmt" min="0" step="0.01" value="0"></div>
+      <div><label>Category</label><input type="text" id="rExpCat" placeholder="e.g. Utilities" list="rExpCatList"><datalist id="rExpCatList"><option value="Rent"><option value="Utilities"><option value="Transport"><option value="Salary"><option value="Miscellaneous"></datalist></div>
+      <div><label>Date</label><input type="date" id="rExpDate" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="saveRExpense()"><i class="fas fa-save"></i>Log Expense</button>
+  </div>
+  ${DB_R.expenses.length?`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th></th></tr></thead><tbody>${DB_R.expenses.map((e,i)=>`<tr><td>${dateStr(e.date)}</td><td>${e.description}</td><td>${e.category||'—'}</td><td style="font-family:var(--mono);color:var(--red)">- ${N(e.amount)}</td><td><button class="btn btn-sm btn-danger" onclick="deleteRExpense(${i})"><i class="fas fa-trash"></i></button></td></tr>`).join('')}</tbody></table></div></div>`:'<div class="card"><div class="empty-state"><i class="fas fa-receipt"></i><p>No expenses logged yet</p></div></div>'}`;
+}
+
+function saveRExpense(){
+  const desc=document.getElementById('rExpDesc').value.trim();
+  const amt=parseFloat(document.getElementById('rExpAmt').value)||0;
+  const cat=document.getElementById('rExpCat').value.trim()||'General';
+  const date=document.getElementById('rExpDate').value||new Date().toISOString().slice(0,10);
+  if(!desc){alert('Description is required.');return;}
+  if(amt<=0){alert('Amount must be greater than 0.');return;}
+  DB_R.expenses.unshift({id:uid(),description:desc,amount:amt,category:cat,date:new Date(date).toISOString(),recordedBy:currentUserName||'Staff'});
+  persistR('expenses');
+  showToast(`Expense logged: ${N(amt)}`);
+  renderR_Accounting();
+}
+
+function deleteRExpense(i){
+  if(!confirm('Delete this expense record?'))return;
+  DB_R.expenses.splice(i,1);persistR('expenses');
+  renderR_Accounting();
+}
+
+function renderRAccSales(){
+  const el=document.getElementById('rAccContent');if(!el)return;
+  if(!DB_R.sales.length){el.innerHTML='<div class="card"><div class="empty-state"><i class="fas fa-bag-shopping"></i><p>No sales recorded yet</p></div></div>';return;}
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Date</th><th>Code</th><th>Customer</th><th>Revenue</th><th>COGS</th><th>Profit</th><th>Payment</th><th>By</th></tr></thead><tbody>${DB_R.sales.slice(0,200).map(s=>{const cogs=s.cogs||0;const profit=s.total-cogs;return `<tr><td>${dateStr(s.date)}</td><td style="font-family:var(--mono);font-size:.72rem">${s.code}</td><td>${s.custName||'Walk-in'}</td><td style="font-family:var(--mono);color:var(--green-light)">${N(s.total)}</td><td style="font-family:var(--mono);color:var(--amber)">${N(cogs)}</td><td style="font-family:var(--mono);color:${profit>=0?'var(--green-light)':'var(--red)'}">${N(profit)}</td><td><span class="badge badge-blue">${s.payType}</span></td><td>${s.soldBy||'—'}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+}
 </script>
 </body>
 </html>
