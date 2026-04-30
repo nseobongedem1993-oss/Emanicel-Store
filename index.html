@@ -586,7 +586,7 @@ body{font-display:swap;}
     <!-- ── RETAIL STORE SECTION ── -->
     <div id="retailNavSection" style="display:none">
       <div class="nav-label" style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding-right:8px" onclick="toggleRetailNav()">
-        <span>Retail Store</span>
+        <i class="fas fa-store-alt" style="color:var(--gold);font-size:.85rem"></i>
         <i class="fas fa-chevron-right" id="retailNavArrow" style="font-size:.6rem;transition:transform .2s;color:var(--gold)"></i>
       </div>
       <div id="retailNavSub" style="display:none">
@@ -618,7 +618,6 @@ body{font-display:swap;}
     <div class="user-avatar" id="userAvatar">?</div>
     <div class="user-info">
       <div class="user-name" id="userName">Loading…</div>
-      <div class="user-role" id="userRoleLabel">—</div>
     </div>
     <button class="logout-btn" onclick="doLogout()" title="Sign out"><i class="fas fa-right-from-bracket"></i></button>
   </div>
@@ -1285,7 +1284,6 @@ function applyRoleUI(){
   const initials = currentUserName.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
   document.getElementById('userAvatar').textContent = initials;
   document.getElementById('userName').textContent = currentUserName;
-  document.getElementById('userRoleLabel').textContent = roleLabelText(currentRole);
   // Topbar
   document.getElementById('topbarUserBadge').style.display='flex';
   document.getElementById('topbarUserName').textContent = currentUserName;
