@@ -786,6 +786,7 @@ body{font-display:swap;}
       <div id="priceModalName" style="font-weight:600;font-size:1rem"></div>
       <div><label>Retail Price (₦)</label><input type="number" id="priceRetail" min="0" step="0.01" style="font-size:1.4rem;font-weight:700"></div>
       <div><label>Wholesale Price (₦)</label><input type="number" id="priceWholesale" min="0" step="0.01" style="font-size:1.4rem;font-weight:700"></div>
+      <div><label>Cost Price (₦) <span style="font-size:.68rem;color:var(--text3)">— used for profit calculation</span></label><input type="number" id="priceCostPrice" min="0" step="0.01" style="font-size:1.4rem;font-weight:700"></div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('priceModal')">Cancel</button>
@@ -2054,14 +2055,28 @@ function renderProductGrid(list){
     const price = isWholesale ? p.wholesale : p.retail;
     const inv = DB.inventory.find(i=>i.id===p.id);
     const stock = inv?inv.stock:p.stock;
-    return `<div class="product-card" onclick="addToCart(${p.id})">
+    const cartItem = cart.find(x=>x.id===p.id);
+    const cartQty = cartItem?cartItem.qty:0;
+    const isOut = stock<=0;
+    const isMaxed = !isOut && cartQty>=stock;
+    const cardStyle = isOut
+      ? 'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed'
+      : isMaxed
+      ? 'border-color:var(--red);background:rgba(192,57,43,.06)'
+      : '';
+    const stockLabel = isOut
+      ? `<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`
+      : isMaxed
+      ? `<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`
+      : `<div class="product-ws">${isWholesale?'Wholesale':'Retail'} · ${stock} left${cartQty>0?` (${cartQty} in cart)`:''}</div>`;
+    return `<div class="product-card" style="${cardStyle}" onclick="${isOut?'showToast(\"❌ Out of stock!\",false)':'addToCart('+p.id+')'}">
       <div class="product-emoji">${p.emoji||'📦'}</div>
       <div class="product-name">${p.name}</div>
       <div class="product-cat">${p.category} · ${p.unit}</div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px">
         <div>
-          <div class="product-price">${N(price)}</div>
-          <div class="product-ws">${isWholesale?'Wholesale':'Retail'} · ${stock} left</div>
+          <div class="product-price" style="${isOut||isMaxed?'color:var(--red)':''}">${N(price)}</div>
+          ${stockLabel}
         </div>
       </div>
     </div>`;
@@ -2102,10 +2117,16 @@ function setPriceMode(ws){
 
 function addToCart(id){
   const p=DB.products.find(x=>x.id===id);if(!p)return;
+  const inv=DB.inventory.find(i=>i.id===id);
+  const stock=inv!==undefined?inv.stock:p.stock;
+  if(stock<=0){showToast(`❌ "${p.name}" is out of stock!`,false);return;}
   const existing=cart.find(x=>x.id===id);
-  if(existing){existing.qty++;}
-  else{cart.push({...p,qty:1,price:isWholesale?p.wholesale:p.retail});}
+  if(existing){
+    if(existing.qty>=stock){showToast(`⚠️ Only ${stock} ${p.unit}(s) available for "${p.name}"`,false);return;}
+    existing.qty++;
+  }else{cart.push({...p,qty:1,price:isWholesale?p.wholesale:p.retail});}
   renderCart();
+  renderProductGrid(DB.products);
 }
 
 function renderCart(){
@@ -2113,29 +2134,45 @@ function renderCart(){
   const cc=document.getElementById('cartCount');
   if(!el)return;
   if(!cart.length){el.innerHTML='<div class="cart-empty"><i class="fas fa-cart-plus"></i>Cart is empty<br><small style="color:var(--text3)">Click a product to add</small></div>';if(cc)cc.textContent='0 items';recalcCart();return;}
-  el.innerHTML=cart.map((item,i)=>`
-    <div class="cart-item">
+  el.innerHTML=cart.map((item,i)=>{
+    const inv=DB.inventory.find(x=>x.id===item.id);
+    const prod=DB.products.find(x=>x.id===item.id);
+    const stock=inv!==undefined?inv.stock:(prod?prod.stock:999);
+    const isOver=item.qty>stock;
+    return `
+    <div class="cart-item" style="${isOver?'border:1px solid var(--red);background:rgba(192,57,43,.06)':''}">
       <div class="flex-between">
-        <div><div class="cart-item-name">${item.name}</div><div class="cart-item-unit">${item.unit}</div></div>
+        <div><div class="cart-item-name" style="${isOver?'color:var(--red)':''}">${item.name}${isOver?` <span style="font-size:.65rem;color:var(--red);font-weight:700">(only ${stock} in stock!)</span>`:''}</div><div class="cart-item-unit">${item.unit}</div></div>
         <button class="btn btn-icon" style="color:var(--text3);background:none;border:none;cursor:pointer;font-size:.9rem" onclick="removeFromCart(${i})"><i class="fas fa-times"></i></button>
       </div>
       <div class="cart-qty-row">
         <div style="display:flex;align-items:center;gap:8px">
           <button class="qty-btn" onclick="changeQty(${i},-1)">−</button>
-          <span class="qty-val">${item.qty}</span>
-          <button class="qty-btn" onclick="changeQty(${i},1)">+</button>
+          <span class="qty-val" style="${isOver?'color:var(--red)':''}">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${i},1)" ${isOver?'disabled style="opacity:.4;cursor:not-allowed"':''}>+</button>
         </div>
         <div style="text-align:right">
-          <div style="font-family:var(--mono);font-weight:700;color:var(--green-light)">${N(item.price)}</div>
+          <div style="font-family:var(--mono);font-weight:700;color:${isOver?'var(--red)':'var(--green-light)'}">${N(item.price)}</div>
           <div style="font-size:.68rem;color:var(--text3)">× ${item.qty} = ${N(item.price*item.qty)}</div>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;}).join('');
   if(cc)cc.textContent=cart.length+' item'+(cart.length!==1?'s':'');
   recalcCart();
 }
 
-function changeQty(i,d){cart[i].qty=Math.max(1,cart[i].qty+d);renderCart();}
+function changeQty(i,d){
+  if(d>0){
+    const item=cart[i];
+    const inv=DB.inventory.find(x=>x.id===item.id);
+    const prod=DB.products.find(x=>x.id===item.id);
+    const stock=inv!==undefined?inv.stock:(prod?prod.stock:0);
+    if(item.qty>=stock){showToast(`⚠️ Only ${stock} ${item.unit}(s) available for "${item.name}"`,false);return;}
+  }
+  cart[i].qty=Math.max(1,cart[i].qty+d);
+  renderCart();
+  renderProductGrid(DB.products);
+}
 function removeFromCart(i){cart.splice(i,1);renderCart();}
 function clearCart(){if(!canDelete()&&cart.length){if(!confirm('Clear the entire cart?')){return;}}else if(!cart.length){return;}if(confirm('Clear the entire cart?')){cart=[];renderCart();}}
 
@@ -2157,6 +2194,17 @@ function recalcCart(){
 
 function showPaymentModal(){
   if(!cart.length){alert('Cart is empty!');return;}
+  // Block sale if any item qty exceeds available stock
+  const stockViolations=cart.filter(item=>{
+    const inv=DB.inventory.find(x=>x.id===item.id);
+    const prod=DB.products.find(x=>x.id===item.id);
+    const stock=inv!==undefined?inv.stock:(prod?prod.stock:999);
+    return item.qty>stock;
+  });
+  if(stockViolations.length){
+    alert('⚠️ Cannot complete sale!\n\nThe following items exceed available stock:\n'+stockViolations.map(item=>{const inv=DB.inventory.find(x=>x.id===item.id);const prod=DB.products.find(x=>x.id===item.id);const stock=inv!==undefined?inv.stock:(prod?prod.stock:0);return `• ${item.name}: ${item.qty} requested, only ${stock} in stock`;}).join('\n')+'\n\nPlease reduce the quantities before proceeding.');
+    return;
+  }
   const total=recalcCart();
   currentPayTotal=total;
   selectedPayType='cash';
@@ -2275,7 +2323,7 @@ function processCheckout(){
   lastReceipt={code,items:[...cart],total:currentPayTotal,collected,depositAmt,balance:Math.max(0,total-collected),payType:selectedPayType,custName,date:new Date(),soldBy:currentUserName||'Staff',transferRef,paystackRef};
   // Record sale for accounting/dashboard
   const saleCOGS=cart.reduce((s,item)=>{const p=DB.products.find(x=>x.id===item.id);return s+(p?(item.qty*(p.costPrice||0)):0);},0);
-  DB.sales.unshift({id:uid(),code,date:new Date().toISOString(),total:currentPayTotal,collected,payType:selectedPayType,custName:custName||'Walk-in',soldBy:currentUserName||'Staff',transferRef,paystackRef,items:cart.map(i=>({name:i.name,qty:i.qty,price:i.price,id:i.id}))});
+  DB.sales.unshift({id:uid(),code,date:new Date().toISOString(),total:currentPayTotal,collected,payType:selectedPayType,custName:custName||'Walk-in',soldBy:currentUserName||'Staff',transferRef,paystackRef,cogs:saleCOGS,items:cart.map(i=>({name:i.name,qty:i.qty,price:i.price,id:i.id,costPrice:DB.products.find(x=>x.id===i.id)?.costPrice||0}))});
   persist('sales');
   logActivity('Sale', `Sale ${code} — ${N(currentPayTotal)} — ${selectedPayType} — by ${currentUserName||'Staff'}`);
   pushNotif('sale',`New sale: ${N(currentPayTotal)} via ${selectedPayType} (${code})`,'fa-bag-shopping');
@@ -3197,10 +3245,11 @@ function savePurchase(){
     if(!p){alert('Product not found.');return;}
     productName=p.name; category=p.category; unit=p.unit;
 
-    // Update inventory stock
+    // Update inventory stock AND sync latest cost price to product
     const inv=DB.inventory.find(i=>i.id===productId);
-    if(inv){inv.stock+=qty;}
+    if(inv){inv.stock+=qty; inv.costPrice=costPrice;}
     p.stock=(p.stock||0)+qty;
+    p.costPrice=costPrice; // ← keep cost price current for accurate margin
     persist('products'); persist('inventory');
 
     // Record stock history
@@ -3232,7 +3281,7 @@ function savePurchase(){
     const newId=Date.now();
     const newProd={
       id:newId, name:newName, category:newCat, emoji:'📦',
-      retail:newRetail, wholesale:newWholesale,
+      retail:newRetail, wholesale:newWholesale, costPrice:costPrice,
       unit:newUnit, stock:qty, lowStock:newLow, conversions:{}
     };
     DB.products.push(newProd);
@@ -3495,20 +3544,48 @@ function renderPriceTab(){
 function renderPriceTable(){
   const el=document.getElementById('priceTabContent');if(!el)return;
   el.innerHTML=`<div class="tbl-wrap"><table>
-    <thead><tr><th>Product</th><th>Category</th><th>Retail (₦)</th><th>Wholesale (₦)</th><th>Unit</th><th style="text-align:right">Actions</th></tr></thead>
-    <tbody>${DB.products.map(p=>`<tr>
-      <td class="td-name">${p.name}</td>
-      <td style="color:var(--text3)">${p.category}</td>
-      <td class="mono" style="color:var(--green-light)">${N(p.retail)}</td>
-      <td class="mono" style="color:var(--gold-light)">${N(p.wholesale)}</td>
-      <td style="color:var(--text3)">${p.unit}</td>
-      <td style="text-align:right">
-        <div style="display:flex;gap:6px;justify-content:flex-end">
-          <button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-edit"></i>Edit</button>
-          ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'price')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
-        </div>
-      </td>
-    </tr>`).join('')}
+    <thead><tr><th>Product</th><th>Category</th><th>Cost (₦)</th><th>Retail (₦)</th><th>Wholesale (₦)</th><th>Margin</th><th>Unit</th><th style="text-align:right">Actions</th></tr></thead>
+    <tbody>${DB.products.map(p=>{
+      const cost=p.costPrice||0;
+      const retailMargin = p.retail>0&&cost>0 ? Math.round(((p.retail-cost)/p.retail)*100) : null;
+      const wsMargin     = p.wholesale>0&&cost>0 ? Math.round(((p.wholesale-cost)/p.wholesale)*100) : null;
+      const marginColor  = m => m===null?'var(--text3)':m>=30?'var(--green-light)':m>=10?'var(--amber)':'var(--red)';
+      const marginBar    = m => m===null
+        ? `<span style="color:var(--text3);font-size:.72rem">—</span>`
+        : `<div style="display:flex;align-items:center;gap:5px">
+             <div style="width:46px;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden">
+               <div style="height:100%;width:${Math.min(100,Math.max(0,m))}%;background:${marginColor(m)};transition:width .3s"></div>
+             </div>
+             <span style="font-size:.72rem;font-family:var(--mono);color:${marginColor(m)};font-weight:700">${m}%</span>
+           </div>`;
+      return `<tr>
+        <td class="td-name">${p.name}</td>
+        <td style="color:var(--text3)">${p.category}</td>
+        <td class="mono" style="color:${cost>0?'var(--amber)':'var(--text3)'}">${cost>0?N(cost):'—'}</td>
+        <td>
+          <div class="mono" style="color:var(--green-light)">${N(p.retail)}</div>
+          <div style="margin-top:3px">${marginBar(retailMargin)}</div>
+        </td>
+        <td>
+          <div class="mono" style="color:var(--gold-light)">${N(p.wholesale)}</div>
+          <div style="margin-top:3px">${marginBar(wsMargin)}</div>
+        </td>
+        <td>
+          ${retailMargin!==null
+            ? `<div style="font-size:.72rem;color:var(--text3);line-height:1.6">
+                 Retail GP: <strong style="color:${marginColor(retailMargin)}">${N(p.retail-cost)}</strong><br>
+                 ${p.wholesale>0?`WS GP: <strong style="color:${marginColor(wsMargin)}">${N(p.wholesale-cost)}</strong>`:''}
+               </div>`
+            : `<span style="font-size:.7rem;color:var(--text3);font-style:italic">Set cost price</span>`}
+        </td>
+        <td style="color:var(--text3)">${p.unit}</td>
+        <td style="text-align:right">
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-edit"></i>Edit</button>
+            ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'price')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
+          </div>
+        </td>
+      </tr>`;}).join('')||`<tr><td colspan="8"><div class="empty-state"><i class="fas fa-tags"></i><p>No products yet</p></div></td></tr>`}
     </tbody>
   </table></div>`;
 }
@@ -3519,6 +3596,7 @@ function openPriceEditor(id){
   document.getElementById('priceModalName').textContent=p.name;
   document.getElementById('priceRetail').value=p.retail;
   document.getElementById('priceWholesale').value=p.wholesale;
+  document.getElementById('priceCostPrice').value=p.costPrice||0;
   openModal('priceModal');
 }
 
@@ -3526,13 +3604,18 @@ function savePriceEdit(){
   const p=DB.products.find(x=>x.id===editingPriceId);if(!p)return;
   const r=parseFloat(document.getElementById('priceRetail').value)||0;
   const w=parseFloat(document.getElementById('priceWholesale').value)||0;
-  if(r===p.retail&&w===p.wholesale){alert('No changes.');closeModal('priceModal');return;}
+  const c=parseFloat(document.getElementById('priceCostPrice').value)||0;
+  if(r===p.retail&&w===p.wholesale&&c===(p.costPrice||0)){alert('No changes.');closeModal('priceModal');return;}
   const changes=[];
   if(r!==p.retail)changes.push(`Retail: ${N(p.retail)} → ${N(r)}`);
   if(w!==p.wholesale)changes.push(`Wholesale: ${N(p.wholesale)} → ${N(w)}`);
+  if(c!==(p.costPrice||0))changes.push(`Cost: ${N(p.costPrice||0)} → ${N(c)}`);
   DB.priceHistory.unshift({id:uid(),productId:p.id,productName:p.name,timestamp:new Date().toISOString(),user:currentUserName||'Staff',changes:changes.join(' · '),oldRetail:p.retail,newRetail:r,oldWholesale:p.wholesale,newWholesale:w});
-  p.retail=r;p.wholesale=w;
-  persist('products');persist('priceHistory');
+  p.retail=r;p.wholesale=w;p.costPrice=c;
+  // Sync cost price to inventory record
+  const inv=DB.inventory.find(x=>x.id===editingPriceId);
+  if(inv){inv.retail=r;inv.wholesale=w;inv.costPrice=c;}
+  persist('products');persist('inventory');persist('priceHistory');
   closeModal('priceModal');renderPriceTab();
   alert('✅ Prices updated and synced to POS!');
 }
@@ -3625,8 +3708,15 @@ function renderDashboard(){
     if(d>=weekStart) weeklySales+=s.total;
     if(d>=monthStart) monthlySales+=s.total;
   });
-  // COGS = total cost of purchases
-  const totalCOGS=DB.purchases.reduce((s,r)=>s+r.totalCost,0);
+  // COGS = cost of goods actually sold (sale records store cogs; fallback: compute from product costPrice)
+  const totalCOGS=DB.sales.reduce((s,sale)=>{
+    if(sale.cogs!=null) return s+sale.cogs;
+    // legacy sales without cogs field — compute on the fly
+    return s+(sale.items||[]).reduce((ss,item)=>{
+      const p=DB.products.find(x=>x.id===item.id);
+      return ss+item.qty*(item.costPrice||(p?p.costPrice:0)||0);
+    },0);
+  },0);
   // Expenses (non-inventory)
   const totalExpenses=DB.expenses.filter(e=>!e.isInventoryPurchase).reduce((s,e)=>s+e.amount,0);
   // Profit
