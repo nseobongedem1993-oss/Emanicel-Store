@@ -440,6 +440,14 @@ body{font-display:swap;}
 .user-role{font-size:.62rem;color:var(--text3)}
 .logout-btn{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;border-radius:6px;font-size:.85rem;transition:color .15s}
 .logout-btn:hover{color:var(--red)}
+.nav-retail-toggle{cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--radius);color:var(--text2);font-size:.875rem;font-weight:500;transition:background .15s,color .15s;user-select:none}
+.nav-retail-toggle:hover,.nav-retail-toggle.active{background:var(--surface2);color:var(--green)}
+.nav-retail-toggle .retail-chevron{margin-left:auto;font-size:.7rem;transition:transform .2s}
+.nav-retail-toggle.open .retail-chevron{transform:rotate(180deg)}
+.nav-retail-sub{display:none;flex-direction:column;gap:2px;padding-left:12px;margin-top:2px}
+.nav-retail-sub.open{display:flex}
+.nav-retail-sub .nav-item{font-size:.82rem;padding:8px 12px}
+.nav-retail-sub .nav-item i{font-size:.8rem}
 
 /* ── DARK MODE ── */
 .dark{
@@ -582,6 +590,18 @@ body{font-display:swap;}
     <div class="nav-item nav-admin-item" onclick="showModule('activitylog')" id="nav-activitylog" style="display:none">
       <i class="fas fa-shield-check"></i><span>Activity Log</span>
     </div>
+    <div class="nav-label" id="nav-retail-label" style="display:none">Retail Store</div>
+    <div class="nav-retail-toggle" id="nav-retail-toggle" onclick="toggleRetailNav()" style="display:none">
+      <i class="fas fa-store"></i><span>Retail Store</span><i class="fas fa-chevron-down retail-chevron"></i>
+    </div>
+    <div class="nav-retail-sub" id="nav-retail-sub">
+      <div class="nav-item" onclick="showModule('retail_pos')" id="nav-retail_pos"><i class="fas fa-cash-register"></i><span>Retail POS</span></div>
+      <div class="nav-item" onclick="showModule('retail_purchase')" id="nav-retail_purchase"><i class="fas fa-truck-ramp-box"></i><span>Retail Purchase</span></div>
+      <div class="nav-item" onclick="showModule('retail_debt')" id="nav-retail_debt"><i class="fas fa-file-invoice-dollar"></i><span>Retail Debt</span></div>
+      <div class="nav-item" onclick="showModule('retail_inventory')" id="nav-retail_inventory"><i class="fas fa-boxes-stacked"></i><span>Retail Inventory</span></div>
+      <div class="nav-item" onclick="showModule('retail_price')" id="nav-retail_price"><i class="fas fa-tags"></i><span>Retail Price Config</span></div>
+      <div class="nav-item" onclick="showModule('retail_accounting')" id="nav-retail_accounting"><i class="fas fa-coins"></i><span>Retail Accounting</span></div>
+    </div>
   </div>
   <div class="sidebar-user" id="sidebarUser">
     <div class="user-avatar" id="userAvatar">?</div>
@@ -603,15 +623,15 @@ body{font-display:swap;}
     <div class="topbar-right">
       <div class="topbar-badge" id="topbarUserBadge" style="display:none"><i class="fas fa-circle-user" style="color:var(--gold)"></i><span id="topbarUserName">—</span></div>
       <div class="topbar-badge"><div class="status-dot" id="onlineDot"></div><span id="onlineLabel">Live · Ready</span></div>
+      <button class="topbar-logout" onclick="doLogout()" title="Sign out">
+        <i class="fas fa-right-from-bracket"></i><span style="font-size:.72rem;font-weight:600">Sign Out</span>
+      </button>
       <button class="theme-toggle" id="themeToggleBtn" onclick="toggleDarkMode()" title="Toggle dark mode">
         <i class="fas fa-moon" id="themeIcon"></i><span id="themeLabel" style="font-size:.72rem;font-weight:600">Dark</span>
       </button>
       <button class="notif-bell" onclick="toggleNotifPanel()" title="Notifications">
         <i class="fas fa-bell"></i>
         <span class="notif-badge" id="notifBadge" style="display:none">0</span>
-      </button>
-      <button class="topbar-logout" onclick="doLogout()" title="Sign out">
-        <i class="fas fa-right-from-bracket"></i><span style="font-size:.72rem;font-weight:600">Logout</span>
       </button>
     </div>
   </div>
@@ -984,6 +1004,7 @@ body{font-display:swap;}
         <label>Role <span style="color:var(--red)">*</span></label>
         <select id="staffRole">
           <option value="staff">Staff</option>
+          <option value="retail_staff">Retail Staff</option>
           <option value="admin">Admin</option>
           <option value="super_admin" id="staffRoleSuperAdminOption" style="display:none">Super Admin</option>
         </select>
@@ -1143,12 +1164,13 @@ let currentUserName = '';
 // Role helpers
 function isSuperAdmin(){ return currentRole === 'super_admin'; }
 function isAdmin(){ return currentRole === 'admin' || currentRole === 'super_admin'; }
+function isRetailStaff(){ return currentRole === 'retail_staff'; }
 function canDelete(){ return isAdmin(); }
 function canAddStaff(){ return isAdmin(); }
 function canSeeSettings(){ return isSuperAdmin(); }
 
 function roleLabelText(r){
-  return r==='super_admin'?'Super Admin':r==='admin'?'Admin':'Staff';
+  return r==='super_admin'?'Super Admin':r==='admin'?'Admin':r==='retail_staff'?'Retail Staff':'Staff';
 }
 
 // Toast helper
@@ -1255,6 +1277,20 @@ function applyRoleUI(){
   // Topbar
   document.getElementById('topbarUserBadge').style.display='flex';
   document.getElementById('topbarUserName').textContent = currentUserName;
+  if(isRetailStaff()){
+    // Retail staff: hide all main nav, show only retail dropdown
+    document.querySelector('.sidebar-nav').querySelectorAll('.nav-item,.nav-label').forEach(el=>el.style.display='none');
+    document.getElementById('nav-retail-label').style.display='';
+    document.getElementById('nav-retail-toggle').style.display='flex';
+    // Auto-open retail dropdown and navigate to retail POS
+    document.getElementById('nav-retail-sub').classList.add('open');
+    document.getElementById('nav-retail-toggle').classList.add('open');
+    showModule('retail_pos');
+    return;
+  }
+  // Show retail store section for all other roles
+  document.getElementById('nav-retail-label').style.display='';
+  document.getElementById('nav-retail-toggle').style.display='flex';
   // Show admin nav items
   if(canAddStaff()){
     document.querySelectorAll('.nav-admin-label,.nav-admin-item').forEach(el=>el.style.display='');
@@ -1269,6 +1305,13 @@ function applyRoleUI(){
     const opt=document.getElementById('staffRoleSuperAdminOption');
     if(opt) opt.style.display='';
   }
+}
+
+function toggleRetailNav(){
+  const toggle=document.getElementById('nav-retail-toggle');
+  const sub=document.getElementById('nav-retail-sub');
+  toggle.classList.toggle('open');
+  sub.classList.toggle('open');
 }
 
 // Logout
@@ -1287,6 +1330,16 @@ async function doLogout(){
   document.getElementById('nav-staff').style.display='none';
   document.getElementById('nav-activitylog').style.display='none';
   document.getElementById('topbarUserBadge').style.display='none';
+  // Hide retail nav
+  const rLabel=document.getElementById('nav-retail-label');if(rLabel)rLabel.style.display='none';
+  const rToggle=document.getElementById('nav-retail-toggle');if(rToggle)rToggle.style.display='none';
+  const rSub=document.getElementById('nav-retail-sub');if(rSub){rSub.classList.remove('open');}
+  // Restore any hidden main nav items for retail staff
+  document.querySelector('.sidebar-nav').querySelectorAll('.nav-item,.nav-label').forEach(el=>el.style.display='');
+  document.querySelectorAll('.nav-admin-label,.nav-admin-item').forEach(el=>el.style.display='none');
+  document.getElementById('nav-settings').style.display='none';
+  document.getElementById('nav-staff').style.display='none';
+  document.getElementById('nav-activitylog').style.display='none';
 }
 
 // Forgot password
@@ -1959,6 +2012,12 @@ const moduleTitles = {
   reports:'<i class="fas fa-file-chart-column"></i>Records & Reports',
   analytics:'<i class="fas fa-chart-pie"></i>Analytics',
   activitylog:'<i class="fas fa-shield-check"></i>Activity Log',
+  retail_pos:'<i class="fas fa-store"></i>Retail POS',
+  retail_purchase:'<i class="fas fa-truck-ramp-box"></i>Retail Purchase / Restock',
+  retail_debt:'<i class="fas fa-file-invoice-dollar"></i>Retail Debt & Deposits',
+  retail_inventory:'<i class="fas fa-boxes-stacked"></i>Retail Inventory',
+  retail_price:'<i class="fas fa-tags"></i>Retail Price Config',
+  retail_accounting:'<i class="fas fa-coins"></i>Retail Accounting',
 };
 
 let navHistory = [];
@@ -1984,15 +2043,29 @@ function showModuleInternal(m){
   // Access control
   if(m==='settings'&&!canSeeSettings()){showToast('Access denied — Super Admin only.',false);return;}
   if(m==='staff'&&!canAddStaff()){showToast('Access denied.',false);return;}
+  // Retail staff cannot access main modules
+  const retailModules=['retail_pos','retail_purchase','retail_debt','retail_inventory','retail_price','retail_accounting'];
+  if(isRetailStaff()&&!retailModules.includes(m)){showToast('Access denied — Retail Staff only.',false);return;}
   currentModule = m;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const navEl=document.getElementById('nav-'+m);
   if(navEl) navEl.classList.add('active');
+  // Highlight retail toggle if a retail sub-module is active
+  const retailToggle=document.getElementById('nav-retail-toggle');
+  const retailSub=document.getElementById('nav-retail-sub');
+  const isRetailMod=['retail_pos','retail_purchase','retail_debt','retail_inventory','retail_price','retail_accounting'].includes(m);
+  if(retailToggle){
+    retailToggle.classList.toggle('active', isRetailMod);
+    if(isRetailMod && retailSub && !retailSub.classList.contains('open')){
+      retailSub.classList.add('open');
+      retailToggle.classList.add('open');
+    }
+  }
   document.getElementById('topbar-title').innerHTML = moduleTitles[m]||'';
   // Show/hide back button
   const backBtn = document.getElementById('topbarBackBtn');
   if(backBtn) backBtn.style.display = navHistory.length > 0 ? 'flex' : 'none';
-  const renders={pos:renderPOS,purchase:renderPurchase,debt:renderDebt,inventory:renderInventory,price:renderPrice,staff:renderStaffModule,settings:renderSettings,dashboard:renderDashboard,accounting:renderAccounting,reports:renderReports,analytics:renderAnalytics,activitylog:renderActivityLog};
+  const renders={pos:renderPOS,purchase:renderPurchase,debt:renderDebt,inventory:renderInventory,price:renderPrice,staff:renderStaffModule,settings:renderSettings,dashboard:renderDashboard,accounting:renderAccounting,reports:renderReports,analytics:renderAnalytics,activitylog:renderActivityLog,retail_pos:renderRetailPOS,retail_purchase:renderRetailPurchase,retail_debt:renderRetailDebt,retail_inventory:renderRetailInventory,retail_price:renderRetailPrice,retail_accounting:renderRetailAccounting};
   if(renders[m]) renders[m]();
 }
 
@@ -4579,6 +4652,25 @@ function saveNewProduct(){
   if(_addProductCalledFrom === 'price') renderPrice();
   else renderInventory();
 }
+// ══════════════════════════════════════════════════════════════════════════════
+// RETAIL STORE — Stub renderers (full implementation to be added)
+// These display a placeholder until each retail module is built out.
+// ══════════════════════════════════════════════════════════════════════════════
+function renderRetailStub(title, icon, color){
+  document.getElementById('content').innerHTML = `
+  <div class="card" style="text-align:center;padding:48px 24px">
+    <i class="${icon}" style="font-size:3rem;color:${color};margin-bottom:16px"></i>
+    <h2 style="color:var(--text1);margin-bottom:8px">${title}</h2>
+    <p style="color:var(--text3);font-size:.9rem">This retail module is ready and wired up.<br>Full UI will render here.</p>
+  </div>`;
+}
+function renderRetailPOS(){ renderRetailStub('Retail POS','fas fa-store','var(--green)'); }
+function renderRetailPurchase(){ renderRetailStub('Retail Purchase / Restock','fas fa-truck-ramp-box','var(--blue)'); }
+function renderRetailDebt(){ renderRetailStub('Retail Debt & Deposits','fas fa-file-invoice-dollar','var(--amber)'); }
+function renderRetailInventory(){ renderRetailStub('Retail Inventory','fas fa-boxes-stacked','var(--blue)'); }
+function renderRetailPrice(){ renderRetailStub('Retail Price Config','fas fa-tags','var(--gold)'); }
+function renderRetailAccounting(){ renderRetailStub('Retail Accounting','fas fa-coins','var(--green)'); }
+
 </script>
 </body>
 </html>
