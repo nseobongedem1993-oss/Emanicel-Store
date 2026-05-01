@@ -433,7 +433,8 @@ body{font-display:swap;}
     background:var(--surface);border-top:1px solid var(--border);
     border-radius:20px 20px 0 0;z-index:499;
     box-shadow:0 -8px 32px rgba(0,0,0,.15);
-    padding:14px 16px 10px;
+    padding:10px 16px 14px;
+    max-height:70vh;overflow-y:auto;
   }
   #moreDrawer.open{display:block}
   #moreDrawer h5{font-size:.65rem;font-weight:700;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;padding-left:4px}
@@ -1431,14 +1432,21 @@ function applyRoleUI(){
     if(rSection) rSection.style.display='';
     retailNavOpen=true;
     const sub=document.getElementById('retailNavSub');
-    const arrow=document.getElementById('retailNavArrow');
     if(sub) sub.style.display='block';
-    if(arrow) arrow.style.transform='rotate(90deg)';
     showModule('r_dashboard');
+    // Show mobile retail section too
+    const mrd=document.getElementById('mobileRetailSection');
+    if(mrd) mrd.style.display='block';
+    const mrt=document.getElementById('mob-retail');
+    if(mrt) mrt.style.display='flex';
   } else {
     // For admin/superadmin show retail section too
     const rSection=document.getElementById('retailNavSection');
     if(rSection) rSection.style.display='';
+    const mrd=document.getElementById('mobileRetailSection');
+    if(mrd) mrd.style.display='block';
+    const mrt=document.getElementById('mob-retail');
+    if(mrt) mrt.style.display='flex';
   }
 }
 
@@ -1465,9 +1473,11 @@ async function doLogout(){
   if(rSection) rSection.style.display='none';
   retailNavOpen=false;
   const sub=document.getElementById('retailNavSub');
-  const arrow=document.getElementById('retailNavArrow');
   if(sub) sub.style.display='none';
-  if(arrow) arrow.style.transform='';
+  const mrd=document.getElementById('mobileRetailSection');
+  if(mrd) mrd.style.display='none';
+  const mrt=document.getElementById('mob-retail');
+  if(mrt) mrt.style.display='none';
 }
 
 // Forgot password
@@ -4844,9 +4854,7 @@ let rAccTab='overview';
 function toggleRetailNav(){
   retailNavOpen=!retailNavOpen;
   const sub=document.getElementById('retailNavSub');
-  const arrow=document.getElementById('retailNavArrow');
   if(sub)sub.style.display=retailNavOpen?'block':'none';
-  if(arrow)arrow.style.transform=retailNavOpen?'rotate(90deg)':'';
 }
 
 // ── RETAIL POS ──
@@ -5503,7 +5511,10 @@ function renderRAccSales(){
 <!-- ═══════════ MOBILE BOTTOM NAV ═══════════ -->
 <div id="drawerOverlay" onclick="closeMoreDrawer()"></div>
 <div id="moreDrawer">
-  <h5>More Modules</h5>
+  <div style="width:36px;height:4px;background:var(--border2);border-radius:4px;margin:0 auto 14px"></div>
+
+  <!-- Main modules -->
+  <h5>Modules</h5>
   <div class="drawer-grid">
     <div class="drawer-item" onclick="mobileNav('inventory');closeMoreDrawer()"><i class="fas fa-boxes-stacked"></i><span>Inventory</span></div>
     <div class="drawer-item" onclick="mobileNav('price');closeMoreDrawer()"><i class="fas fa-tags"></i><span>Prices</span></div>
@@ -5514,7 +5525,22 @@ function renderRAccSales(){
     <div class="drawer-item" onclick="mobileNav('settings');closeMoreDrawer()"><i class="fas fa-sliders"></i><span>Settings</span></div>
     <div class="drawer-item" onclick="mobileNav('activitylog');closeMoreDrawer()"><i class="fas fa-shield-check"></i><span>Activity Log</span></div>
   </div>
+
+  <!-- Retail Store section — shown after login if role allows -->
+  <div id="mobileRetailSection" style="display:none;margin-top:14px">
+    <h5 style="display:flex;align-items:center;gap:6px"><i class="fas fa-store-alt" style="color:var(--gold)"></i>Retail Store</h5>
+    <div class="drawer-grid">
+      <div class="drawer-item" onclick="mobileNav('r_dashboard');closeMoreDrawer()"><i class="fas fa-chart-line"></i><span>Dashboard</span></div>
+      <div class="drawer-item" onclick="mobileNav('r_pos');closeMoreDrawer()"><i class="fas fa-cash-register"></i><span>Retail POS</span></div>
+      <div class="drawer-item" onclick="mobileNav('r_purchase');closeMoreDrawer()"><i class="fas fa-truck-ramp-box"></i><span>Purchase</span></div>
+      <div class="drawer-item" onclick="mobileNav('r_debt');closeMoreDrawer()"><i class="fas fa-file-invoice-dollar"></i><span>Debt</span></div>
+      <div class="drawer-item" onclick="mobileNav('r_inventory');closeMoreDrawer()"><i class="fas fa-boxes-stacked"></i><span>Inventory</span></div>
+      <div class="drawer-item" onclick="mobileNav('r_price');closeMoreDrawer()"><i class="fas fa-tags"></i><span>Prices</span></div>
+      <div class="drawer-item" onclick="mobileNav('r_accounting');closeMoreDrawer()"><i class="fas fa-coins"></i><span>Accounting</span></div>
+    </div>
+  </div>
 </div>
+
 <nav id="mobileNav">
   <button class="mob-tab active" id="mob-pos" onclick="mobileNav('pos')" data-mod="pos">
     <i class="fas fa-cash-register"></i><span>POS</span>
@@ -5525,6 +5551,9 @@ function renderRAccSales(){
   <button class="mob-tab" id="mob-debt" onclick="mobileNav('debt')" data-mod="debt">
     <i class="fas fa-file-invoice-dollar"></i><span>Debt</span>
   </button>
+  <button class="mob-tab mob-retail-tab" id="mob-retail" onclick="mobileNav('r_pos')" data-mod="r_pos" style="display:none">
+    <i class="fas fa-store-alt"></i><span>Retail</span>
+  </button>
   <button class="mob-tab" id="mob-dashboard" onclick="mobileNav('dashboard')" data-mod="dashboard">
     <i class="fas fa-chart-line"></i><span>Stats</span>
   </button>
@@ -5532,17 +5561,25 @@ function renderRAccSales(){
     <i class="fas fa-grid-2"></i><span>More</span>
   </button>
 </nav>
+
 <script>
+const _retailMods=['r_dashboard','r_pos','r_purchase','r_debt','r_inventory','r_price','r_accounting'];
+const _mainMods=['pos','purchase','debt','dashboard'];
 function mobileNav(mod){
   showModule(mod);
-  // sync tab highlights
   document.querySelectorAll('.mob-tab[data-mod]').forEach(t=>{
-    t.classList.toggle('active', t.dataset.mod===mod);
+    t.classList.remove('active');
   });
-  const moreBtn=document.getElementById('mob-more');
-  const mainMods=['pos','purchase','debt','dashboard'];
-  if(!mainMods.includes(mod)) moreBtn.classList.add('active');
-  else moreBtn.classList.remove('active');
+  // Highlight matching tab
+  const direct=document.querySelector(`.mob-tab[data-mod="${mod}"]`);
+  if(direct) direct.classList.add('active');
+  else if(_retailMods.includes(mod)){
+    const rt=document.getElementById('mob-retail');
+    if(rt) rt.classList.add('active');
+    else document.getElementById('mob-more').classList.add('active');
+  } else if(!_mainMods.includes(mod)){
+    document.getElementById('mob-more').classList.add('active');
+  }
 }
 function toggleMoreDrawer(){
   const d=document.getElementById('moreDrawer');
