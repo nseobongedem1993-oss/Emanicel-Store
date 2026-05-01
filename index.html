@@ -1952,7 +1952,17 @@ function load(key,seed){
   try{const d=localStorage.getItem(key);return d?JSON.parse(d):seed();}
   catch{return seed();}
 }
-function save(key,data){localStorage.setItem(key,JSON.stringify(data));}
+function save(key,data){
+  try{
+    localStorage.setItem(key,JSON.stringify(data));
+  }catch(e){
+    if(e && (e.name==='QuotaExceededError' || e.name==='NS_ERROR_DOM_QUOTA_REACHED' || (e.code&&(e.code===22||e.code===1014)))){
+      showToast('⚠️ Storage full! Please remove some product photos to free up space.',false);
+    } else {
+      console.error('Save error for key '+key+':',e);
+    }
+  }
+}
 
 let DB = {
   products: load(KEYS.products, seedProducts),
@@ -5818,6 +5828,17 @@ function handleProductImageUpload(fileInputId, previewId, dataId, categoryInputI
 
       // Final size in kb for the toast
       const kb = Math.round(base64.length * 0.73 / 1024);
+
+      // Guard: estimate remaining localStorage space before writing
+      let usedBytes = 0;
+      try{
+        for(let k in localStorage){ if(localStorage.hasOwnProperty(k)) usedBytes += (localStorage.getItem(k)||'').length * 2; }
+      }catch(_){}
+      const MAX_STORAGE = 4.5 * 1024 * 1024; // 4.5MB safety threshold (browsers allow ~5MB)
+      if(usedBytes + base64.length * 2 > MAX_STORAGE){
+        showToast('⚠️ Storage nearly full! Cannot save photo — remove existing product photos first.',false);
+        return;
+      }
 
       document.getElementById(dataId).value = base64;
 
