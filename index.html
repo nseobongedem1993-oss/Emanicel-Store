@@ -5786,10 +5786,10 @@ function applySwUpdate() {
 </script>
 <script>
 // ══════════════════════════════════════════════════════
-//  PRODUCT IMAGE UPLOAD HELPERS
+//  PRODUCT IMAGE UPLOAD HELPERS  (bucket version)
 // ══════════════════════════════════════════════════════
 
-function handleProductImageUpload(fileInputId, previewId, dataId, categoryInputId){
+async function handleProductImageUpload(fileInputId, previewId, dataId, categoryInputId){
   const file = document.getElementById(fileInputId).files[0];
   if(!file) return;
 
@@ -5797,17 +5797,17 @@ function handleProductImageUpload(fileInputId, previewId, dataId, categoryInputI
   const MAX_DIM = 220;            // max width or height in px
 
   const reader = new FileReader();
-  reader.onload = function(e){
+  reader.onload = async function(e){
     const img = new Image();
-    img.onload = function(){
+    img.onload = async function(){
+
+      // ── 1. Compress (same logic as before) ──────────
       const canvas = document.createElement('canvas');
       const ratio  = Math.min(MAX_DIM / img.width, MAX_DIM / img.height, 1);
       canvas.width  = Math.round(img.width  * ratio);
       canvas.height = Math.round(img.height * ratio);
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // Start at quality 0.75 and step down until under 35kb
       let quality = 0.75;
       let base64  = canvas.toDataURL('image/jpeg', quality);
 
@@ -5827,25 +5827,54 @@ function handleProductImageUpload(fileInputId, previewId, dataId, categoryInputI
         base64 = c2.toDataURL('image/jpeg', 0.65);
       }
 
-      // Final size in kb for the toast
-      const kb = Math.round(base64.length * 0.73 / 1024);
+      // ── 2. Convert base64 → Blob for upload ─────────
+      const res      = await fetch(base64);
+      const blob     = await res.blob();
+      const kb       = Math.round(blob.size / 1024);
+      const fileName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
 
-      document.getElementById(dataId).value = base64;
+      // ── 3. Delete old image from bucket (avoids orphans) ──
+      const oldUrl = document.getElementById(dataId).value;
+      if(oldUrl && oldUrl.includes('/product-images/')){
+        const oldPath = oldUrl.split('/product-images/')[1];
+        await supabase.storage.from('product-images').remove([oldPath]);
+      }
+
+      // ── 4. Upload to bucket ──────────────────────────
+      const { error } = await supabase.storage
+        .from('product-images')
+        .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
+
+      if(error){ showToast('Upload failed: ' + error.message); return; }
+
+      // ── 5. Get public URL & store it ─────────────────
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(fileName);
+
+      document.getElementById(dataId).value = publicUrl;
 
       const prev = document.getElementById(previewId);
       if(prev){
-        prev.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;display:block">`;
+        prev.innerHTML = `<img src="${publicUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;display:block">`;
         prev.style.padding = '0';
       }
 
-      showToast(`Photo saved · ${kb}kb`);
+      showToast(`Photo uploaded · ${kb}kb`);
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function clearProductImage(previewId, dataId, categoryInputId){
+async function clearProductImage(previewId, dataId, categoryInputId){
+  // Delete from bucket if a URL is stored
+  const oldUrl = document.getElementById(dataId).value;
+  if(oldUrl && oldUrl.includes('/product-images/')){
+    const oldPath = oldUrl.split('/product-images/')[1];
+    await supabase.storage.from('product-images').remove([oldPath]);
+  }
+
   document.getElementById(dataId).value = '';
   const prev = document.getElementById(previewId);
   if(prev){
@@ -5857,6 +5886,7 @@ function clearProductImage(previewId, dataId, categoryInputId){
 }
 
 // Auto-update emoji preview when category changes in the modal
+// (unchanged — no image logic here)
 function onProductCategoryChange(catInputId, previewId, dataId){
   const hasImage = document.getElementById(dataId).value;
   if(hasImage) return; // keep photo if already uploaded
