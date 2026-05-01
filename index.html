@@ -761,6 +761,9 @@ body{font-display:swap;}
       <button class="theme-toggle" id="themeToggleBtn" onclick="toggleDarkMode()" title="Toggle dark mode">
         <i class="fas fa-moon" id="themeIcon"></i><span id="themeLabel" style="font-size:.72rem;font-weight:600">Dark</span>
       </button>
+      <button id="pwaInstallBtn" onclick="triggerPwaInstall()" title="Install App" style="display:none;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,rgba(26,92,46,.12),rgba(184,134,11,.1));border:1px solid rgba(184,134,11,.4);border-radius:var(--radius);cursor:pointer;font-family:var(--font);font-size:.72rem;font-weight:700;color:var(--green-dark);transition:all .15s" onmouseover="this.style.background='linear-gradient(135deg,rgba(26,92,46,.2),rgba(184,134,11,.18))'" onmouseout="this.style.background='linear-gradient(135deg,rgba(26,92,46,.12),rgba(184,134,11,.1))'">
+        <i class="fas fa-download" style="color:var(--gold);font-size:.8rem"></i><span>Install App</span>
+      </button>
       <button class="notif-bell" onclick="toggleNotifPanel()" title="Notifications">
         <i class="fas fa-bell"></i>
         <span class="notif-badge" id="notifBadge" style="display:none">0</span>
@@ -5509,6 +5512,18 @@ function renderRAccSales(){
 }
 </script>
 <!-- ═══════════ MOBILE BOTTOM NAV ═══════════ -->
+<!-- ═══════════ PWA UPDATE TOAST ═══════════ -->
+<div id="swUpdateToast" style="display:none;position:fixed;bottom:calc(72px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);
+  background:var(--green-dark);color:#fff;padding:12px 18px;border-radius:14px;font-size:.8rem;font-weight:600;
+  z-index:9000;box-shadow:0 8px 32px rgba(0,0,0,.25);display:none;align-items:center;gap:12px;white-space:nowrap;
+  border:1px solid rgba(184,134,11,.4)">
+  <i class="fas fa-arrows-rotate" style="color:var(--gold)"></i>
+  <span>New version available</span>
+  <button onclick="applySwUpdate()" style="background:var(--gold);color:#fff;border:none;border-radius:8px;
+    padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:var(--font)">Update now</button>
+  <button onclick="document.getElementById('swUpdateToast').style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:1rem;padding:0 2px">×</button>
+</div>
+
 <div id="drawerOverlay" onclick="closeMoreDrawer()"></div>
 <div id="moreDrawer">
   <div style="width:36px;height:4px;background:var(--border2);border-radius:4px;margin:0 auto 14px"></div>
@@ -5599,6 +5614,79 @@ function toggleMoreDrawer(){
 function closeMoreDrawer(){
   document.getElementById('moreDrawer').classList.remove('open');
   document.getElementById('drawerOverlay').classList.remove('open');
+}
+</script>
+<script>
+// ══════════════════════════════════════════════════════
+//  PWA — Install Prompt & SW Update Handler
+// ══════════════════════════════════════════════════════
+
+// ── Install prompt ────────────────────────────────────
+let _pwaPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaPrompt = e;
+  const btn = document.getElementById('pwaInstallBtn');
+  if (btn) btn.style.display = 'inline-flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  _pwaPrompt = null;
+  const btn = document.getElementById('pwaInstallBtn');
+  if (btn) btn.style.display = 'none';
+  showToast('App installed! Launch it from your home screen.');
+});
+
+function triggerPwaInstall() {
+  if (!_pwaPrompt) return;
+  _pwaPrompt.prompt();
+  _pwaPrompt.userChoice.then(choice => {
+    if (choice.outcome === 'accepted') showToast('Installing Emanicel…');
+    _pwaPrompt = null;
+    const btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'none';
+  });
+}
+
+// ── SW update watcher ─────────────────────────────────
+let _newSwWaiting = null;
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(reg => {
+    // Check for a waiting SW right now (page reloaded after update)
+    if (reg.waiting) showUpdateToast(reg.waiting);
+
+    // Watch for a new SW installing then waiting
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      if (!newSW) return;
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateToast(newSW);
+        }
+      });
+    });
+  });
+
+  // When the SW activates (after skipWaiting), reload the page
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!refreshing) { refreshing = true; location.reload(); }
+  });
+}
+
+function showUpdateToast(sw) {
+  _newSwWaiting = sw;
+  const toast = document.getElementById('swUpdateToast');
+  if (toast) toast.style.display = 'flex';
+}
+
+function applySwUpdate() {
+  if (_newSwWaiting) {
+    _newSwWaiting.postMessage({ type: 'SKIP_WAITING' });
+  }
+  document.getElementById('swUpdateToast').style.display = 'none';
 }
 </script>
 </body>
