@@ -2302,7 +2302,7 @@ function renderProductGrid(list){
       ? `<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`
       : `<div class="product-ws">${isWholesale?'Wholesale':'Retail'} · ${stock} left${cartQty>0?` (${cartQty} in cart)`:''}</div>`;
     return `<div class="product-card" style="${cardStyle}" onclick="${isOut?'showToast(\"Out of stock!\",false)':'addToCart('+p.id+')'}">
-      <div class="product-emoji"><i class="fas fa-box-open"></i></div>
+      ${productThumb(p)}
       <div class="product-name">${p.name}</div>
       <div class="product-cat">${p.category} · ${p.unit}</div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px">
@@ -4610,7 +4610,7 @@ window.onload = async function(){
         </div>
         <div>
           <label>Category <span style="color:var(--red)">*</span></label>
-          <input type="text" id="apCategory" placeholder="e.g. Drinks" list="apCategoryList">
+          <input type="text" id="apCategory" placeholder="e.g. Drinks" list="apCategoryList" oninput="onProductCategoryChange('apCategory','apImgPreview','apImageData')">
           <datalist id="apCategoryList">
             <option value="Drinks"><option value="Groceries"><option value="Provisions">
             <option value="Beverages"><option value="Toiletries"><option value="Frozen Foods">
@@ -4655,6 +4655,20 @@ window.onload = async function(){
       <div style="background:rgba(26,92,46,.07);border:1px solid rgba(26,92,46,.2);border-radius:var(--radius);padding:12px 16px;font-size:.8rem;color:var(--text2)">
         <i class="fas fa-info-circle" style="color:var(--green-light);margin-right:6px"></i>
         This product will appear immediately in Inventory, POS, and Price Configuration.
+      </div>
+      <!-- Product Image -->
+      <div>
+        <label>Product Photo <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+          <div id="apImgPreview" style="width:64px;height:64px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;flex-shrink:0" id="apImgPreview">📦</div>
+          <div style="flex:1">
+            <input type="file" id="apImageFile" accept="image/*" style="display:none" onchange="handleProductImageUpload('apImageFile','apImgPreview','apImageData','apCategory')">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('apImageFile').click()"><i class="fas fa-camera"></i>Choose Photo</button>
+            <button type="button" class="btn btn-ghost btn-sm" style="margin-left:6px;color:var(--text3)" onclick="clearProductImage('apImgPreview','apImageData','apCategory')"><i class="fas fa-times"></i>Remove</button>
+            <div style="font-size:.68rem;color:var(--text3);margin-top:5px">JPG or PNG · auto-resized to save space</div>
+          </div>
+        </div>
+        <input type="hidden" id="apImageData" value="">
       </div>
     </div>
     <div class="modal-foot">
@@ -4709,7 +4723,19 @@ window.onload = async function(){
         <div><label>Cost Price (₦)</label><input type="number" id="rAddProdCost" min="0" step="0.01" value="0"></div>
         <div><label>Opening Stock</label><input type="number" id="rAddProdStock" min="0" value="0"></div>
         <div><label>Low Stock Alert</label><input type="number" id="rAddProdLow" min="0" value="5"></div>
-      </div>
+        <!-- Product Image -->
+        <div style="grid-column:1/-1">
+          <label>Product Photo <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+            <div id="rAddImgPreview" style="width:56px;height:56px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.4rem;overflow:hidden;flex-shrink:0">📦</div>
+            <div style="flex:1">
+              <input type="file" id="rAddImageFile" accept="image/*" style="display:none" onchange="handleProductImageUpload('rAddImageFile','rAddImgPreview','rAddImageData','rAddProdCat')">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('rAddImageFile').click()"><i class="fas fa-camera"></i>Choose Photo</button>
+              <button type="button" class="btn btn-ghost btn-sm" style="margin-left:6px;color:var(--text3)" onclick="clearProductImage('rAddImgPreview','rAddImageData','rAddProdCat')"><i class="fas fa-times"></i>Remove</button>
+            </div>
+          </div>
+          <input type="hidden" id="rAddImageData" value="">
+        </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('rAddProductModal')">Cancel</button>
@@ -4771,6 +4797,9 @@ function openAddProductModal(from){
   document.getElementById('apWholesale').value = '0';
   document.getElementById('apCostPrice').value = '0';
   document.getElementById('apLowStock').value = '10';
+  document.getElementById('apImageData').value = '';
+  const prev = document.getElementById('apImgPreview');
+  if(prev){ prev.innerHTML=''; prev.textContent='📦'; prev.style.padding=''; }
   openModal('addProductModal');
   setTimeout(()=>document.getElementById('apName').focus(), 200);
 }
@@ -4800,6 +4829,7 @@ function saveNewProduct(){
   const wholesale = parseFloat(document.getElementById('apWholesale').value) || 0;
   const costPrice = parseFloat(document.getElementById('apCostPrice').value) || 0;
   const lowStock = parseInt(document.getElementById('apLowStock').value) || 10;
+  const image = document.getElementById('apImageData').value || '';
 
   if(!name){ alert('Product name is required.'); return; }
   if(!category){ alert('Category is required.'); return; }
@@ -4811,6 +4841,7 @@ function saveNewProduct(){
   const newId = Date.now();
   const newProd = {
     id: newId, name, category, emoji: '',
+    image: image || '',
     retail, wholesale, costPrice,
     unit, stock, lowStock, conversions: {}
   };
@@ -4904,7 +4935,7 @@ function renderProductGridR(){
     const cs=isOut?'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed':isMaxed?'border-color:var(--red);background:rgba(192,57,43,.06)':'';
     const sl=isOut?`<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`:isMaxed?`<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`:`<div class="product-ws">Retail · ${stock} left${cq>0?` (${cq} in cart)`:''}</div>`;
     return `<div class="product-card" style="${cs}" onclick="${isOut?`showToast('Out of stock!',false)`:`addToCartR(${p.id})`}">
-      <div class="product-emoji"><i class="fas fa-box-open"></i></div>
+      ${productThumb(p)}
       <div class="product-name">${p.name}</div>
       <div class="product-cat">${p.category} · ${p.unit}</div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px">
@@ -5322,6 +5353,7 @@ function saveRAddProduct(){
   const name=document.getElementById('rAddProdName').value.trim();
   const cat=document.getElementById('rAddProdCat').value.trim()||'General';
   const emoji=document.getElementById('rAddProdEmoji').value.trim()||'';
+  const image=document.getElementById('rAddImageData').value||'';
   const retail=parseFloat(document.getElementById('rAddProdRetail').value)||0;
   const cost=parseFloat(document.getElementById('rAddProdCost').value)||0;
   const stock=parseFloat(document.getElementById('rAddProdStock').value)||0;
@@ -5329,13 +5361,65 @@ function saveRAddProduct(){
   const unit=document.getElementById('rAddProdUnit').value;
   if(!name){alert('Product name is required.');return;}
   const id=Date.now();
-  const prod={id,name,category:cat,emoji,retail,wholesale:retail,costPrice:cost,unit,stock,lowStock:low,conversions:{}};
+  const prod={id,name,category:cat,emoji,image,retail,wholesale:retail,costPrice:cost,unit,stock,lowStock:low,conversions:{}};
   DB_R.products.push(prod);DB_R.inventory.push({...prod});
   if(stock>0)DB_R.stockHistory.unshift({id:uid(),productId:id,productName:name,timestamp:new Date().toISOString(),action:'add',delta:stock,newStock:stock,unit,reason:'Initial stock'});
   persistR('products');persistR('inventory');persistR('stockHistory');
   closeModal('rAddProductModal');
   showToast(`"${name}" added to retail inventory!`);
   renderR_Inventory();
+}
+
+// ══════════════════════════════════════════════════════
+//  PRODUCT IMAGE & EMOJI HELPERS
+// ══════════════════════════════════════════════════════
+const _categoryEmoji = {
+  'drinks':'🥤','beverage':'🥤','beverages':'🥤','soda':'🥤','water':'💧',
+  'juice':'🧃','alcohol':'🍺','beer':'🍺','wine':'🍷','spirits':'🥃',
+  'food':'🍱','groceries':'🛒','grocery':'🛒','provisions':'🧴',
+  'noodles':'🍜','pasta':'🍝','rice':'🍚','bread':'🍞','flour':'🌾',
+  'sugar':'🍬','salt':'🧂','oil':'🫙','seasoning':'🌶️','spice':'🌶️',
+  'milk':'🥛','dairy':'🥛','yoghurt':'🫙','yogurt':'🫙','cheese':'🧀',
+  'egg':'🥚','eggs':'🥚','meat':'🥩','chicken':'🍗','fish':'🐟',
+  'vegetable':'🥦','vegetables':'🥦','fruit':'🍎','fruits':'🍎',
+  'snack':'🍿','snacks':'🍿','biscuit':'🍪','biscuits':'🍪','chocolate':'🍫','sweet':'🍬',
+  'toiletries':'🧴','toilet':'🧻','soap':'🧼','toothpaste':'🪥','sanitizer':'🧴',
+  'household':'🏠','cleaning':'🧹','detergent':'🫧','bleach':'🧴',
+  'frozen':'🧊','ice cream':'🍦','icecream':'🍦',
+  'baby':'👶','diapers':'👶',
+  'stationery':'📝','pen':'🖊️','notebook':'📓',
+  'phone':'📱','electronics':'🔌','accessories':'🎧',
+  'medicine':'💊','health':'💊','drugs':'💊',
+  'cosmetics':'💄','beauty':'💄','perfume':'🌸',
+  'bag':'👜','clothing':'👕',
+  'paint':'🎨','hardware':'🔧','tools':'🔧',
+  'general':'📦','other':'📦','miscellaneous':'📦',
+};
+
+function getCategoryEmoji(category){
+  if(!category) return '📦';
+  const key = category.toLowerCase().trim();
+  // exact match
+  if(_categoryEmoji[key]) return _categoryEmoji[key];
+  // partial match
+  for(const [k,v] of Object.entries(_categoryEmoji)){
+    if(key.includes(k)||k.includes(key)) return v;
+  }
+  return '📦';
+}
+
+// Returns HTML for the product-emoji div — photo if available, emoji fallback
+function productThumb(p){
+  if(p && p.image){
+    return `<div class="product-emoji" style="padding:0;overflow:hidden;border-radius:12px">
+      <img src="${p.image}" style="width:46px;height:46px;object-fit:cover;border-radius:12px;display:block">
+    </div>`;
+  }
+  const em = (p && p.emoji) ? p.emoji : getCategoryEmoji(p && p.category);
+  if(em && em.length <= 4){
+    return `<div class="product-emoji" style="font-size:1.6rem">${em}</div>`;
+  }
+  return `<div class="product-emoji"><i class="fas fa-box-open"></i></div>`;
 }
 
 function openRAdjustStock(id){
@@ -5687,6 +5771,90 @@ function applySwUpdate() {
     _newSwWaiting.postMessage({ type: 'SKIP_WAITING' });
   }
   document.getElementById('swUpdateToast').style.display = 'none';
+}
+</script>
+<script>
+// ══════════════════════════════════════════════════════
+//  PRODUCT IMAGE UPLOAD HELPERS
+// ══════════════════════════════════════════════════════
+
+function handleProductImageUpload(fileInputId, previewId, dataId, categoryInputId){
+  const file = document.getElementById(fileInputId).files[0];
+  if(!file) return;
+
+  const TARGET_BYTES = 35 * 1024; // 35kb hard limit
+  const MAX_DIM = 220;            // max width or height in px
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      const ratio  = Math.min(MAX_DIM / img.width, MAX_DIM / img.height, 1);
+      canvas.width  = Math.round(img.width  * ratio);
+      canvas.height = Math.round(img.height * ratio);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Start at quality 0.75 and step down until under 35kb
+      let quality = 0.75;
+      let base64  = canvas.toDataURL('image/jpeg', quality);
+
+      while(base64.length > TARGET_BYTES * 1.37 && quality > 0.15){
+        // base64 is ~37% larger than raw bytes, so multiply target by 1.37
+        quality = Math.round((quality - 0.08) * 100) / 100;
+        base64  = canvas.toDataURL('image/jpeg', quality);
+      }
+
+      // If still too big, shrink canvas further and retry
+      if(base64.length > TARGET_BYTES * 1.37){
+        const s2 = 0.65; // scale canvas to 65%
+        const c2 = document.createElement('canvas');
+        c2.width  = Math.round(canvas.width  * s2);
+        c2.height = Math.round(canvas.height * s2);
+        c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
+        base64 = c2.toDataURL('image/jpeg', 0.65);
+      }
+
+      // Final size in kb for the toast
+      const kb = Math.round(base64.length * 0.73 / 1024);
+
+      document.getElementById(dataId).value = base64;
+
+      const prev = document.getElementById(previewId);
+      if(prev){
+        prev.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:12px;display:block">`;
+        prev.style.padding = '0';
+      }
+
+      showToast(`Photo saved · ${kb}kb`);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearProductImage(previewId, dataId, categoryInputId){
+  document.getElementById(dataId).value = '';
+  const prev = document.getElementById(previewId);
+  if(prev){
+    const cat = categoryInputId ? (document.getElementById(categoryInputId)||{}).value : '';
+    prev.innerHTML = '';
+    prev.textContent = getCategoryEmoji(cat) || '📦';
+    prev.style.padding = '';
+  }
+}
+
+// Auto-update emoji preview when category changes in the modal
+function onProductCategoryChange(catInputId, previewId, dataId){
+  const hasImage = document.getElementById(dataId).value;
+  if(hasImage) return; // keep photo if already uploaded
+  const cat = document.getElementById(catInputId).value;
+  const prev = document.getElementById(previewId);
+  if(prev && !hasImage){
+    prev.innerHTML = '';
+    prev.textContent = getCategoryEmoji(cat);
+  }
 }
 </script>
 </body>
