@@ -5513,6 +5513,15 @@ function renderRAccSales(){
 <div id="moreDrawer">
   <div style="width:36px;height:4px;background:var(--border2);border-radius:4px;margin:0 auto 14px"></div>
 
+  <!-- Primary shortcuts -->
+  <h5>Quick Access</h5>
+  <div class="drawer-grid" style="margin-bottom:14px">
+    <div class="drawer-item" onclick="mobileNav('pos');closeMoreDrawer()"><i class="fas fa-cash-register"></i><span>POS</span></div>
+    <div class="drawer-item" onclick="mobileNav('purchase');closeMoreDrawer()"><i class="fas fa-truck-ramp-box"></i><span>Purchase</span></div>
+    <div class="drawer-item" onclick="mobileNav('debt');closeMoreDrawer()"><i class="fas fa-file-invoice-dollar"></i><span>Debt</span></div>
+    <div class="drawer-item" onclick="mobileNav('dashboard');closeMoreDrawer()"><i class="fas fa-chart-line"></i><span>Dashboard</span></div>
+  </div>
+
   <!-- Main modules -->
   <h5>Modules</h5>
   <div class="drawer-grid">
@@ -5555,7 +5564,7 @@ function renderRAccSales(){
     <i class="fas fa-store-alt"></i><span>Retail</span>
   </button>
   <button class="mob-tab" id="mob-dashboard" onclick="mobileNav('dashboard')" data-mod="dashboard">
-    <i class="fas fa-chart-line"></i><span>Stats</span>
+    <i class="fas fa-chart-line"></i><span>Dashboard</span>
   </button>
   <button class="mob-tab" id="mob-more" onclick="toggleMoreDrawer()">
     <i class="fas fa-grid-2"></i><span>More</span>
