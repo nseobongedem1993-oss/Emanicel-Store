@@ -377,21 +377,11 @@ body{font-display:swap;}
 
 @media(max-width:900px){
   #pos-wrap{grid-template-columns:1fr;height:auto;overflow:visible}
-  .cart-panel{min-height:220px;max-height:none;height:auto}
-  .products-panel{max-height:62vh;max-height:62dvh}
+  .cart-panel{min-height:320px;max-height:none;height:auto}
+  .products-panel{max-height:50vh;max-height:50dvh}
   .grid-4{grid-template-columns:repeat(2,1fr)}
   .grid-3{grid-template-columns:1fr 1fr}
   .pay-methods{grid-template-columns:repeat(2,1fr)}
-}
-@media(max-width:900px) and (max-height:750px){
-  .products-panel{max-height:58vh;max-height:58dvh}
-  .cart-panel{min-height:180px}
-}
-@media(max-width:600px){
-  .product-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
-  .product-card{padding:12px}
-  .product-price{font-size:1.2rem;margin-top:6px}
-  .product-emoji{width:38px;height:38px;font-size:1.5rem;margin-bottom:6px}
 }
 
 /* ── MOBILE: bottom tab bar ── */
@@ -1452,6 +1442,9 @@ function applyRoleUI(){
     if(mrd) mrd.style.display='block';
     const mrt=document.getElementById('mob-retail');
     if(mrt) mrt.style.display='flex';
+    // Retail tab takes Dashboard's slot — hide Dashboard from bottom bar
+    const mdb=document.getElementById('mob-dashboard');
+    if(mdb) mdb.style.display='none';
   } else {
     // For admin/superadmin show retail section too
     const rSection=document.getElementById('retailNavSection');
@@ -1460,6 +1453,9 @@ function applyRoleUI(){
     if(mrd) mrd.style.display='block';
     const mrt=document.getElementById('mob-retail');
     if(mrt) mrt.style.display='flex';
+    // Retail tab takes Dashboard's slot — hide Dashboard from bottom bar
+    const mdb=document.getElementById('mob-dashboard');
+    if(mdb) mdb.style.display='none';
   }
 }
 
@@ -1491,6 +1487,8 @@ async function doLogout(){
   if(mrd) mrd.style.display='none';
   const mrt=document.getElementById('mob-retail');
   if(mrt) mrt.style.display='none';
+  const mdb=document.getElementById('mob-dashboard');
+  if(mdb) mdb.style.display='';
 }
 
 // Forgot password
@@ -1567,7 +1565,7 @@ function renderSettings(){
     </div>
     <!-- Tab Bar -->
     <div class="settings-tab-bar">
-      ${['business','branding','colors','staff_mgmt','paystack','bank_accounts','storage'].map(t=>`<button class="btn btn-sm ${settingsTab===t?'btn-primary':'btn-ghost'}" onclick="setSettingsTab('${t}')">${{business:'<i class="fas fa-building"></i> Business Info',branding:'<i class="fas fa-image"></i> Logo & Branding',colors:'<i class="fas fa-palette"></i> Colors',staff_mgmt:'<i class="fas fa-users"></i> Staff Accounts',paystack:'<i class="fas fa-credit-card"></i> Paystack',bank_accounts:'<i class="fas fa-university"></i> Bank Accounts'}[t]}</button>`).join('')}
+      ${['business','branding','colors','staff_mgmt','paystack','bank_accounts'].map(t=>`<button class="btn btn-sm ${settingsTab===t?'btn-primary':'btn-ghost'}" onclick="setSettingsTab('${t}')">${{business:'<i class="fas fa-building"></i> Business Info',branding:'<i class="fas fa-image"></i> Logo & Branding',colors:'<i class="fas fa-palette"></i> Colors',staff_mgmt:'<i class="fas fa-users"></i> Staff Accounts',paystack:'<i class="fas fa-credit-card"></i> Paystack',bank_accounts:'<i class="fas fa-university"></i> Bank Accounts'}[t]}</button>`).join('')}
     </div>
     <div id="settingsTabContent"></div>
   </div>`;
@@ -1702,22 +1700,7 @@ function renderSettingsTab(){
         </div>`).join('')}
       </div>`:`<div class="empty-state" style="padding:32px"><i class="fas fa-university"></i><p>No bank accounts added yet.<br><small>Add accounts to show them at Transfer checkout.</small></p></div>`}
     </div>`;
-  } else if(settingsTab==='storage'){
-    let totalBytes=0,imageBytes=0,imageCount=0;
-    try{for(let k in localStorage){if(!localStorage.hasOwnProperty(k))continue;const v=localStorage.getItem(k)||'';totalBytes+=v.length*2;if(k===KEYS.products||k===KEYS.inventory||k===KEYS_R.products||k===KEYS_R.inventory){try{const arr=JSON.parse(v)||[];arr.forEach(p=>{if(p.image&&p.image.startsWith('data:')){imageBytes+=p.image.length*2;imageCount++;}});}catch(_){}}}}catch(_){}
-    const usedKB=Math.round(totalBytes/1024),imageKB=Math.round(imageBytes/1024),maxKB=5120,pct=Math.min(100,Math.round(totalBytes/1024/maxKB*100));
-    const barColor=pct>85?'var(--red)':pct>60?'var(--amber)':'var(--green-light)';
-    el.innerHTML=`<div class="card"><h3 class="section-title" style="margin-bottom:16px"><i class="fas fa-database"></i>Storage Management</h3><p style="color:var(--text3);font-size:.85rem;margin-bottom:16px">All app data is stored in your browser. Product images take the most space. If storage is full the app breaks.</p><div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:6px"><span style="font-weight:600">Storage Used</span><span style="color:var(--text3)">${usedKB} KB / ~${maxKB} KB</span></div><div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:8px"></div></div><div style="font-size:.75rem;color:var(--text3);margin-top:6px">${pct}% full &middot; Product photos: ${imageKB} KB across ${imageCount} item(s)</div></div><div style="display:flex;flex-direction:column;gap:10px"><button class="btn btn-gold" onclick="clearAllProductImages()" style="width:100%"><i class="fas fa-images"></i> Clear ALL Product Photos (free ${imageKB} KB)</button><p style="font-size:.75rem;color:var(--text3);margin:0">Removes only photos — all product names, prices and stock are kept.</p></div></div>`;
   }
-}
-
-function clearAllProductImages(){
-  if(!confirm('Remove ALL product photos from both stores? Product data (names, prices, stock) will NOT be deleted.')) return;
-  let count=0;
-  [DB.products,DB.inventory,DB_R.products,DB_R.inventory].forEach(arr=>{arr.forEach(p=>{if(p.image){p.image='';count++;}});});
-  persist('products');persist('inventory');persistR('products');persistR('inventory');
-  showToast('Done! Cleared photos from '+count+' item(s). Storage freed up.');
-  renderSettingsTab();
 }
 
 function saveBusinessInfo(){
@@ -1977,17 +1960,7 @@ function load(key,seed){
   try{const d=localStorage.getItem(key);return d?JSON.parse(d):seed();}
   catch{return seed();}
 }
-function save(key,data){
-  try{
-    localStorage.setItem(key,JSON.stringify(data));
-  }catch(e){
-    if(e && (e.name==='QuotaExceededError' || e.name==='NS_ERROR_DOM_QUOTA_REACHED' || (e.code&&(e.code===22||e.code===1014)))){
-      showToast('⚠️ Storage full! Please remove some product photos to free up space.',false);
-    } else {
-      console.error('Save error for key '+key+':',e);
-    }
-  }
-}
+function save(key,data){localStorage.setItem(key,JSON.stringify(data));}
 
 let DB = {
   products: load(KEYS.products, seedProducts),
@@ -2245,6 +2218,8 @@ function showModuleInternal(m){
   const retailMods=['r_dashboard','r_pos','r_purchase','r_debt','r_inventory','r_price','r_accounting'];
   if(isRetailStaff()&&!retailMods.includes(m)){showToast('Access restricted to Retail Store.',false);return;}
   currentModule=m;
+  const contentEl = document.getElementById('content');
+  if(contentEl) contentEl.scrollTop = 0;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   const navEl=document.getElementById('nav-'+m);
   if(navEl)navEl.classList.add('active');
@@ -2260,15 +2235,7 @@ function showModuleInternal(m){
     r_debt:renderR_Debt,r_inventory:renderR_Inventory,r_price:renderR_Price,
     r_accounting:renderR_Accounting,
   };
-  if(renders[m]){
-    try{
-      renders[m]();
-    }catch(err){
-      console.error("Render error in ["+m+"]:",err);
-      const c=document.getElementById("content");
-      if(c)c.innerHTML=`<div style="padding:32px;text-align:center"><div style="font-size:2.5rem;margin-bottom:12px">⚠️</div><div style="font-weight:700;font-size:1.1rem;margin-bottom:8px">Could not load this section</div><div style="color:var(--text3);font-size:.85rem;margin-bottom:20px">`+err.message+`</div><button class="btn btn-primary" onclick="showModule('pos')">Go to POS</button> <button class="btn btn-ghost" onclick="location.reload()">Reload App</button></div>`;
-    }
-  }
+  if(renders[m])renders[m]();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -4703,7 +4670,7 @@ window.onload = async function(){
       <div>
         <label>Product Photo <span style="color:var(--text3);font-weight:400">(optional)</span></label>
         <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
-          <div id="apImgPreview" style="width:64px;height:64px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;flex-shrink:0" id="apImgPreview">📦</div>
+          <div id="apImgPreview" style="width:64px;height:64px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;flex-shrink:0">📦</div>
           <div style="flex:1">
             <input type="file" id="apImageFile" accept="image/*" style="display:none" onchange="handleProductImageUpload('apImageFile','apImgPreview','apImageData','apCategory')">
             <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('apImageFile').click()"><i class="fas fa-camera"></i>Choose Photo</button>
@@ -4779,6 +4746,7 @@ window.onload = async function(){
           </div>
           <input type="hidden" id="rAddImageData" value="">
         </div>
+      </div>
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('rAddProductModal')">Cancel</button>
@@ -5861,17 +5829,6 @@ function handleProductImageUpload(fileInputId, previewId, dataId, categoryInputI
 
       // Final size in kb for the toast
       const kb = Math.round(base64.length * 0.73 / 1024);
-
-      // Guard: estimate remaining localStorage space before writing
-      let usedBytes = 0;
-      try{
-        for(let k in localStorage){ if(localStorage.hasOwnProperty(k)) usedBytes += (localStorage.getItem(k)||'').length * 2; }
-      }catch(_){}
-      const MAX_STORAGE = 4.5 * 1024 * 1024; // 4.5MB safety threshold (browsers allow ~5MB)
-      if(usedBytes + base64.length * 2 > MAX_STORAGE){
-        showToast('⚠️ Storage nearly full! Cannot save photo — remove existing product photos first.',false);
-        return;
-      }
 
       document.getElementById(dataId).value = base64;
 
