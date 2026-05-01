@@ -1567,7 +1567,7 @@ function renderSettings(){
     </div>
     <!-- Tab Bar -->
     <div class="settings-tab-bar">
-      ${['business','branding','colors','staff_mgmt','paystack','bank_accounts'].map(t=>`<button class="btn btn-sm ${settingsTab===t?'btn-primary':'btn-ghost'}" onclick="setSettingsTab('${t}')">${{business:'<i class="fas fa-building"></i> Business Info',branding:'<i class="fas fa-image"></i> Logo & Branding',colors:'<i class="fas fa-palette"></i> Colors',staff_mgmt:'<i class="fas fa-users"></i> Staff Accounts',paystack:'<i class="fas fa-credit-card"></i> Paystack',bank_accounts:'<i class="fas fa-university"></i> Bank Accounts'}[t]}</button>`).join('')}
+      ${['business','branding','colors','staff_mgmt','paystack','bank_accounts','storage'].map(t=>`<button class="btn btn-sm ${settingsTab===t?'btn-primary':'btn-ghost'}" onclick="setSettingsTab('${t}')">${{business:'<i class="fas fa-building"></i> Business Info',branding:'<i class="fas fa-image"></i> Logo & Branding',colors:'<i class="fas fa-palette"></i> Colors',staff_mgmt:'<i class="fas fa-users"></i> Staff Accounts',paystack:'<i class="fas fa-credit-card"></i> Paystack',bank_accounts:'<i class="fas fa-university"></i> Bank Accounts'}[t]}</button>`).join('')}
     </div>
     <div id="settingsTabContent"></div>
   </div>`;
@@ -1702,7 +1702,22 @@ function renderSettingsTab(){
         </div>`).join('')}
       </div>`:`<div class="empty-state" style="padding:32px"><i class="fas fa-university"></i><p>No bank accounts added yet.<br><small>Add accounts to show them at Transfer checkout.</small></p></div>`}
     </div>`;
+  } else if(settingsTab==='storage'){
+    let totalBytes=0,imageBytes=0,imageCount=0;
+    try{for(let k in localStorage){if(!localStorage.hasOwnProperty(k))continue;const v=localStorage.getItem(k)||'';totalBytes+=v.length*2;if(k===KEYS.products||k===KEYS.inventory||k===KEYS_R.products||k===KEYS_R.inventory){try{const arr=JSON.parse(v)||[];arr.forEach(p=>{if(p.image&&p.image.startsWith('data:')){imageBytes+=p.image.length*2;imageCount++;}});}catch(_){}}}}catch(_){}
+    const usedKB=Math.round(totalBytes/1024),imageKB=Math.round(imageBytes/1024),maxKB=5120,pct=Math.min(100,Math.round(totalBytes/1024/maxKB*100));
+    const barColor=pct>85?'var(--red)':pct>60?'var(--amber)':'var(--green-light)';
+    el.innerHTML=`<div class="card"><h3 class="section-title" style="margin-bottom:16px"><i class="fas fa-database"></i>Storage Management</h3><p style="color:var(--text3);font-size:.85rem;margin-bottom:16px">All app data is stored in your browser. Product images take the most space. If storage is full the app breaks.</p><div style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:6px"><span style="font-weight:600">Storage Used</span><span style="color:var(--text3)">${usedKB} KB / ~${maxKB} KB</span></div><div style="height:10px;background:var(--surface2);border-radius:8px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${barColor};border-radius:8px"></div></div><div style="font-size:.75rem;color:var(--text3);margin-top:6px">${pct}% full &middot; Product photos: ${imageKB} KB across ${imageCount} item(s)</div></div><div style="display:flex;flex-direction:column;gap:10px"><button class="btn btn-gold" onclick="clearAllProductImages()" style="width:100%"><i class="fas fa-images"></i> Clear ALL Product Photos (free ${imageKB} KB)</button><p style="font-size:.75rem;color:var(--text3);margin:0">Removes only photos — all product names, prices and stock are kept.</p></div></div>`;
   }
+}
+
+function clearAllProductImages(){
+  if(!confirm('Remove ALL product photos from both stores? Product data (names, prices, stock) will NOT be deleted.')) return;
+  let count=0;
+  [DB.products,DB.inventory,DB_R.products,DB_R.inventory].forEach(arr=>{arr.forEach(p=>{if(p.image){p.image='';count++;}});});
+  persist('products');persist('inventory');persistR('products');persistR('inventory');
+  showToast('Done! Cleared photos from '+count+' item(s). Storage freed up.');
+  renderSettingsTab();
 }
 
 function saveBusinessInfo(){
@@ -2245,7 +2260,15 @@ function showModuleInternal(m){
     r_debt:renderR_Debt,r_inventory:renderR_Inventory,r_price:renderR_Price,
     r_accounting:renderR_Accounting,
   };
-  if(renders[m])renders[m]();
+  if(renders[m]){
+    try{
+      renders[m]();
+    }catch(err){
+      console.error("Render error in ["+m+"]:",err);
+      const c=document.getElementById("content");
+      if(c)c.innerHTML=`<div style="padding:32px;text-align:center"><div style="font-size:2.5rem;margin-bottom:12px">⚠️</div><div style="font-weight:700;font-size:1.1rem;margin-bottom:8px">Could not load this section</div><div style="color:var(--text3);font-size:.85rem;margin-bottom:20px">`+err.message+`</div><button class="btn btn-primary" onclick="showModule('pos')">Go to POS</button> <button class="btn btn-ghost" onclick="location.reload()">Reload App</button></div>`;
+    }
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
