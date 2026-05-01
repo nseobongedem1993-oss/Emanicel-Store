@@ -122,6 +122,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .topbar-right{display:flex;align-items:center;gap:10px}
 .status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes spin{to{transform:rotate(360deg)}}
 .topbar-badge{font-size:.72rem;color:var(--text2);display:flex;align-items:center;gap:5px}
 
 #content{flex:1;overflow-y:auto;padding:24px 28px;padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px))}
@@ -1402,8 +1403,21 @@ async function onAuthSuccess(user){
   }
   applyRoleUI();
   document.getElementById('loginOverlay').classList.add('hidden');
+  // Show spinner while syncing all data from Supabase
+  const contentEl=document.getElementById('content');
+  if(contentEl) contentEl.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:18px">
+      <div style="width:44px;height:44px;border:3px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin 0.75s linear infinite"></div>
+      <p style="color:var(--text3);font-size:.85rem;font-weight:600;letter-spacing:.03em">Syncing data across devices…</p>
+    </div>`;
+  await loadAllData();
+  setupRealtime();
+  applyBizColors();
+  syncInventoryFromProducts();
+  checkLowStockNotifs();
+  checkDailySummaryNotif();
   showToast('Welcome back, '+currentUserName+'!');
-  if(!isRetailStaff()) showModule('pos');
+  showModuleInternal(isRetailStaff() ? 'r_dashboard' : 'pos');
 }
 
 // Apply role-based UI
@@ -1436,7 +1450,6 @@ function applyRoleUI(){
     retailNavOpen=true;
     const sub=document.getElementById('retailNavSub');
     if(sub) sub.style.display='block';
-    showModule('r_dashboard');
     // Show mobile retail section too
     const mrd=document.getElementById('mobileRetailSection');
     if(mrd) mrd.style.display='block';
@@ -1462,6 +1475,7 @@ function applyRoleUI(){
 // Logout
 async function doLogout(){
   if(!confirm('Sign out?')) return;
+  if(_rtChannel){ try{_sb.removeChannel(_rtChannel);}catch(e){} _rtChannel=null; }
   await _sb.auth.signOut();
   currentUser=null;currentRole=null;currentUserName='';
   document.getElementById('loginOverlay').classList.remove('hidden');
@@ -1901,7 +1915,9 @@ async function removeStaff(userId, name){
 function saveSetting(key, inputId){
   const val=document.getElementById(inputId)?.value.trim();
   if(!val)return;
-  localStorage.setItem('env_setting_'+key, val);
+  if(!DB.bizSettings) DB.bizSettings={};
+  DB.bizSettings['setting_'+key]=val;
+  persist('bizSettings');
   showToast('Setting saved.');
 }
 
@@ -1956,11 +1972,27 @@ function seedProducts() {
 function seedDebt(){return[];}
 function seedInventory(){return seedProducts().map(p=>({...p}));}
 
-function load(key,seed){
-  try{const d=localStorage.getItem(key);return d?JSON.parse(d):seed();}
-  catch{return seed();}
+// ── SUPABASE DATA LAYER ────────────────────────────────────────────────────────
+// Single app_data table: { key TEXT UNIQUE, value JSONB, updated_at TIMESTAMPTZ }
+// RLS: authenticated users read/write own org's rows.
+
+async function sbLoad(key, seed){
+  try{
+    const {data,error}=await _sb.from('app_data').select('value').eq('key',key).maybeSingle();
+    if(error||!data) return seed();
+    return data.value;
+  }catch{ return seed(); }
 }
-function save(key,data){localStorage.setItem(key,JSON.stringify(data));}
+function sbSave(key,data){
+  if(!currentUser) return; // Don't persist before auth
+  _sb.from('app_data')
+    .upsert({key,value:data,updated_at:new Date().toISOString()},{onConflict:'key'})
+    .then(({error})=>{ if(error) console.warn('sbSave:',key,error.message); })
+    .catch(e=>console.warn('sbSave err:',key,e));
+}
+// load() returns seed — real data loaded async via loadAllData() after auth
+function load(key,seed){ return seed(); }
+function save(key,data){ sbSave(key,data); }
 
 let DB = {
   products: load(KEYS.products, seedProducts),
@@ -2013,6 +2045,65 @@ let DB_R={
   debt:load(KEYS_R.debt,()=>[]),
 };
 function persistR(k){save(KEYS_R[k],DB_R[k]);}
+
+// ── SUPABASE SEED MAP ─────────────────────────────────────────────────────────
+const _DB_SEEDS = {
+  products: seedProducts,
+  debt: seedDebt,
+  inventory: seedInventory,
+  stockHistory: ()=>[],
+  priceHistory: ()=>[],
+  purchases: ()=>[],
+  suppliers: ()=>[],
+  expenses: ()=>[],
+  purchaseAudit: ()=>[],
+  sales: ()=>[],
+  activityLog: ()=>[],
+  notifications: ()=>[],
+  bizSettings: ()=>({
+    name:'Emanicel Nigerian Venture',phone:'08012345678',email:'emanicel@email.com',
+    address:'Abuja, Nigeria',owner:'',logo:'',signature:'',stamp:'',
+    paystackKey:'',colorGreen:'#1a5c2e',colorGold:'#b8860b',bankAccounts:[],
+  }),
+};
+
+// Load ALL business data from Supabase after auth
+async function loadAllData(){
+  try{
+    const dbKeys=Object.keys(KEYS);
+    const rKeys=Object.keys(KEYS_R);
+    const [dbVals,rVals]=await Promise.all([
+      Promise.all(dbKeys.map(k=>sbLoad(KEYS[k],_DB_SEEDS[k]||(() => [])))),
+      Promise.all(rKeys.map(k=>sbLoad(KEYS_R[k],()=>[]))),
+    ]);
+    dbKeys.forEach((k,i)=>DB[k]=dbVals[i]);
+    rKeys.forEach((k,i)=>DB_R[k]=rVals[i]);
+  }catch(e){ console.warn('loadAllData error:',e); }
+}
+
+// Supabase Realtime: any device writes → all tabs re-render immediately
+let _rtChannel=null;
+function setupRealtime(){
+  if(_rtChannel){ try{_sb.removeChannel(_rtChannel);}catch(e){} }
+  _rtChannel=_sb.channel('app_data_rt')
+    .on('postgres_changes',{event:'*',schema:'public',table:'app_data'},payload=>{
+      if(!payload.new) return;
+      const {key,value}=payload.new;
+      if(value===undefined) return;
+      const dbKey=Object.keys(KEYS).find(k=>KEYS[k]===key);
+      if(dbKey){ DB[dbKey]=value; showModuleInternal(currentModule); return; }
+      const rKey=Object.keys(KEYS_R).find(k=>KEYS_R[k]===key);
+      if(rKey){ DB_R[rKey]=value; showModuleInternal(currentModule); }
+    })
+    .subscribe();
+}
+
+// Apply biz brand colours from DB after data load
+function applyBizColors(){
+  const biz=DB.bizSettings||{};
+  if(biz.colorGreen) document.documentElement.style.setProperty('--green',biz.colorGreen);
+  if(biz.colorGold)  document.documentElement.style.setProperty('--gold', biz.colorGold);
+}
 
 // ── ACTIVITY LOG ──
 function logActivity(action, detail){
@@ -2081,17 +2172,21 @@ function checkLowStockNotifs(){
 }
 
 // ── DAILY SUMMARY NOTIF ──
+// Dedup key stored in DB.bizSettings so ALL authenticated devices (admin/super_admin)
+// share the same "already sent today" flag — enabling real-time monitoring across devices.
 function checkDailySummaryNotif(){
-  const lastSummary=localStorage.getItem('env_last_summary');
   const today=new Date().toDateString();
-  if(lastSummary===today)return;
+  const biz=DB.bizSettings||{};
+  if(biz.lastSummaryDate===today) return;
   const tod=new Date();tod.setHours(0,0,0,0);
-  const todaySales=DB.sales.filter(s=>new Date(s.date)>=tod).reduce((s,x)=>s+x.total,0);
+  const todSalesList=DB.sales.filter(s=>new Date(s.date)>=tod);
+  if(!todSalesList.length) return;
+  const todaySales=todSalesList.reduce((s,x)=>s+x.total,0);
   const todayExp=DB.expenses.filter(e=>!e.isInventoryPurchase&&new Date(e.date)>=tod).reduce((s,e)=>s+e.amount,0);
-  if(DB.sales.filter(s=>new Date(s.date)>=tod).length>0){
-    pushNotif('summary',`Daily Summary: Sales ${N(todaySales)} · Expenses ${N(todayExp)}`,'fa-chart-bar');
-    localStorage.setItem('env_last_summary',today);
-  }
+  pushNotif('summary',`Daily Summary: Sales ${N(todaySales)} · Expenses ${N(todayExp)}`,'fa-chart-bar');
+  // Persist flag to Supabase — any admin logging in from any device won't get a duplicate
+  DB.bizSettings.lastSummaryDate=today;
+  persist('bizSettings');
 }
 
 // ── OFFLINE / ONLINE DETECTION ──
@@ -2122,7 +2217,7 @@ function syncInventoryFromProducts(){
 // ══════════════════════════════════════════════════════════════════════════════
 const N = v=>('₦'+(+v||0).toLocaleString('en-NG',{minimumFractionDigits:0}));
 // 6-char receipt code: timestamp base + random to guarantee uniqueness
-const _usedCodes = new Set(JSON.parse(localStorage.getItem('usedCodes')||'[]'));
+const _usedCodes = new Set();
 function uid(){
   const CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I to avoid confusion
   let code;
@@ -2137,9 +2232,6 @@ function uid(){
     tries++;
   }while(_usedCodes.has(code)&&tries<100);
   _usedCodes.add(code);
-  // Persist used codes (keep last 10000)
-  const arr=Array.from(_usedCodes).slice(-10000);
-  try{localStorage.setItem('usedCodes',JSON.stringify(arr));}catch(e){}
   return code;
 }
 const dateStr = d=>new Date(d||Date.now()).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -2148,14 +2240,14 @@ const dateStr = d=>new Date(d||Date.now()).toLocaleString('en-GB',{day:'2-digit'
 function debounce(fn, delay=280){
   let t;return function(...a){clearTimeout(t);t=setTimeout(()=>fn.apply(this,a),delay);}
 }
-// ── Batch localStorage writes to avoid blocking main thread ──
+// ── Batch Supabase writes to avoid hammering on rapid changes ──
 const _persistQueue=new Set();
 let _persistTimer=null;
 function persistBatched(key){
   _persistQueue.add(key);
   if(_persistTimer)return;
   _persistTimer=setTimeout(()=>{
-    _persistQueue.forEach(k=>save(KEYS[k],DB[k]));
+    _persistQueue.forEach(k=>sbSave(KEYS[k],DB[k]));
     _persistQueue.clear();
     _persistTimer=null;
   },80);
@@ -4573,21 +4665,10 @@ function registerServiceWorker(){
 window.onload = async function(){
   applyStoredTheme();
   applyLoginBranding();
-  syncInventoryFromProducts();
   updateOnlineStatus();
   registerServiceWorker();
-  // Apply saved colors
-  const biz=DB.bizSettings||{};
-  if(biz.colorGreen) document.documentElement.style.setProperty('--green',biz.colorGreen);
-  if(biz.colorGold) document.documentElement.style.setProperty('--gold',biz.colorGold);
   renderNotifBadge();
   await checkSession();
-  // Only show POS if already authenticated
-  if(currentUser){
-    showModule('pos');
-    checkLowStockNotifs();
-    checkDailySummaryNotif();
-  }
   // ── Performance: passive scroll listeners ──
   document.addEventListener('touchstart',()=>{},{passive:true});
   document.addEventListener('touchmove',()=>{},{passive:true});
