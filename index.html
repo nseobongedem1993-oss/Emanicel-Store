@@ -1977,19 +1977,79 @@ function seedInventory(){return seedProducts().map(p=>({...p}));}
 // Single app_data table: { key TEXT UNIQUE, value JSONB, updated_at TIMESTAMPTZ }
 // RLS: authenticated users read/write own org's rows.
 
+// ── In-memory cache: populated by loadAllData(), survives offline ──
+const _cache = {};
+
+// ── Offline write queue: flushed automatically when back online ───
+const _offlineQueue = []; // [{key, data}]
+let _flushingQueue = false;
+
 async function sbLoad(key, seed){
   try{
     const {data,error}=await _sb.from('app_data').select('value').eq('key',key).maybeSingle();
-    if(error||!data) return seed();
+    if(error||!data){
+      // Network call failed — return warm cache if available, else seed
+      return Object.prototype.hasOwnProperty.call(_cache,key) ? _cache[key] : seed();
+    }
+    _cache[key]=data.value; // always warm cache on successful fetch
     return data.value;
-  }catch{ return seed(); }
+  }catch{
+    return Object.prototype.hasOwnProperty.call(_cache,key) ? _cache[key] : seed();
+  }
 }
+
 function sbSave(key,data){
-  if(!currentUser) return; // Don't persist before auth
+  if(!currentUser) return;
+  _cache[key]=data; // update in-memory immediately — UI never stalls
+  if(!navigator.onLine){
+    // Replace any existing queued write for same key (last write wins)
+    const idx=_offlineQueue.findIndex(x=>x.key===key);
+    if(idx>=0) _offlineQueue[idx].data=data;
+    else _offlineQueue.push({key,data});
+    return;
+  }
   _sb.from('app_data')
     .upsert({key,value:data,updated_at:new Date().toISOString()},{onConflict:'key'})
-    .then(({error})=>{ if(error) console.warn('sbSave:',key,error.message); })
-    .catch(e=>console.warn('sbSave err:',key,e));
+    .then(({error})=>{
+      if(error){ // Supabase returned error — queue for retry
+        console.warn('sbSave fail, queuing:',key,error.message);
+        const idx=_offlineQueue.findIndex(x=>x.key===key);
+        if(idx>=0) _offlineQueue[idx].data=data;
+        else _offlineQueue.push({key,data});
+      }
+    })
+    .catch(()=>{
+      const idx=_offlineQueue.findIndex(x=>x.key===key);
+      if(idx>=0) _offlineQueue[idx].data=data;
+      else _offlineQueue.push({key,data});
+    });
+}
+
+// ── Flush offline queue when connection returns ───────────────────
+async function flushOfflineQueue(){
+  if(_flushingQueue||!_offlineQueue.length) return;
+  _flushingQueue=true;
+  showToast('Back online — syncing offline changes…');
+  // Deduplicate: keep latest write per key
+  const latest={};
+  _offlineQueue.forEach(({key,data})=>latest[key]=data);
+  _offlineQueue.length=0;
+  const entries=Object.entries(latest);
+  for(const [key,data] of entries){
+    try{
+      await _sb.from('app_data').upsert({key,value:data,updated_at:new Date().toISOString()},{onConflict:'key'});
+    }catch(e){
+      // Re-queue on failure
+      _offlineQueue.push({key,data});
+      console.warn('Queue flush failed for',key,e);
+    }
+  }
+  _flushingQueue=false;
+  // Pull latest server state so this device gets changes from other devices
+  await loadAllData();
+  setupRealtime();
+  showModuleInternal(currentModule);
+  if(!_offlineQueue.length) showToast('All changes synced successfully!');
 }
 // load() returns seed — real data loaded async via loadAllData() after auth
 function load(key,seed){ return seed(); }
@@ -2077,8 +2137,8 @@ async function loadAllData(){
       Promise.all(dbKeys.map(k=>sbLoad(KEYS[k],_DB_SEEDS[k]||(() => [])))),
       Promise.all(rKeys.map(k=>sbLoad(KEYS_R[k],()=>[]))),
     ]);
-    dbKeys.forEach((k,i)=>DB[k]=dbVals[i]);
-    rKeys.forEach((k,i)=>DB_R[k]=rVals[i]);
+    dbKeys.forEach((k,i)=>{ DB[k]=dbVals[i]; _cache[KEYS[k]]=dbVals[i]; });
+    rKeys.forEach((k,i)=>{ DB_R[k]=rVals[i]; _cache[KEYS_R[k]]=rVals[i]; });
   }catch(e){ console.warn('loadAllData error:',e); }
 }
 
@@ -2092,9 +2152,9 @@ function setupRealtime(){
       const {key,value}=payload.new;
       if(value===undefined) return;
       const dbKey=Object.keys(KEYS).find(k=>KEYS[k]===key);
-      if(dbKey){ DB[dbKey]=value; showModuleInternal(currentModule); return; }
+      if(dbKey){ DB[dbKey]=value; _cache[key]=value; showModuleInternal(currentModule); return; }
       const rKey=Object.keys(KEYS_R).find(k=>KEYS_R[k]===key);
-      if(rKey){ DB_R[rKey]=value; showModuleInternal(currentModule); }
+      if(rKey){ DB_R[rKey]=value; _cache[key]=value; showModuleInternal(currentModule); }
     })
     .subscribe();
 }
@@ -2200,8 +2260,8 @@ function updateOnlineStatus(){
   if(dot){dot.style.background=offline?'var(--red)':'var(--green-light)';}
   if(lbl){lbl.textContent=offline?'Offline':'Live · Ready';}
 }
-window.addEventListener('online',updateOnlineStatus);
-window.addEventListener('offline',updateOnlineStatus);
+window.addEventListener('online', ()=>{ updateOnlineStatus(); if(currentUser) flushOfflineQueue(); });
+window.addEventListener('offline', updateOnlineStatus);
 
 // Sync inventory stock from products
 function syncInventoryFromProducts(){
