@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
 <title>Emanicel Nigerian Venture — Business Portal</title>
 <meta name="theme-color" content="#1a5c2e">
 <meta name="description" content="Emanicel Nigerian Venture — POS, Inventory, Sales & Business Management">
@@ -32,7 +32,7 @@
   --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
 }
 html{scroll-behavior:smooth;height:100%}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;overflow:hidden;height:100vh;height:100dvh}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;overflow:auto;height:100vh;height:100dvh}
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -110,7 +110,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sidebar-footer{display:none}
 
 /* ── MAIN ── */
-#main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+#main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:auto}
 #topbar{
   height:62px;background:var(--surface);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
@@ -125,7 +125,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 @keyframes spin{to{transform:rotate(360deg)}}
 .topbar-badge{font-size:.72rem;color:var(--text2);display:flex;align-items:center;gap:5px}
 
-#content{flex:1;overflow-y:auto;padding:24px 28px;padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px))}
+#content{flex:1;overflow-y:auto;overflow-x:auto;padding:24px 28px;padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px));touch-action:pan-x pan-y pinch-zoom}
 
 /* ── CARDS ── */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;box-shadow:0 4px 24px rgba(0,0,0,.07),0 1px 4px rgba(0,0,0,.05)}
@@ -2294,11 +2294,19 @@ function navBack(){
   }
 }
 
+// Intercept Android/browser back button — use in-app navHistory instead of
+// letting the browser navigate away (which hits the login screen or reloads).
+window.addEventListener('popstate', function(e){
+  e.preventDefault();
+  if(navHistory.length > 0){ navBack(); }
+  else { history.pushState({spa:true}, ''); }
+});
+
 function showModule(m){
-  // Track history before changing
   if(currentModule && currentModule !== m){
     navHistory.push(currentModule);
     if(navHistory.length > 20) navHistory.shift();
+    history.pushState({spa:true}, ''); // makes OS back-gesture interceptable
   }
   showModuleInternal(m);
 }
@@ -2996,21 +3004,51 @@ function depositRefundPreview(){
   const r=currentDebtRecord;if(!r)return;
   const amt=parseFloat(document.getElementById('depositRefundAmt')?.value)||0;
   const box=document.getElementById('depositRefundPreviewBox');if(!box)return;
-  if(amt===r.depositAmount){box.className='balance-box balance-change';box.textContent='Full refund of '+N(amt)+' to customer';}
-  else if(amt===0){box.className='balance-box balance-owe';box.textContent='No refund — deposit fully forfeited';}
-  else{box.className='balance-box balance-change';box.textContent='Partial refund: '+N(amt)+' · Forfeited: '+N(r.depositAmount-amt);}
+  const forfeited=Math.max(0,r.depositAmount-amt);
+  if(amt===r.depositAmount){
+    box.className='balance-box balance-change';
+    box.textContent='Full refund of '+N(amt)+' to customer. Nothing credited to account.';
+  } else if(amt===0){
+    box.className='balance-box balance-owe';
+    box.textContent='No refund — full '+N(r.depositAmount)+' credited back to your account.';
+  } else {
+    box.className='balance-box balance-change';
+    box.textContent='Refund '+N(amt)+' to customer · '+N(forfeited)+' credited back to your account.';
+  }
 }
 
 function confirmDepositRefund(id){
   const r=DB.debt.find(x=>x.id===id);if(!r)return;
   const refundAmt=parseFloat(document.getElementById('depositRefundAmt')?.value)||0;
+  const heldAmt=r.depositAmount;
+  const forfeited=Math.max(0,heldAmt-refundAmt);
+
   r.status='cleared';r.depositCleared=true;
   r.refundedAmount=refundAmt;
-  r.history.push({date:new Date().toISOString(),action:`Deposit cleared (refund: ${N(refundAmt)})`,amount:-r.depositAmount,balanceAfter:0});
-  r.depositAmount=0;persist('debt');
+  r.history.push({date:new Date().toISOString(),action:`Deposit cleared (refund: ${N(refundAmt)}, forfeited: ${N(forfeited)})`,amount:-heldAmt,balanceAfter:0});
+  r.depositAmount=0;
+  persist('debt');
+
+  // ── Credit forfeited portion back to business as income ──────────
+  if(forfeited>0){
+    DB.expenses.unshift({
+      id:uid(),
+      date:new Date().toISOString(),
+      description:`Deposit forfeited — ${r.customerName||'Customer'} (${r.code})`,
+      amount:-forfeited, // negative expense = income credit
+      category:'Deposit Income',
+      isIncome:true,
+      recordedBy:currentUserName||'Staff'
+    });
+    persist('expenses');
+    logActivity('Debt','Forfeited deposit of '+N(forfeited)+' credited to account — '+r.customerName);
+  }
+
   document.getElementById('depositRefundModal')?.remove();
   closeModal('detailModal');
-  showToast(`Deposit cleared. ${refundAmt>0?N(refundAmt)+' refunded to customer.':'No refund issued.'}`);
+  const msg=refundAmt>0?N(refundAmt)+' refunded to customer.':'No refund issued.';
+  const credit=forfeited>0?' · '+N(forfeited)+' credited to your account.':'';
+  showToast(`Deposit cleared. ${msg}${credit}`);
   renderDebt();
 }
 
@@ -3733,6 +3771,7 @@ function renderInvTable(search){
         <td><span class="badge ${low?'badge-red':warn?'badge-amber':'badge-green'}">${low?'Out of Stock':warn?'Low Stock':'In Stock'}</span></td>
         <td style="text-align:right" onclick="event.stopPropagation()">
           <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+            <button class="btn btn-sm btn-ghost" onclick="openEditProductModal(${p.id},'inventory')" title="Edit product"><i class="fas fa-pen"></i>Edit</button>
             <button class="btn btn-sm btn-primary" onclick="openStockModal(${p.id},'add')"><i class="fas fa-plus"></i>Add</button>
             <button class="btn btn-sm btn-amber" onclick="openStockModal(${p.id},'sale')">Sale</button>
             <button class="btn btn-sm btn-danger" onclick="openStockModal(${p.id},'damage')">Damage</button>
@@ -3862,7 +3901,10 @@ function renderPrice(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${['prices','bulk','history'].map(t=>`<button class="btn btn-sm ${priceTab===t?'btn-primary':'btn-ghost'}" onclick="setPriceTab('${t}')">${t==='prices'?'<i class="fas fa-tag"></i> Product Prices':t==='bulk'?'<i class="fas fa-layer-group"></i> Bulk Rules':'<i class="fas fa-clock-rotate-left"></i> Price History'}</button>`).join('')}
       </div>
-      <button class="btn btn-primary" onclick="openAddProductModal('price')"><i class="fas fa-plus"></i> Add New Product</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="priceSearch" placeholder="Search product…" oninput="renderPriceTab()" style="width:190px;padding:8px 14px">
+        <button class="btn btn-primary" onclick="openAddProductModal('price')"><i class="fas fa-plus"></i> Add New Product</button>
+      </div>
     </div>
     <div id="priceTabContent"></div>
   </div>`;
@@ -3879,9 +3921,11 @@ function renderPriceTab(){
 
 function renderPriceTable(){
   const el=document.getElementById('priceTabContent');if(!el)return;
+  const search=(document.getElementById('priceSearch')?.value||'').toLowerCase();
+  const list=search?DB.products.filter(p=>p.name.toLowerCase().includes(search)||(p.category||'').toLowerCase().includes(search)):DB.products;
   el.innerHTML=`<div class="tbl-wrap"><table>
     <thead><tr><th>Product</th><th>Category</th><th>Retail (₦)</th><th>Wholesale (₦)</th><th>Unit</th><th style="text-align:right">Actions</th></tr></thead>
-    <tbody>${DB.products.map(p=>`<tr>
+    <tbody>${list.map(p=>`<tr>
       <td class="td-name">${p.name}</td>
       <td style="color:var(--text3)">${p.category}</td>
       <td class="mono" style="color:var(--green-light)">${N(p.retail)}</td>
@@ -3889,11 +3933,12 @@ function renderPriceTable(){
       <td style="color:var(--text3)">${p.unit}</td>
       <td style="text-align:right">
         <div style="display:flex;gap:6px;justify-content:flex-end">
-          <button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-edit"></i>Edit</button>
+          <button class="btn btn-sm btn-ghost" onclick="openEditProductModal(${p.id},'price')" title="Edit product"><i class="fas fa-pen"></i>Edit</button>
+          <button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-tag"></i>Prices</button>
           ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'price')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
         </div>
       </td>
-    </tr>`).join('')}
+    </tr>`).join('')||`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-search"></i><p>No products match your search</p></div></td></tr>`}
     </tbody>
   </table></div>`;
 }
@@ -4352,15 +4397,18 @@ function renderReports(){
 
     <!-- Report Period Tabs -->
     <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${['all','daily','weekly','monthly'].map(t=>`<button class="btn btn-sm ${reportType===t?'btn-primary':'btn-ghost'}" onclick="setReportType('${t}')">${{all:'<i class="fas fa-list"></i> All Transactions',daily:'<i class="fas fa-calendar-day"></i> Daily',weekly:'<i class="fas fa-calendar-week"></i> Weekly',monthly:'<i class="fas fa-calendar"></i> Monthly'}[t]}</button>`).join('')}
+      ${['all','daily','weekly','monthly','yearly'].map(t=>`<button class="btn btn-sm ${reportType===t?'btn-primary':'btn-ghost'}" onclick="setReportType('${t}')">${{all:'<i class="fas fa-list"></i> All',daily:'<i class="fas fa-calendar-day"></i> Daily',weekly:'<i class="fas fa-calendar-week"></i> Weekly',monthly:'<i class="fas fa-calendar"></i> Monthly',yearly:'<i class="fas fa-calendar-check"></i> Yearly'}[t]}</button>`).join('')}
     </div>
 
     <!-- Filters -->
     <div class="card" style="padding:14px 18px">
       <div class="filter-bar">
-        <div style="min-width:160px">
-          <label>Date</label>
+        <div id="repDatePickerWrap" style="min-width:180px">
+          <label id="repDatePickerLabel">Date</label>
           <input type="date" id="repFilterDate" oninput="renderReportTable()">
+          <input type="week" id="repFilterWeek" style="display:none" oninput="renderReportTable()">
+          <input type="month" id="repFilterMonth" style="display:none" oninput="renderReportTable()">
+          <input type="number" id="repFilterYear" placeholder="e.g. 2025" min="2020" max="2099" style="display:none" oninput="renderReportTable()">
         </div>
         <div style="flex:1;min-width:140px">
           <label>Product</label>
@@ -4383,30 +4431,87 @@ function renderReports(){
     <!-- Table -->
     <div class="tbl-wrap" id="repTable"></div>
   </div>`;
+  _syncReportDatePicker();
   renderReportTable();
 }
 
-function setReportType(t){reportType=t;renderReportTable();}
+function _syncReportDatePicker(){
+  const labels={all:'Date',daily:'Select Day',weekly:'Select Week',monthly:'Select Month',yearly:'Year'};
+  const el=document.getElementById('repDatePickerLabel');
+  if(el)el.textContent=labels[reportType]||'Date';
+  ['repFilterDate','repFilterWeek','repFilterMonth','repFilterYear'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  const map={all:'repFilterDate',daily:'repFilterDate',weekly:'repFilterWeek',monthly:'repFilterMonth',yearly:'repFilterYear'};
+  const show=document.getElementById(map[reportType]);
+  if(show)show.style.display='';
+}
+
+function setReportType(t){reportType=t;_syncReportDatePicker();renderReportTable();}
 
 function clearReportFilters(){
-  const d=document.getElementById('repFilterDate');
-  const p=document.getElementById('repFilterProduct');
-  const s=document.getElementById('repFilterStaff');
-  if(d)d.value='';if(p)p.value='';if(s)s.value='';
+  ['repFilterDate','repFilterWeek','repFilterMonth','repFilterYear','repFilterProduct','repFilterStaff'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
   renderReportTable();
 }
 
 function getReportSales(){
-  const filterDate=(document.getElementById('repFilterDate')?.value||'');
   const filterProd=(document.getElementById('repFilterProduct')?.value||'').toLowerCase();
   const filterStaff=(document.getElementById('repFilterStaff')?.value||'').toLowerCase();
   const now=new Date();
+
+  // Period-specific picker values
+  const filterDate=document.getElementById('repFilterDate')?.value||'';
+  const filterWeek=document.getElementById('repFilterWeek')?.value||''; // e.g. "2025-W03"
+  const filterMonth=document.getElementById('repFilterMonth')?.value||''; // e.g. "2025-01"
+  const filterYear=document.getElementById('repFilterYear')?.value||''; // e.g. "2025"
+
   return DB.sales.filter(s=>{
     const sd=new Date(s.date);
-    if(reportType==='daily'){const tod=new Date(now.getFullYear(),now.getMonth(),now.getDate());if(sd<tod)return false;}
-    else if(reportType==='weekly'){const wk=new Date(now);wk.setDate(now.getDate()-7);wk.setHours(0,0,0,0);if(sd<wk)return false;}
-    else if(reportType==='monthly'){const mo=new Date(now.getFullYear(),now.getMonth(),1);if(sd<mo)return false;}
-    if(filterDate){const fd=new Date(filterDate);const fdNext=new Date(fd);fdNext.setDate(fd.getDate()+1);if(sd<fd||sd>=fdNext)return false;}
+
+    // ── Period tab window ───────────────────────────────────────────
+    if(reportType==='daily'){
+      if(filterDate){
+        // User picked a specific day
+        const fd=new Date(filterDate);
+        const fdNext=new Date(fd);fdNext.setDate(fd.getDate()+1);
+        if(sd<fd||sd>=fdNext)return false;
+      } else {
+        const tod=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+        if(sd<tod)return false;
+      }
+    } else if(reportType==='weekly'){
+      if(filterWeek){
+        // Parse ISO week e.g. "2025-W03"
+        const [yr,wk]=filterWeek.split('-W').map(Number);
+        const jan4=new Date(yr,0,4); // Jan 4 is always in week 1
+        const weekStart=new Date(jan4);
+        weekStart.setDate(jan4.getDate()-((jan4.getDay()||7)-1)+(wk-1)*7);
+        weekStart.setHours(0,0,0,0);
+        const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+7);
+        if(sd<weekStart||sd>=weekEnd)return false;
+      } else {
+        const wk=new Date(now);wk.setDate(now.getDate()-7);wk.setHours(0,0,0,0);
+        if(sd<wk)return false;
+      }
+    } else if(reportType==='monthly'){
+      if(filterMonth){
+        const [yr,mo]=filterMonth.split('-').map(Number);
+        const mStart=new Date(yr,mo-1,1);
+        const mEnd=new Date(yr,mo,1);
+        if(sd<mStart||sd>=mEnd)return false;
+      } else {
+        const mo=new Date(now.getFullYear(),now.getMonth(),1);
+        if(sd<mo)return false;
+      }
+    } else if(reportType==='yearly'){
+      const yr=filterYear?parseInt(filterYear):now.getFullYear();
+      if(sd.getFullYear()!==yr)return false;
+    }
+    // 'all' — no window restriction
+
+    // ── Extra filters ───────────────────────────────────────────────
     if(filterProd&&!s.items.some(i=>i.name.toLowerCase().includes(filterProd)))return false;
     if(filterStaff&&!(s.soldBy||'').toLowerCase().includes(filterStaff))return false;
     return true;
@@ -4698,7 +4803,8 @@ window.onload = async function(){
       <div class="grid-2" style="gap:18px">
         <div>
           <label>Product Name <span style="color:var(--red)">*</span></label>
-          <input type="text" id="apName" placeholder="e.g. Bigi Cola 50cl">
+          <input type="text" id="apName" placeholder="e.g. Bigi Cola 50cl" oninput="document.getElementById('apNameError').style.display='none'">
+          <div id="apNameError" style="font-size:.72rem;color:var(--red);margin-top:4px;display:none"></div>
         </div>
         <div>
           <label>Category <span style="color:var(--red)">*</span></label>
@@ -4766,6 +4872,68 @@ window.onload = async function(){
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('addProductModal')">Cancel</button>
       <button class="btn btn-primary btn-lg" onclick="saveNewProduct()"><i class="fas fa-plus"></i>Add Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDIT PRODUCT MODAL ══ -->
+<div class="modal-overlay" id="editProductModal">
+  <div class="modal-box md">
+    <div class="modal-head">
+      <h3><i class="fas fa-pen-to-square" style="color:var(--amber);margin-right:6px"></i>Edit Product</h3>
+      <button class="modal-close" onclick="closeModal('editProductModal')">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+      <input type="hidden" id="epId">
+      <div class="grid-2" style="gap:18px">
+        <div>
+          <label>Product Name <span style="color:var(--red)">*</span></label>
+          <input type="text" id="epName" placeholder="e.g. Bigi Cola 50cl">
+          <div id="epNameError" style="font-size:.72rem;color:var(--red);margin-top:4px;display:none"></div>
+        </div>
+        <div>
+          <label>Category</label>
+          <input type="text" id="epCategory" list="epCategoryList">
+          <datalist id="epCategoryList">
+            <option value="Drinks"><option value="Groceries"><option value="Provisions">
+            <option value="Beverages"><option value="Toiletries"><option value="Frozen Foods">
+          </datalist>
+        </div>
+        <div>
+          <label>Retail Price (₦) <span style="color:var(--red)">*</span></label>
+          <input type="number" id="epRetail" value="0" min="0" step="0.01">
+        </div>
+        <div>
+          <label>Wholesale Price (₦)</label>
+          <input type="number" id="epWholesale" value="0" min="0" step="0.01">
+        </div>
+        <div>
+          <label>Cost Price (₦)</label>
+          <input type="number" id="epCostPrice" value="0" min="0" step="0.01">
+        </div>
+        <div>
+          <label>Low Stock Threshold</label>
+          <input type="number" id="epLowStock" value="10" min="0">
+        </div>
+      </div>
+      <!-- Product Image -->
+      <div>
+        <label>Product Photo <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+          <div id="epImgPreview" style="width:64px;height:64px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;flex-shrink:0">📦</div>
+          <div style="flex:1">
+            <input type="file" id="epImageFile" accept="image/*" style="display:none" onchange="handleProductImageUpload('epImageFile','epImgPreview','epImageData','epCategory')">
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('epImageFile').click()"><i class="fas fa-camera"></i>Change Photo</button>
+            <button type="button" class="btn btn-ghost btn-sm" style="margin-left:6px;color:var(--red)" onclick="epClearImage()"><i class="fas fa-times"></i>Remove</button>
+            <div style="font-size:.68rem;color:var(--text3);margin-top:5px">Removing falls back to default avatar</div>
+          </div>
+        </div>
+        <input type="hidden" id="epImageData" value="">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('editProductModal')">Cancel</button>
+      <button class="btn btn-primary btn-lg" onclick="saveEditProduct()"><i class="fas fa-save"></i>Save Changes</button>
     </div>
   </div>
 </div>
@@ -4897,6 +5065,97 @@ function openAddProductModal(from){
   setTimeout(()=>document.getElementById('apName').focus(), 200);
 }
 
+let _editProductCalledFrom = 'inventory';
+
+function openEditProductModal(id, from){
+  const p = DB.products.find(x => x.id === id); if(!p) return;
+  _editProductCalledFrom = from || 'inventory';
+  document.getElementById('epId').value = id;
+  document.getElementById('epName').value = p.name;
+  document.getElementById('epCategory').value = p.category || '';
+  document.getElementById('epRetail').value = p.retail;
+  document.getElementById('epWholesale').value = p.wholesale || 0;
+  document.getElementById('epCostPrice').value = p.costPrice || 0;
+  document.getElementById('epLowStock').value = p.lowStock || 10;
+  document.getElementById('epImageData').value = p.image || '';
+  document.getElementById('epNameError').style.display = 'none';
+  const prev = document.getElementById('epImgPreview');
+  if(p.image){
+    prev.innerHTML = `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+  } else {
+    prev.innerHTML = '📦'; prev.style.padding = '';
+  }
+  openModal('editProductModal');
+}
+
+function epClearImage(){
+  document.getElementById('epImageData').value = '';
+  const prev = document.getElementById('epImgPreview');
+  prev.innerHTML = '📦'; prev.style.padding = '';
+}
+
+function saveEditProduct(){
+  const id = parseInt(document.getElementById('epId').value);
+  const name = document.getElementById('epName').value.trim();
+  const category = document.getElementById('epCategory').value.trim();
+  const retail = parseFloat(document.getElementById('epRetail').value) || 0;
+  const wholesale = parseFloat(document.getElementById('epWholesale').value) || 0;
+  const costPrice = parseFloat(document.getElementById('epCostPrice').value) || 0;
+  const lowStock = parseInt(document.getElementById('epLowStock').value) || 10;
+  const image = document.getElementById('epImageData').value || '';
+
+  const errEl = document.getElementById('epNameError');
+  if(!name){ errEl.textContent = 'Product name is required.'; errEl.style.display = 'block'; return; }
+  if(retail <= 0){ alert('Retail price must be greater than 0.'); return; }
+
+  // Duplicate name check — skip self
+  const dup = DB.products.find(p => p.id !== id && p.name.toLowerCase() === name.toLowerCase());
+  if(dup){
+    errEl.textContent = `A product named "${dup.name}" already exists. Choose a different name.`;
+    errEl.style.display = 'block';
+    document.getElementById('epName').focus();
+    return;
+  }
+  errEl.style.display = 'none';
+
+  const p = DB.products.find(x => x.id === id); if(!p) return;
+  const inv = DB.inventory.find(x => x.id === id);
+  const changes = [];
+  if(p.name !== name) changes.push(`Name: "${p.name}" → "${name}"`);
+  if(p.retail !== retail) changes.push(`Retail: ${N(p.retail)} → ${N(retail)}`);
+  if(p.wholesale !== wholesale) changes.push(`WS: ${N(p.wholesale||0)} → ${N(wholesale)}`);
+  if((p.costPrice||0) !== costPrice) changes.push(`Cost: ${N(p.costPrice||0)} → ${N(costPrice)}`);
+  if(p.image !== image) changes.push('Photo updated');
+
+  // Apply to products
+  p.name = name; p.category = category; p.retail = retail;
+  p.wholesale = wholesale; p.costPrice = costPrice;
+  p.lowStock = lowStock; p.image = image || '';
+
+  // Sync to inventory
+  if(inv){
+    inv.name = name; inv.category = category; inv.retail = retail;
+    inv.wholesale = wholesale; inv.costPrice = costPrice;
+    inv.lowStock = lowStock; inv.image = image || '';
+  }
+
+  // Log price history if prices changed
+  if(retail !== p.retail || wholesale !== p.wholesale || costPrice !== (p.costPrice||0)){
+    DB.priceHistory.unshift({id:uid(),productId:id,productName:name,
+      timestamp:new Date().toISOString(),user:currentUserName||'Staff',
+      changes:changes.join(' · '),oldRetail:p.retail,newRetail:retail,
+      oldWholesale:p.wholesale,newWholesale:wholesale});
+    persist('priceHistory');
+  }
+
+  persist('products'); persist('inventory');
+  logActivity('Product', `Product edited: ${changes.join(' · ')} — by ${currentUserName||'Staff'}`);
+  closeModal('editProductModal');
+  showToast(`"${name}" updated successfully!`);
+  if(_editProductCalledFrom === 'price') renderPrice();
+  else renderInventory();
+}
+
 function deleteProduct(id, from){
   if(!isAdmin()){showToast('Only Admin or Super Admin can delete products.', false); return;}
   const p = DB.products.find(x => x.id === id);
@@ -4924,12 +5183,22 @@ function saveNewProduct(){
   const lowStock = parseInt(document.getElementById('apLowStock').value) || 10;
   const image = document.getElementById('apImageData').value || '';
 
-  if(!name){ alert('Product name is required.'); return; }
+  if(!name){
+    const e=document.getElementById('apNameError');
+    e.textContent='Product name is required.';e.style.display='block';
+    document.getElementById('apName').focus(); return;
+  }
   if(!category){ alert('Category is required.'); return; }
   if(retail <= 0){ alert('Please enter a retail price greater than 0.'); return; }
 
+  // Main store duplicate check (retail store uses DB_R — different namespace, allowed)
   const dup = DB.products.find(p => p.name.toLowerCase() === name.toLowerCase());
-  if(dup){ alert(`A product named "${dup.name}" already exists.`); return; }
+  if(dup){
+    const e=document.getElementById('apNameError');
+    e.textContent=`"${dup.name}" already exists in the main store. Use a different name or update the existing product.`;
+    e.style.display='block';
+    document.getElementById('apName').focus(); return;
+  }
 
   const newId = Date.now();
   const newProd = {
