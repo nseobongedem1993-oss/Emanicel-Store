@@ -3,6 +3,37 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, viewport-fit=cover">
+<!-- ═══════════════════════════════════════════════════════════════
+  SECURITY HEADERS
+  NOTE: These meta CSP tags are a second line of defence only.
+  For production, configure the equivalent HTTP response headers
+  on your web server / CDN (nginx, Cloudflare, etc.).
+═══════════════════════════════════════════════════════════════ -->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src  'self' 'unsafe-inline'
+              https://cdn.jsdelivr.net
+              https://cdnjs.cloudflare.com;
+  style-src   'self' 'unsafe-inline'
+              https://fonts.googleapis.com
+              https://cdnjs.cloudflare.com;
+  font-src    https://fonts.gstatic.com
+              https://cdnjs.cloudflare.com
+              data:;
+  img-src     'self' data: blob:
+              https://*.supabase.co
+              https://storage.googleapis.com;
+  connect-src 'self'
+              https://*.supabase.co
+              wss://*.supabase.co;
+  frame-src   'none';
+  object-src  'none';
+  base-uri    'self';
+  form-action 'self';
+">
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="geolocation=(), microphone=(), camera=()">
 <title>Emanicel Nigerian Venture — Business Portal</title>
 <meta name="theme-color" content="#1a5c2e">
 <meta name="description" content="Emanicel Nigerian Venture — POS, Inventory, Sales & Business Management">
@@ -12,11 +43,18 @@
 <meta name="apple-mobile-web-app-title" content="Emanicel">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
+<!-- ═══ EXTERNAL RESOURCES ═══════════════════════════════════════
+  SECURITY NOTE — Subresource Integrity (SRI):
+  crossorigin="anonymous" is set on all CDN resources.
+  For maximum supply-chain protection, generate SRI hashes at
+  https://www.srihash.org and add integrity="sha384-..." to each tag.
+═══════════════════════════════════════════════════════════════ -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1293,9 +1331,63 @@ body{font-display:swap;}
 // ══════════════════════════════════════════════════════════════════════════════
 // SUPABASE AUTH & ROLE SYSTEM
 // ══════════════════════════════════════════════════════════════════════════════
-const SUPABASE_URL = 'https://ajxywryxdzqizqymbykh.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqeHl3cnl4ZHpxaXpxeW1ieWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczODI5MDIsImV4cCI6MjA5Mjk1ODkwMn0.0uuJ8oSu51GkI27toPBGrcDuKsE7qytrRXJ0tW8iN7g';
+// SECURITY NOTE — Supabase anon key:
+//   The anon key below is intentionally public (it is safe to embed in
+//   client-side code per Supabase design). Your real security boundary is
+//   Row Level Security (RLS) policies on every table in the Supabase dashboard.
+//   Confirm RLS is ENABLED on: app_data, staff_profiles, and all business tables.
+//   Never embed a service_role key in front-end code — that key bypasses RLS.
+const SUPABASE_URL      = 'https://ajxywryxdzqizqymbykh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqeHl3cnl4ZHpxaXpxeW1ieWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczODI5MDIsImV4cCI6MjA5Mjk1ODkwMn0.0uuJ8oSu51GkI27toPBGrcDuKsE7qytrRXJ0tW8iN7g'; // anon key — safe to be public; security enforced by RLS
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SECURITY UTILITIES
+// ══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * escapeHTML — always call this before interpolating user-supplied or
+ * database-stored text into innerHTML to prevent XSS.
+ */
+function escapeHTML(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ── Login brute-force rate limiter ──────────────────────────────────────────
+const _LOGIN_MAX_ATTEMPTS = 5;
+const _LOGIN_LOCKOUT_MS   = 15 * 60 * 1000; // 15 minutes
+const _LOGIN_KEY          = 'emanicel_login_rl';
+
+function _rlCheck() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(_LOGIN_KEY) || '{}');
+    if (d.lockUntil && Date.now() < d.lockUntil) {
+      const mins = Math.ceil((d.lockUntil - Date.now()) / 60000);
+      return `Too many failed login attempts. Try again in ${mins} minute(s).`;
+    }
+  } catch(_) {}
+  return null;
+}
+function _rlRecord() {
+  try {
+    const d = JSON.parse(sessionStorage.getItem(_LOGIN_KEY) || '{}');
+    d.count = (d.count || 0) + 1;
+    if (d.count >= _LOGIN_MAX_ATTEMPTS) {
+      d.lockUntil = Date.now() + _LOGIN_LOCKOUT_MS;
+      d.count = 0;
+    }
+    sessionStorage.setItem(_LOGIN_KEY, JSON.stringify(d));
+  } catch(_) {}
+}
+function _rlClear() {
+  try { sessionStorage.removeItem(_LOGIN_KEY); } catch(_) {}
+}
 
 let currentUser = null;
 let currentRole = null; // 'super_admin' | 'admin' | 'staff' | 'retail_staff'
@@ -1349,14 +1441,23 @@ function setLoginError(msg){
 // Resolve login identifier → email
 async function resolveEmail(identifier){
   identifier = identifier.trim();
-  if(identifier.includes('@')) return identifier; // It's an email
-  // Try to look up by username or phone in profiles table
-  const {data} = await _sb.from('staff_profiles').select('email').or(`username.eq.${identifier},phone.eq.${identifier}`).maybeSingle();
+  if(identifier.includes('@')) return identifier; // Already an email
+  // Escape double-quotes to prevent PostgREST filter injection,
+  // then wrap value in quotes as required by the PostgREST .or() syntax.
+  const safe = identifier.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const {data} = await _sb.from('staff_profiles')
+    .select('email')
+    .or(`username.eq."${safe}",phone.eq."${safe}"`)
+    .maybeSingle();
   return data?.email || null;
 }
 
 // Login
 async function doLogin(){
+  // ── Rate-limit check ─────────────────────────────────────
+  const rlErr = _rlCheck();
+  if(rlErr){ setLoginError(rlErr); return; }
+  // ─────────────────────────────────────────────────────────
   const identifier = document.getElementById('loginIdentifier').value.trim();
   const password = document.getElementById('loginPassword').value;
   const remember = document.getElementById('rememberMe').checked;
@@ -1372,11 +1473,13 @@ async function doLogin(){
     }
     const {data, error} = await _sb.auth.signInWithPassword({email, password});
     if(error) throw error;
+    _rlClear(); // clear failed attempts on success
     if(remember){
       // session persistence handled by supabase client by default
     }
     await onAuthSuccess(data.user);
   } catch(e){
+    _rlRecord(); // record failed attempt for rate limiting
     setLoginError(e.message || 'Login failed. Check your credentials.');
     btn.disabled=false;btn.innerHTML='<i class="fas fa-right-to-bracket"></i> Sign In';
   }
@@ -2648,7 +2751,7 @@ function selectPayType(btn){
         if(!isNaN(idx)&&accts[idx]){
           const a=accts[idx];
           det.style.display='block';
-          det.innerHTML=`<strong style="color:var(--green-dark)">${a.bankName}</strong><br><span class="mono" style="font-size:.9rem;font-weight:700">${a.accountNumber}</span><br><span style="color:var(--text2)">${a.accountName}</span>`;
+          det.innerHTML=`<strong style="color:var(--green-dark)">${escapeHTML(a.bankName)}</strong><br><span class="mono" style="font-size:.9rem;font-weight:700">${escapeHTML(a.accountNumber)}</span><br><span style="color:var(--text2)">${escapeHTML(a.accountName)}</span>`;
         } else { det.style.display='none'; }
       };
     }
@@ -2789,8 +2892,7 @@ function generateReceipt(r){
 function printReceipt(){
   const area=document.getElementById('receiptPrintArea');
   if(!area){alert('Receipt not ready.');return;}
-  const w=window.open('','_blank','width=440,height=760');
-  w.document.write(`<html><head><title>Receipt</title>
+  const html=`<html><head><title>Receipt</title>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -2822,17 +2924,23 @@ function printReceipt(){
     .receipt-footer-owner{font-size:.68rem;font-weight:600;color:#b8860b;margin-top:6px}
     .receipt-number-badge{display:inline-block;background:#1a5c2e;color:#fff;font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:20px;margin-bottom:2px;font-family:'JetBrains Mono',monospace}
     @media print{body{background:none;padding:0}@page{margin:0.5cm}}
-  </style></head><body>`+area.outerHTML+'</body></html>');
-  w.document.close();
-  setTimeout(()=>{w.focus();w.print();},800);
+  </style></head><body>`+area.outerHTML+'</body></html>';
+  // Use Blob URL instead of document.write() to avoid deprecated API
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const w=window.open(url,'_blank','width=440,height=760');
+  setTimeout(()=>{
+    if(w){ w.focus(); w.print(); }
+    URL.revokeObjectURL(url); // release memory
+  },800);
 }
 
 function downloadReceiptPDF(){
   // Use print-to-PDF approach via styled print window — matches the on-screen receipt exactly
   const area=document.getElementById('receiptPrintArea');
   if(!area){alert('Receipt not ready.');return;}
-  const w=window.open('','_blank','width=440,height=760');
-  w.document.write(`<html><head><title>Receipt-${lastReceipt?lastReceipt.code:''}</title>
+  const title='Receipt-'+(lastReceipt?escapeHTML(lastReceipt.code):'');
+  const html=`<html><head><title>${title}</title>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -2864,9 +2972,15 @@ function downloadReceiptPDF(){
     .receipt-footer-owner{font-size:.68rem;font-weight:600;color:#b8860b;margin-top:6px}
     .receipt-number-badge{display:inline-block;background:#1a5c2e;color:#fff;font-size:.6rem;font-weight:700;letter-spacing:.1em;padding:2px 8px;border-radius:20px;margin-bottom:2px;font-family:'JetBrains Mono',monospace}
     @media print{@page{size:80mm auto;margin:4mm}body{padding:0}}
-  </style></head><body>`+area.outerHTML+'</body></html>');
-  w.document.close();
-  setTimeout(()=>{w.focus();w.print();},800);
+  </style></head><body>`+area.outerHTML+'</body></html>';
+  // Use Blob URL instead of deprecated document.write()
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const w=window.open(url,'_blank','width=440,height=760');
+  setTimeout(()=>{
+    if(w){ w.focus(); w.print(); }
+    URL.revokeObjectURL(url);
+  },800);
   showToast('Select "Save as PDF" in the print dialog.');
 }
 
@@ -3566,7 +3680,7 @@ function deleteSupplier(id){
 function openSupPayModal(id){
   const s=DB.suppliers.find(x=>x.id===id);if(!s)return;
   document.getElementById('supPaySupplierId').value=id;
-  document.getElementById('supPayInfo').innerHTML=`<strong>${s.name}</strong> — Amount Owed: <span style="color:var(--red);font-weight:700">${N(s.amountOwed||0)}</span>`;
+  document.getElementById('supPayInfo').innerHTML=`<strong>${escapeHTML(s.name)}</strong> — Amount Owed: <span style="color:var(--red);font-weight:700">${N(s.amountOwed||0)}</span>`;
   document.getElementById('supPayAmt').value=0;
   document.getElementById('supPayNote').value='';
   document.getElementById('supPayPreviewBox').textContent='Enter amount above';
@@ -3647,7 +3761,7 @@ function onPurchProductSelect(){
   if(!id){el.textContent='';return;}
   const p=DB.products.find(x=>x.id===id);
   if(!p){el.textContent='';return;}
-  el.innerHTML=`<span style="color:var(--text2)">Category: <strong>${p.category}</strong> · Unit: <strong>${p.unit}</strong> · Current Stock: <strong style="color:var(--green-light)">${p.stock}</strong></span>`;
+  el.innerHTML=`<span style="color:var(--text2)">Category: <strong>${escapeHTML(p.category)}</strong> · Unit: <strong>${escapeHTML(p.unit)}</strong> · Current Stock: <strong style="color:var(--green-light)">${p.stock}</strong></span>`;
 }
 
 function calcPurchTotal(){
@@ -3887,7 +4001,7 @@ function openStockModal(id,mode){
   stockModalProduct=p;stockModalMode=mode;
   const titles={add:'Add Stock',sale:'Record Sale (Deduct)',damage:'Report Damaged Goods'};
   document.getElementById('stockModalTitle').textContent=titles[mode];
-  document.getElementById('stockModalInfo').innerHTML=`<strong>${p.name}</strong> <span style="color:var(--text3)">· Current: ${p.stock} ${p.unit}</span>`;
+  document.getElementById('stockModalInfo').innerHTML=`<strong>${escapeHTML(p.name)}</strong> <span style="color:var(--text3)">· Current: ${p.stock} ${escapeHTML(p.unit)}</span>`;
   document.getElementById('stockQty').value=1;
   document.getElementById('stockReasonRow').style.display=mode==='damage'?'block':'none';
   document.getElementById('stockReason').value='';
@@ -4062,7 +4176,7 @@ function renderBulkRules(){
 function openBulkModal(id){
   const p=DB.products.find(x=>x.id===id);if(!p)return;
   bulkForId=id;
-  document.getElementById('bulkModalName').innerHTML=`<strong>${p.name}</strong>`;
+  document.getElementById('bulkModalName').innerHTML=`<strong>${escapeHTML(p.name)}</strong>`;
   let opts=`<option value="${p.unit}">${p.unit} (base)</option>`;
   if(p.conversions)Object.entries(p.conversions).forEach(([u,f])=>{opts+=`<option value="${u}">${u} (1 ${u} = ${f} ${p.unit})</option>`;});
   document.getElementById('bulkUnit').innerHTML=opts;
