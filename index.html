@@ -44,17 +44,31 @@
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <!-- ═══ EXTERNAL RESOURCES ═══════════════════════════════════════
-  SECURITY NOTE — Subresource Integrity (SRI):
-  crossorigin="anonymous" is set on all CDN resources.
-  For maximum supply-chain protection, generate SRI hashes at
-  https://www.srihash.org and add integrity="sha384-..." to each tag.
+  SECURITY — Subresource Integrity (SRI)  ✅ ACTION REQUIRED
+  ─────────────────────────────────────────────────────────────
+  crossorigin="anonymous" is already set on every CDN resource.
+  You still need to add the integrity="sha384-..." attribute to
+  lock each file to an exact hash. Steps:
+
+  1. Open https://www.srihash.org
+  2. Paste each CDN URL listed below, one at a time, and click Hash
+  3. Copy the generated integrity="sha384-..." string
+  4. Replace the matching REPLACE_WITH_SRI_HASH placeholder below
+
+  URLs to hash:
+    A) https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css
+    B) https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2
+    C) https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js
+
+  ⚠  Do NOT use a hash you find online — generate it fresh from the
+     actual URL so it matches exactly what your browser will fetch.
 ═══════════════════════════════════════════════════════════════ -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" crossorigin="anonymous">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha384-t1nt8BQoYMLFN5p42tRAtuAAFQaCQODekUVeKKZrEnEyp4H2R0RHFz0KWpmj7i8g" crossorigin="anonymous" referrerpolicy="no-referrer">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-sfbOag7cEcqn2DK53T/iBNAH/2cMCf7bSzJDwBhV117A0z/NIj9Usei1jKIBY1Ae" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1331,12 +1345,25 @@ body{font-display:swap;}
 // ══════════════════════════════════════════════════════════════════════════════
 // SUPABASE AUTH & ROLE SYSTEM
 // ══════════════════════════════════════════════════════════════════════════════
-// SECURITY NOTE — Supabase anon key:
-//   The anon key below is intentionally public (it is safe to embed in
-//   client-side code per Supabase design). Your real security boundary is
-//   Row Level Security (RLS) policies on every table in the Supabase dashboard.
-//   Confirm RLS is ENABLED on: app_data, staff_profiles, and all business tables.
-//   Never embed a service_role key in front-end code — that key bypasses RLS.
+// SECURITY — Supabase anon key:
+//   The anon key below is intentionally public (safe per Supabase design).
+//   Your ONLY security boundary is Row Level Security (RLS).
+//
+// ⛔ ACTION REQUIRED — CONFIRM EVERY TABLE HAS RLS ENABLED:
+//   Go to: Supabase Dashboard → Table Editor → [table] → RLS tab
+//   or run the SQL query shown in the screenshot on ALL tables and verify
+//   relrowsecurity = true  AND  relforcerowsecurity = true.
+//   Tables that MUST have RLS on: app_data, staff_profiles, inventory,
+//   products, retail_sales, retail_products, retail_inventory,
+//   retail_expenses, retail_debt, retail_purchases, retail_suppliers,
+//   retail_stock_history, retail_price_history, activity_log.
+//
+//   If ANY table shows false — open Supabase SQL Editor and run:
+//     ALTER TABLE public.<table_name> ENABLE ROW LEVEL SECURITY;
+//     ALTER TABLE public.<table_name> FORCE ROW LEVEL SECURITY;
+//   Then add appropriate SELECT/INSERT/UPDATE/DELETE policies.
+//
+//   Never embed the service_role key in front-end code — it bypasses RLS.
 const SUPABASE_URL      = 'https://ajxywryxdzqizqymbykh.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqeHl3cnl4ZHpxaXpxeW1ieWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczODI5MDIsImV4cCI6MjA5Mjk1ODkwMn0.0uuJ8oSu51GkI27toPBGrcDuKsE7qytrRXJ0tW8iN7g'; // anon key — safe to be public; security enforced by RLS
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1360,33 +1387,40 @@ function escapeHTML(str) {
 }
 
 // ── Login brute-force rate limiter ──────────────────────────────────────────
+// SECURITY: Uses localStorage (not sessionStorage) so the lockout persists
+// across new tabs, incognito windows re-opened on the same device, and
+// page refreshes. sessionStorage is tab-scoped and resets freely.
 const _LOGIN_MAX_ATTEMPTS = 5;
 const _LOGIN_LOCKOUT_MS   = 15 * 60 * 1000; // 15 minutes
 const _LOGIN_KEY          = 'emanicel_login_rl';
 
 function _rlCheck() {
   try {
-    const d = JSON.parse(sessionStorage.getItem(_LOGIN_KEY) || '{}');
+    const d = JSON.parse(localStorage.getItem(_LOGIN_KEY) || '{}');
     if (d.lockUntil && Date.now() < d.lockUntil) {
       const mins = Math.ceil((d.lockUntil - Date.now()) / 60000);
       return `Too many failed login attempts. Try again in ${mins} minute(s).`;
+    }
+    // Auto-clear an expired lock so the counter resets cleanly
+    if (d.lockUntil && Date.now() >= d.lockUntil) {
+      localStorage.removeItem(_LOGIN_KEY);
     }
   } catch(_) {}
   return null;
 }
 function _rlRecord() {
   try {
-    const d = JSON.parse(sessionStorage.getItem(_LOGIN_KEY) || '{}');
+    const d = JSON.parse(localStorage.getItem(_LOGIN_KEY) || '{}');
     d.count = (d.count || 0) + 1;
     if (d.count >= _LOGIN_MAX_ATTEMPTS) {
       d.lockUntil = Date.now() + _LOGIN_LOCKOUT_MS;
       d.count = 0;
     }
-    sessionStorage.setItem(_LOGIN_KEY, JSON.stringify(d));
+    localStorage.setItem(_LOGIN_KEY, JSON.stringify(d));
   } catch(_) {}
 }
 function _rlClear() {
-  try { sessionStorage.removeItem(_LOGIN_KEY); } catch(_) {}
+  try { localStorage.removeItem(_LOGIN_KEY); } catch(_) {}
 }
 
 let currentUser = null;
