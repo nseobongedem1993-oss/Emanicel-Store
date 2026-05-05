@@ -566,6 +566,31 @@ body{font-display:swap;}
 }
 .btn-login:hover{background:linear-gradient(135deg,var(--green-dark),var(--green));box-shadow:0 6px 20px rgba(26,92,46,.4)}
 .btn-login:disabled{opacity:.6;cursor:not-allowed}
+/* OTP step */
+.otp-info-box{
+  display:flex;align-items:flex-start;gap:12px;
+  background:rgba(26,92,46,.08);border:1px solid rgba(26,92,46,.2);
+  border-radius:var(--radius);padding:14px 16px;
+}
+.otp-info-box i{color:var(--green);font-size:1.4rem;margin-top:1px;flex-shrink:0}
+.otp-info-box p{font-size:.82rem;color:var(--text2);line-height:1.5}
+#otpCode{
+  font-family:var(--mono);font-size:1.4rem;font-weight:700;
+  letter-spacing:.25em;text-align:center;padding:14px;
+}
+.btn-otp-back{
+  background:none;border:none;color:var(--text3);font-size:.78rem;
+  cursor:pointer;font-family:var(--font);display:flex;align-items:center;
+  justify-content:center;gap:6px;padding:4px;margin-top:-4px;
+  transition:color .15s;
+}
+.btn-otp-back:hover{color:var(--green)}
+.totp-secret-box{
+  background:var(--surface2);border:1px solid var(--border2);
+  border-radius:var(--radius);padding:12px 14px;
+  color:var(--text);word-break:break-all;line-height:1.6;
+  user-select:all;cursor:text;
+}
 .login-error{
   background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);
   color:#fca5a5;border-radius:var(--radius);padding:10px 14px;
@@ -592,6 +617,7 @@ body{font-display:swap;}
 }
 .role-super{background:rgba(184,134,11,.15);color:var(--gold-dim)}
 .role-admin{background:rgba(26,74,140,.12);color:var(--blue)}
+.role-staff-controller{background:rgba(126,34,206,.12);color:#7c22ce}
 .role-staff{background:rgba(26,92,46,.12);color:var(--green)}
 /* user info in sidebar footer */
 .sidebar-user{
@@ -661,8 +687,11 @@ body{font-display:swap;}
       <h1 id="loginBizName">Emanicel</h1>
       <p id="loginBizSub">Nigerian Venture — Business Portal</p>
     </div>
-    <div class="login-fields">
-      <div id="loginError" class="login-error"></div>
+    <!-- shared error banner — visible in both steps -->
+    <div id="loginError" class="login-error"></div>
+
+    <!-- ── Step 1: Password ── -->
+    <div id="loginStep1" class="login-fields">
       <div>
         <label>Email / Phone / Username</label>
         <input type="text" id="loginIdentifier" placeholder="Enter your email, phone or username" autocomplete="username">
@@ -683,6 +712,49 @@ body{font-display:swap;}
       </div>
       <button class="btn-login" id="loginBtn" onclick="doLogin()">
         <i class="fas fa-right-to-bracket"></i> Sign In
+      </button>
+    </div>
+
+    <!-- ── Step 2: TOTP (enrollment OR challenge) ── -->
+    <div id="loginStep2" class="login-fields" style="display:none">
+
+      <!-- Enrollment only: secret key setup -->
+      <div id="totpSetupBlock" style="display:none">
+        <div class="otp-info-box" style="margin-bottom:0">
+          <i class="fas fa-mobile-screen-button"></i>
+          <p>Open <strong>Google Authenticator</strong> → tap <strong>+</strong> → <strong>Enter a setup key</strong>, then fill in the fields below.</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label>Account name (use this in the app)</label>
+          <div class="totp-secret-box" id="totpAccountDisplay" style="font-size:.82rem"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label>Secret key (paste this in the app)</label>
+          <div class="totp-secret-box" id="totpSecretDisplay" style="font-size:1rem;letter-spacing:.15em;font-family:var(--mono)"></div>
+          <button class="btn-otp-back" onclick="_copySecret()" id="copySecretBtn">
+            <i class="fas fa-copy"></i> Copy secret key
+          </button>
+        </div>
+        <p style="font-size:.75rem;color:var(--text3);text-align:center">Type <strong>Time based</strong> when the app asks for key type.</p>
+      </div>
+
+      <!-- Both flows: code input -->
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="otp-info-box" id="otpInfoBox">
+          <i class="fas fa-shield-halved"></i>
+          <p id="otpNote">Enter the 6-digit code from your authenticator app.</p>
+        </div>
+        <label>6-digit code</label>
+        <input type="text" id="otpCode" placeholder="000000"
+               inputmode="numeric" maxlength="6" autocomplete="one-time-code"
+               onkeydown="if(event.key==='Enter')submitOtp()">
+      </div>
+
+      <button class="btn-login" id="otpBtn" onclick="submitOtp()">
+        <i class="fas fa-shield-halved"></i> Verify
+      </button>
+      <button class="btn-otp-back" onclick="cancelOtp()">
+        <i class="fas fa-arrow-left"></i> Back to login
       </button>
     </div>
   </div>
@@ -990,6 +1062,32 @@ body{font-display:swap;}
   </div>
 </div>
 
+<!-- Remove Stock Modal (Super Admin & Staff Controller only — silent, no activity log) -->
+<div class="modal-overlay" id="removeStockModal">
+  <div class="modal-box sm">
+    <div class="modal-head">
+      <h3><i class="fas fa-minus-circle" style="color:var(--red);margin-right:6px"></i>Remove Stock</h3>
+      <button class="modal-close" onclick="closeModal('removeStockModal')">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div class="card-sm" style="background:rgba(192,57,43,.07);border-color:rgba(192,57,43,.25)">
+        <i class="fas fa-triangle-exclamation" style="color:var(--red);margin-right:6px"></i>
+        <span style="font-size:.78rem;color:var(--red)">This action removes stock silently — it will <strong>not</strong> appear in the activity log.</span>
+      </div>
+      <div id="removeStockInfo" class="card-sm"></div>
+      <div>
+        <label>Quantity to Remove <span style="color:var(--red)">*</span></label>
+        <input type="number" id="removeStockQty" value="1" min="1" oninput="updateRemoveStockPreview()" style="font-size:1.4rem;font-weight:700">
+      </div>
+      <div id="removeStockPreview" class="balance-box balance-owe">Preview will appear here</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('removeStockModal')">Cancel</button>
+      <button class="btn btn-danger btn-lg" onclick="confirmRemoveStock()"><i class="fas fa-minus-circle"></i>Remove Stock</button>
+    </div>
+  </div>
+</div>
+
 <!-- Edit Price Modal -->
 <div class="modal-overlay" id="priceModal">
   <div class="modal-box sm">
@@ -1198,6 +1296,7 @@ body{font-display:swap;}
           <option value="staff">Staff</option>
           <option value="retail_staff">Retail Staff</option>
           <option value="admin">Admin</option>
+          <option value="staff_controller" id="staffRoleControllerOption" style="display:none">Staff Controller</option>
           <option value="super_admin" id="staffRoleSuperAdminOption" style="display:none">Super Admin</option>
         </select>
       </div>
@@ -1424,19 +1523,27 @@ function _rlClear() {
 }
 
 let currentUser = null;
-let currentRole = null; // 'super_admin' | 'admin' | 'staff' | 'retail_staff'
+let currentRole = null; // 'super_admin' | 'admin' | 'staff_controller' | 'staff' | 'retail_staff'
 let currentUserName = '';
 
 // Role helpers
 function isSuperAdmin(){ return currentRole === 'super_admin'; }
-function isAdmin(){ return currentRole === 'admin' || currentRole === 'super_admin'; }
+function isStaffController(){ return currentRole === 'staff_controller'; }
+function isAdmin(){ return currentRole === 'admin' || currentRole === 'super_admin' || currentRole === 'staff_controller'; }
 function isRetailStaff(){ return currentRole === 'retail_staff'; }
 function canDelete(){ return isAdmin(); }
 function canAddStaff(){ return isAdmin(); }
 function canSeeSettings(){ return isSuperAdmin(); }
+function canRemoveStock(){ return isSuperAdmin() || isStaffController(); }
+function canDeleteStaff(targetRole){
+  // super_admin can delete anyone; staff_controller can delete anyone except super_admin
+  if(isSuperAdmin()) return true;
+  if(isStaffController()) return targetRole !== 'super_admin';
+  return false;
+}
 
 function roleLabelText(r){
-  return r==='super_admin'?'Super Admin':r==='admin'?'Admin':r==='retail_staff'?'Retail Staff':'Staff';
+  return r==='super_admin'?'Super Admin':r==='admin'?'Admin':r==='staff_controller'?'Staff Controller':r==='retail_staff'?'Retail Staff':'Staff';
 }
 
 // Toast helper
@@ -1486,37 +1593,154 @@ async function resolveEmail(identifier){
   return data?.email || null;
 }
 
-// Login
+// ── MFA state ────────────────────────────────────────────────────────────────
+let _mfaFactorId    = null;
+let _mfaChallengeId = null;
+let _mfaSecret      = null; // TOTP secret shown during enrollment
+
+// Login — Step 1: password
 async function doLogin(){
-  // ── Rate-limit check ─────────────────────────────────────
   const rlErr = _rlCheck();
   if(rlErr){ setLoginError(rlErr); return; }
-  // ─────────────────────────────────────────────────────────
+
   const identifier = document.getElementById('loginIdentifier').value.trim();
-  const password = document.getElementById('loginPassword').value;
-  const remember = document.getElementById('rememberMe').checked;
+  const password   = document.getElementById('loginPassword').value;
   if(!identifier||!password){setLoginError('Please enter your credentials.');return;}
+
   const btn=document.getElementById('loginBtn');
   btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Signing in…';
   setLoginError('');
+
   try{
     let email = await resolveEmail(identifier);
-    if(!email){
-      // fallback: treat as email anyway (Supabase will reject if wrong)
-      email = identifier;
-    }
+    if(!email) email = identifier;
+
     const {data, error} = await _sb.auth.signInWithPassword({email, password});
     if(error) throw error;
-    _rlClear(); // clear failed attempts on success
-    if(remember){
-      // session persistence handled by supabase client by default
+
+    // ── Check if TOTP verification is required ──────────────
+    const {data: aal} = await _sb.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if(aal.nextLevel === 'aal2' && aal.nextLevel !== aal.currentLevel){
+      // TOTP enrolled and verified — just challenge it
+      await _totpChallenge();
+    } else {
+      // First login — enroll TOTP and show secret key
+      await _totpEnroll(email);
     }
-    await onAuthSuccess(data.user);
+    btn.disabled=false;btn.innerHTML='<i class="fas fa-right-to-bracket"></i> Sign In';
+
   } catch(e){
-    _rlRecord(); // record failed attempt for rate limiting
+    _rlRecord();
     setLoginError(e.message || 'Login failed. Check your credentials.');
     btn.disabled=false;btn.innerHTML='<i class="fas fa-right-to-bracket"></i> Sign In';
   }
+}
+
+// First-time setup: enroll TOTP, show secret key to staff member
+async function _totpEnroll(email){
+  // Remove any unverified leftover TOTP factors first
+  const {data: existing} = await _sb.auth.mfa.listFactors();
+  for(const f of (existing?.totp || [])){
+    if(f.status !== 'verified') await _sb.auth.mfa.unenroll({factorId: f.id});
+  }
+
+  const {data: enroll, error: eErr} = await _sb.auth.mfa.enroll({factorType: 'totp'});
+  if(eErr) throw eErr;
+
+  _mfaFactorId = enroll.id;
+  _mfaSecret   = enroll.totp.secret;
+
+  // Show secret key setup screen
+  document.getElementById('totpAccountDisplay').textContent = email || 'Emanicel Portal';
+  document.getElementById('totpSecretDisplay').textContent  = _mfaSecret;
+  document.getElementById('totpSetupBlock').style.display   = 'flex';
+  document.getElementById('totpSetupBlock').style.flexDirection = 'column';
+  document.getElementById('totpSetupBlock').style.gap = '14px';
+  document.getElementById('otpNote').textContent = 'After adding the key in Google Authenticator, enter the 6-digit code it shows to confirm setup.';
+  _showOtpStep();
+}
+
+// Subsequent logins: challenge existing verified TOTP factor
+async function _totpChallenge(){
+  const {data: factors, error: fErr} = await _sb.auth.mfa.listFactors();
+  if(fErr) throw fErr;
+
+  const totpFactor = (factors?.totp || []).find(f => f.status === 'verified');
+  if(!totpFactor) throw new Error('No verified authenticator found. Contact your admin.');
+
+  _mfaFactorId = totpFactor.id;
+  const {data: challenge, error: cErr} = await _sb.auth.mfa.challenge({factorId: _mfaFactorId});
+  if(cErr) throw cErr;
+  _mfaChallengeId = challenge.id;
+
+  document.getElementById('totpSetupBlock').style.display = 'none';
+  document.getElementById('otpNote').textContent = 'Enter the 6-digit code from your Google Authenticator app.';
+  _showOtpStep();
+}
+
+// Reveal the OTP input step
+function _showOtpStep(){
+  document.getElementById('loginStep1').style.display = 'none';
+  document.getElementById('loginStep2').style.display = 'flex';
+  document.getElementById('otpCode').value = '';
+  setLoginError('');
+  setTimeout(()=>document.getElementById('otpCode').focus(), 80);
+}
+
+// Copy secret key to clipboard
+function _copySecret(){
+  if(!_mfaSecret) return;
+  navigator.clipboard.writeText(_mfaSecret).then(()=>{
+    const btn = document.getElementById('copySecretBtn');
+    btn.innerHTML='<i class="fas fa-check"></i> Copied!';
+    setTimeout(()=>btn.innerHTML='<i class="fas fa-copy"></i> Copy secret key', 2000);
+  });
+}
+
+// Login — Step 2: verify TOTP code
+async function submitOtp(){
+  const code = document.getElementById('otpCode').value.replace(/\s/g,'');
+  if(!code || code.length < 6){ setLoginError('Please enter the 6-digit code.'); return; }
+
+  const btn = document.getElementById('otpBtn');
+  btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Verifying…';
+  setLoginError('');
+
+  try{
+    // For enrollment, challengeAndVerify in one call; for challenge, use stored challengeId
+    if(!_mfaChallengeId){
+      // Enrollment path — create challenge then verify
+      const {data: ch, error: cErr} = await _sb.auth.mfa.challenge({factorId: _mfaFactorId});
+      if(cErr) throw cErr;
+      _mfaChallengeId = ch.id;
+    }
+
+    const {error} = await _sb.auth.mfa.verify({
+      factorId:    _mfaFactorId,
+      challengeId: _mfaChallengeId,
+      code
+    });
+    if(error) throw error;
+
+    _rlClear();
+    const {data:{user}} = await _sb.auth.getUser();
+    await onAuthSuccess(user);
+
+  } catch(e){
+    setLoginError(e.message || 'Invalid code. Please try again.');
+    btn.disabled=false;btn.innerHTML='<i class="fas fa-shield-halved"></i> Verify';
+  }
+}
+
+// Back button — sign out and reset to step 1
+async function cancelOtp(){
+  await _sb.auth.signOut();
+  _mfaFactorId = null; _mfaChallengeId = null; _mfaSecret = null;
+  document.getElementById('totpSetupBlock').style.display = 'none';
+  document.getElementById('loginStep1').style.display = 'flex';
+  document.getElementById('loginStep2').style.display = 'none';
+  setLoginError('');
 }
 
 // Called after successful login
@@ -1579,6 +1803,11 @@ function applyRoleUI(){
   if(isSuperAdmin()){
     const opt=document.getElementById('staffRoleSuperAdminOption');
     if(opt) opt.style.display='';
+    const optCtrl=document.getElementById('staffRoleControllerOption');
+    if(optCtrl) optCtrl.style.display='';
+  } else if(isStaffController()){
+    const optCtrl=document.getElementById('staffRoleControllerOption');
+    if(optCtrl) optCtrl.style.display='';
   }
   // Retail staff: hide main store nav, show only retail nav, auto-expand retail section
   if(isRetailStaff()){
@@ -1627,6 +1856,11 @@ async function doLogout(){
   document.getElementById('nav-staff').style.display='none';
   document.getElementById('nav-activitylog').style.display='none';
   document.getElementById('topbarUserBadge').style.display='none';
+  // Hide privileged role options in staff dropdown
+  const optSuper=document.getElementById('staffRoleSuperAdminOption');
+  if(optSuper) optSuper.style.display='none';
+  const optCtrl=document.getElementById('staffRoleControllerOption');
+  if(optCtrl) optCtrl.style.display='none';
   // Restore main nav visibility for next login
   document.querySelectorAll('.nav-main-item,.nav-main-label').forEach(el=>el.style.display='');
   // Hide retail section until next login resolves role
@@ -2021,8 +2255,13 @@ async function loadStaffTable(){
       <td class="td-name">${s.name||'—'}</td>
       <td style="color:var(--text2)">${s.email||'—'}</td>
       <td style="color:var(--text3)">${s.phone||'—'}</td>
-      <td><span class="badge ${s.role==='super_admin'?'badge-gold':s.role==='admin'?'badge-blue':s.role==='retail_staff'?'badge-amber':'badge-green'}">${roleLabelText(s.role)}</span></td>
-      <td>${s.user_id!==currentUser?.id?`<button class="btn btn-sm btn-danger" onclick="removeStaff('${s.user_id}','${(s.name||'').replace(/'/g,"\\'")}')"><i class="fas fa-user-minus"></i>Remove</button>`:`<span style="font-size:.72rem;color:var(--text3)">You</span>`}</td>
+      <td><span class="badge ${s.role==='super_admin'?'badge-gold':s.role==='admin'?'badge-blue':s.role==='staff_controller'?'badge-amber':'badge-green'}">${roleLabelText(s.role)}</span></td>
+      <td>${s.user_id===currentUser?.id
+        ? `<span style="font-size:.72rem;color:var(--text3)">You</span>`
+        : canDeleteStaff(s.role)
+          ? `<button class="btn btn-sm btn-danger" onclick="removeStaff('${s.user_id}','${(s.name||'').replace(/'/g,"\\'")}','${s.role}')"><i class="fas fa-user-minus"></i>Remove</button>`
+          : `<span style="font-size:.72rem;color:var(--text3)">—</span>`
+      }</td>
     </tr>`).join('')}
     </tbody>
   </table></div>`;
@@ -2042,8 +2281,8 @@ function renderStaffModule(){
   loadStaffTable();
 }
 
-async function removeStaff(userId, name){
-  if(!isSuperAdmin()){showToast('Only Super Admin can remove staff.',false);return;}
+async function removeStaff(userId, name, targetRole){
+  if(!canDeleteStaff(targetRole)){showToast('You do not have permission to remove this staff member.',false);return;}
   if(!confirm(`Remove staff member "${name}"? This cannot be undone.`))return;
   await _sb.from('staff_profiles').delete().eq('user_id',userId);
   showToast(name+' removed.');
@@ -3983,6 +4222,7 @@ function renderInvTable(search){
             <button class="btn btn-sm btn-primary" onclick="openStockModal(${p.id},'add')"><i class="fas fa-plus"></i>Add</button>
             <button class="btn btn-sm btn-amber" onclick="openStockModal(${p.id},'sale')">Sale</button>
             <button class="btn btn-sm btn-danger" onclick="openStockModal(${p.id},'damage')">Damage</button>
+            ${canRemoveStock()?`<button class="btn btn-sm btn-danger" onclick="openRemoveStockModal(${p.id})" title="Remove Stock" style="background:rgba(192,57,43,.18)"><i class="fas fa-minus-circle"></i>Remove</button>`:''}
             ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'inventory')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
           </div>
         </td>
@@ -4095,8 +4335,44 @@ function confirmStockAction(){
   closeModal('stockModal');renderInvTab();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MODULE 4 — PRICE CONFIGURATION
+// ── REMOVE STOCK (Super Admin & Staff Controller only — silent, no activity log) ──
+let removeStockProduct = null;
+
+function openRemoveStockModal(id){
+  if(!canRemoveStock()){showToast('Access denied — Super Admin or Staff Controller only.',false);return;}
+  const p=DB.inventory.find(x=>x.id===id);if(!p)return;
+  removeStockProduct=p;
+  document.getElementById('removeStockInfo').innerHTML=`<strong>${escapeHTML(p.name)}</strong> <span style="color:var(--text3)">· Current Stock: <strong style="color:var(--red)">${p.stock}</strong> ${escapeHTML(p.unit)}</span>`;
+  document.getElementById('removeStockQty').value=1;
+  updateRemoveStockPreview();
+  openModal('removeStockModal');
+}
+
+function updateRemoveStockPreview(){
+  const p=removeStockProduct;if(!p)return;
+  const qty=parseInt(document.getElementById('removeStockQty').value)||0;
+  const newStock=Math.max(0,p.stock-qty);
+  const box=document.getElementById('removeStockPreview');
+  box.className=`balance-box ${newStock<=0?'balance-owe':newStock<=(p.lowStock||0)?'balance-owe':'balance-change'}`;
+  box.innerHTML=`Stock after removal: <strong>${newStock}</strong> ${p.unit}${qty>p.stock?` <span style="color:var(--red);font-size:.75rem">(exceeds current stock!)</span>`:''}`;
+}
+
+function confirmRemoveStock(){
+  if(!canRemoveStock()){showToast('Access denied.',false);return;}
+  const p=removeStockProduct;if(!p)return;
+  const qty=parseInt(document.getElementById('removeStockQty').value)||0;
+  if(qty<=0){alert('Enter a valid quantity to remove.');return;}
+  if(qty>p.stock){alert(`Cannot remove ${qty} — only ${p.stock} ${p.unit} in stock.`);return;}
+  // Silently subtract from stock — NO activity log, NO stockHistory entry
+  p.stock-=qty;
+  const prod=DB.products.find(x=>x.id===p.id);if(prod)prod.stock=p.stock;
+  persist('inventory');persist('products');
+  closeModal('removeStockModal');
+  showToast(`Removed ${qty} ${p.unit} from "${p.name}". New stock: ${p.stock}.`);
+  renderInvTab();
+}
+
+
 // ══════════════════════════════════════════════════════════════════════════════
 let priceTab='prices';
 let editingPriceId=null;
