@@ -7,10 +7,11 @@
 //    • Navigate   → Network-first → cache fallback
 // ══════════════════════════════════════════════════════
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const SHELL_CACHE   = `emanicel-shell-${CACHE_VERSION}`;
 const CDN_CACHE     = `emanicel-cdn-${CACHE_VERSION}`;
-const ALL_CACHES    = [SHELL_CACHE, CDN_CACHE];
+const DATA_CACHE    = `emanicel-data-${CACHE_VERSION}`;
+const ALL_CACHES    = [SHELL_CACHE, CDN_CACHE, DATA_CACHE];
 
 // App shell — files hosted on YOUR origin
 const SHELL_ASSETS = [
@@ -21,6 +22,14 @@ const SHELL_ASSETS = [
   './icon-512.png',
 ];
 
+// CDN scripts — pre-cached on install so app loads fully offline
+const CDN_ASSETS = [
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
+  'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap',
+];
+
 // CDN assets — external libraries (cache on first fetch)
 const CDN_ORIGINS = [
   'fonts.googleapis.com',
@@ -29,18 +38,23 @@ const CDN_ORIGINS = [
   'cdn.jsdelivr.net',
 ];
 
-// Never cache these (always need live data)
-const NETWORK_ONLY_ORIGINS = [
+// Supabase origins — network-first with cache fallback for offline support
+const SUPABASE_ORIGINS = [
   'supabase.co',
   'supabase.io',
 ];
 
-// ── INSTALL: pre-cache app shell ──────────────────────
+// ── INSTALL: pre-cache app shell + CDN scripts ────────
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(SHELL_CACHE)
-      .then(cache => cache.addAll(SHELL_ASSETS))
-      .then(() => self.skipWaiting())  // activate immediately
+    Promise.all([
+      caches.open(SHELL_CACHE).then(cache => cache.addAll(SHELL_ASSETS)),
+      caches.open(CDN_CACHE).then(cache =>
+        Promise.allSettled(CDN_ASSETS.map(url =>
+          cache.add(url).catch(err => console.warn('SW: failed to pre-cache', url, err))
+        ))
+      ),
+    ]).then(() => self.skipWaiting())
   );
 });
 
@@ -66,9 +80,10 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   if (!['http:', 'https:'].includes(url.protocol)) return;
 
-  // Supabase / API → always network, no cache
-  if (NETWORK_ONLY_ORIGINS.some(o => url.hostname.includes(o))) {
-    return; // let browser handle it
+  // Supabase → network-first, cache fallback (works offline with last known data)
+  if (SUPABASE_ORIGINS.some(o => url.hostname.includes(o))) {
+    event.respondWith(networkFirstData(request));
+    return;
   }
 
   // CDN assets → cache-first
@@ -122,6 +137,23 @@ async function networkFirst(request) {
     const fallback = await caches.match('./index.html');
     return fallback || new Response(offlinePage(), {
       headers: { 'Content-Type': 'text/html' }
+    });
+  }
+}
+
+// Network-first for Supabase — caches responses so data available offline
+async function networkFirstData(request) {
+  const cache = await caches.open(DATA_CACHE);
+  try {
+    const response = await fetch(request);
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    return new Response(JSON.stringify({ error: 'offline', message: 'No cached data available' }), {
+      status: 503,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
