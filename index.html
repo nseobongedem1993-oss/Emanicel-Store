@@ -67,7 +67,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha384-t1nt8BQoYMLFN5p42tRAtuAAFQaCQODekUVeKKZrEnEyp4H2R0RHFz0KWpmj7i8g" crossorigin="anonymous" referrerpolicy="no-referrer">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" integrity="sha384-sfbOag7cEcqn2DK53T/iBNAH/2cMCf7bSzJDwBhV117A0z/NIj9Usei1jKIBY1Ae" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -1465,7 +1465,31 @@ body{font-display:swap;}
 //   Never embed the service_role key in front-end code — it bypasses RLS.
 const SUPABASE_URL      = 'https://ajxywryxdzqizqymbykh.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFqeHl3cnl4ZHpxaXpxeW1ieWtoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczODI5MDIsImV4cCI6MjA5Mjk1ODkwMn0.0uuJ8oSu51GkI27toPBGrcDuKsE7qytrRXJ0tW8iN7g'; // anon key — safe to be public; security enforced by RLS
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Guard: wait for supabase library to be available before initializing
+let _sb;
+function _initSupabase(){
+  if(typeof supabase !== 'undefined' && supabase.createClient){
+    _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return true;
+  }
+  return false;
+}
+if(!_initSupabase()){
+  // Library not yet ready — retry up to 20 times (2 seconds total)
+  let _sbRetries = 0;
+  const _sbInterval = setInterval(()=>{
+    _sbRetries++;
+    if(_initSupabase()){
+      clearInterval(_sbInterval);
+      checkSession();
+    } else if(_sbRetries >= 20){
+      clearInterval(_sbInterval);
+      const el = document.getElementById('loginError');
+      if(el){ el.textContent = 'Failed to load. Please refresh the page.'; el.classList.add('show'); }
+    }
+  }, 100);
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  SECURITY UTILITIES
@@ -5247,10 +5271,14 @@ function renderActivityLog(){
 // ══════════════════════════════════════════════════════════════════════════════
 function registerServiceWorker(){
   if(!('serviceWorker' in navigator)) return;
-  // SW requires same-origin .js file — skip in embedded/preview environments
   const swUrl = new URL('./sw.js', window.location.href).href;
   if(swUrl.startsWith('blob:') || swUrl.startsWith('data:')) return;
-  navigator.serviceWorker.register(swUrl, {scope:'./'}).catch(()=>{});
+  navigator.serviceWorker.register(swUrl, {scope:'./'})
+    .then(reg => {
+      // Check for updates every 60 seconds while app is open
+      setInterval(()=>reg.update(), 60000);
+    })
+    .catch(err => console.warn('SW registration failed:', err));
 }
 window.onload = async function(){
   applyStoredTheme();
@@ -5258,7 +5286,9 @@ window.onload = async function(){
   updateOnlineStatus();
   registerServiceWorker();
   renderNotifBadge();
-  await checkSession();
+  // Only call checkSession if _sb is already initialized (fast load)
+  // If not ready yet, the _sbInterval retry above will call it once ready
+  if(_sb) await checkSession();
   // ── Performance: passive scroll listeners ──
   document.addEventListener('touchstart',()=>{},{passive:true});
   document.addEventListener('touchmove',()=>{},{passive:true});
