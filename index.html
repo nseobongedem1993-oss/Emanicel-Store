@@ -674,6 +674,33 @@ body{font-display:swap;}
 .theme-toggle:hover{background:var(--surface2);color:var(--text)}
 .topbar-logout{background:none;border:1px solid var(--border2);color:var(--text3);cursor:pointer;padding:6px 9px;border-radius:var(--radius);font-size:.85rem;transition:all .15s;display:flex;align-items:center;gap:5px}
 .topbar-logout:hover{background:#fce8e8;color:var(--red);border-color:rgba(192,57,43,.3)}
+
+/* ── SELLING UNIT ROW ── */
+.selling-unit-row{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:12px 14px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end}
+.selling-unit-row label{font-size:.68rem;font-weight:600;color:var(--text3);margin-bottom:4px;display:block;letter-spacing:.03em}
+.selling-unit-row input,.selling-unit-row select{font-size:.82rem;padding:8px 10px}
+.unit-remove-btn{background:rgba(192,57,43,.12);border:none;color:var(--red);width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:background .12s;flex-shrink:0;margin-bottom:0}
+.unit-remove-btn:hover{background:var(--red);color:#fff}
+@media(max-width:640px){.selling-unit-row{grid-template-columns:1fr 1fr;gap:8px}.selling-unit-row .unit-remove-btn{grid-column:1/-1;width:100%;height:30px;border-radius:8px}}
+
+/* ── POS UNIT SELECTOR BOTTOM SHEET ── */
+#posUnitSheet{position:fixed;inset:0;z-index:700;display:none;align-items:flex-end;justify-content:center;background:rgba(26,46,26,.5);backdrop-filter:blur(4px)}
+#posUnitSheet.open{display:flex}
+#posUnitSheetBox{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:520px;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0px));box-shadow:0 -12px 40px rgba(0,0,0,.2);animation:sheetIn .22s ease}
+@keyframes sheetIn{from{transform:translateY(100%)}to{transform:none}}
+.unit-opt-btn{background:var(--surface2);border:1.5px solid var(--border2);border-radius:var(--radius);padding:12px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .15s;width:100%;text-align:left;font-family:var(--font)}
+.unit-opt-btn:hover,.unit-opt-btn.selected{border-color:var(--green);background:rgba(26,92,46,.1)}
+.unit-opt-btn .uname{font-weight:700;font-size:.88rem;color:var(--text)}
+.unit-opt-btn .uprice{font-family:var(--mono);font-size:.95rem;color:var(--green-light);font-weight:700}
+.unit-opt-btn .ustock{font-size:.68rem;color:var(--text3);margin-top:2px}
+
+/* ── SELLING UNIT ROWS (Add/Edit Product modal) ── */
+.su-row{display:grid;grid-template-columns:1fr 80px 105px 105px 34px;gap:6px;align-items:center;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px}
+.su-row input{padding:6px 8px;font-size:.78rem;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);color:var(--text);width:100%;box-sizing:border-box}
+.su-row input:focus{outline:none;border-color:var(--green-light)}
+.su-row-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:1.05rem;padding:4px;border-radius:6px;line-height:1}
+.su-row-del:hover{background:rgba(192,57,43,.1)}
+@media(max-width:500px){.su-row{grid-template-columns:1fr 64px 84px 84px 30px;gap:4px}}
 </style>
 </head>
 <body>
@@ -2357,21 +2384,12 @@ const KEYS = {
 };
 
 function seedProducts() {
-  return [
-    {id:1,name:'Coca Cola 50cl',category:'Drinks',emoji:'',retail:350,wholesale:320,unit:'bottle',stock:245,lowStock:50,conversions:{crate:24}},
-    {id:2,name:'Pepsi 50cl',category:'Drinks',emoji:'',retail:340,wholesale:310,unit:'bottle',stock:189,lowStock:50,conversions:{crate:24}},
-    {id:3,name:'Rice 50kg Bag',category:'Groceries',emoji:'',retail:28500,wholesale:27200,unit:'bag',stock:23,lowStock:5,conversions:{}},
-    {id:4,name:'Indomie Noodles',category:'Provisions',emoji:'',retail:1250,wholesale:1100,unit:'pack',stock:67,lowStock:20,conversions:{carton:24}},
-    {id:5,name:'Peak Milk Tetra',category:'Beverages',emoji:'',retail:480,wholesale:450,unit:'piece',stock:134,lowStock:30,conversions:{}},
-    {id:6,name:'Golden Penny Sugar 1kg',category:'Groceries',emoji:'',retail:950,wholesale:880,unit:'pack',stock:45,lowStock:10,conversions:{}},
-    {id:7,name:'Eva Water 75cl',category:'Drinks',emoji:'',retail:280,wholesale:260,unit:'bottle',stock:312,lowStock:60,conversions:{crate:12}},
-    {id:8,name:'Milo 400g',category:'Beverages',emoji:'',retail:1800,wholesale:1650,unit:'tin',stock:55,lowStock:15,conversions:{}},
-    {id:9,name:'Dangote Pasta 500g',category:'Provisions',emoji:'',retail:350,wholesale:320,unit:'pack',stock:88,lowStock:25,conversions:{carton:20}},
-    {id:10,name:'Hollandia Yoghurt',category:'Beverages',emoji:'',retail:600,wholesale:560,unit:'piece',stock:41,lowStock:12,conversions:{}},
-  ];
+  // No seed products — start fresh. Old demo data (Coca-Cola → Hollandia Yoghurt)
+  // removed as requested. Products are created by the business owner via Add Product.
+  return [];
 }
 function seedDebt(){return[];}
-function seedInventory(){return seedProducts().map(p=>({...p}));}
+function seedInventory(){return [];}
 
 // ── SUPABASE DATA LAYER ────────────────────────────────────────────────────────
 // Single app_data table: { key TEXT UNIQUE, value JSONB, updated_at TIMESTAMPTZ }
@@ -2665,18 +2683,17 @@ window.addEventListener('offline', updateOnlineStatus);
 
 // Sync inventory stock from products
 function syncInventoryFromProducts(){
-  // Add or update inventory entries that match a product
   DB.products.forEach(p=>{
     const inv=DB.inventory.find(i=>i.id===p.id);
     if(!inv){DB.inventory.push({...p});}
-    else{inv.name=p.name;inv.category=p.category;inv.unit=p.unit;inv.conversions=p.conversions;}
+    else{
+      inv.name=p.name;inv.category=p.category;inv.unit=p.unit;
+      inv.conversions=p.conversions;
+      if(p.sellingUnits) inv.sellingUnits=p.sellingUnits;
+    }
   });
-  // Remove any inventory entries whose product no longer exists (prevents orphan ghosts)
-  const before = DB.inventory.length;
-  DB.inventory = DB.inventory.filter(i => DB.products.some(p => p.id === i.id));
-  if(DB.inventory.length !== before){
-    console.log(`[syncInventory] Pruned ${before - DB.inventory.length} orphaned inventory item(s).`);
-  }
+  // Remove inventory items whose products no longer exist
+  DB.inventory=DB.inventory.filter(inv=>DB.products.find(p=>p.id===inv.id));
   persist('inventory');
 }
 
@@ -2862,30 +2879,26 @@ function renderProductGrid(list){
   if(!g) return;
   if(!list.length){g.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><p>No products found</p></div>';return;}
   g.innerHTML = list.map(p=>{
-    const price = isWholesale ? p.wholesale : p.retail;
     const inv = DB.inventory.find(i=>i.id===p.id);
     const stock = inv?inv.stock:p.stock;
-    const cartItem = cart.find(x=>x.id===p.id);
-    const cartQty = cartItem?cartItem.qty:0;
+    // Determine display price from first selling unit, or fallback
+    const sellingUnits = p.sellingUnits || [];
+    const displayUnit = sellingUnits.find(u=>u.qty===1) || sellingUnits[0];
+    const price = displayUnit ? (isWholesale?(displayUnit.wholesale||displayUnit.retail):displayUnit.retail) : (isWholesale?p.wholesale:p.retail);
     const isOut = stock<=0;
-    const isMaxed = !isOut && cartQty>=stock;
-    const cardStyle = isOut
-      ? 'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed'
-      : isMaxed
-      ? 'border-color:var(--red);background:rgba(192,57,43,.06)'
-      : '';
+    const cartQty = cart.filter(x=>x.id===p.id).reduce((s,x)=>s+x.qty,0);
+    const cardStyle = isOut ? 'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed' : '';
+    const unitsStr = sellingUnits.length > 1 ? sellingUnits.map(u=>u.name).join(' · ') : (displayUnit?.name || p.unit);
     const stockLabel = isOut
       ? `<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`
-      : isMaxed
-      ? `<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`
-      : `<div class="product-ws">${isWholesale?'Wholesale':'Retail'} · ${stock} left${cartQty>0?` (${cartQty} in cart)`:''}</div>`;
-    return `<div class="product-card" style="${cardStyle}" onclick="${isOut?'showToast(\"Out of stock!\",false)':'addToCart('+p.id+')'}">
+      : `<div class="product-ws">${stock} ${p.unit} left${cartQty>0?` · ${cartQty} in cart`:''}</div>`;
+    return `<div class="product-card" style="${cardStyle}" onclick="${isOut?'showToast(\"Out of stock!\",false)':'openPosUnitSheet('+p.id+')'}">
       ${productThumb(p)}
       <div class="product-name">${p.name}</div>
-      <div class="product-cat">${p.category} · ${p.unit}</div>
+      <div class="product-cat" style="font-size:.6rem">${p.category} · <span style="color:var(--green-dark)">${unitsStr}</span></div>
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:8px">
         <div>
-          <div class="product-price" style="${isOut||isMaxed?'color:var(--red)':''}">${N(price)}</div>
+          <div class="product-price" style="${isOut?'color:var(--red)':''}">${price?N(price):'—'}</div>
           ${stockLabel}
         </div>
       </div>
@@ -2901,11 +2914,16 @@ function posSearch(val){
   const filtered = DB.products.filter(p=>p.name.toLowerCase().includes(term)||p.category.toLowerCase().includes(term));
   renderProductGrid(filtered);
   if(!filtered.length){res.innerHTML='<div style="padding:12px 16px;color:var(--text3)">No results</div>';res.classList.add('open');return;}
-  res.innerHTML = filtered.map(p=>`
-    <div class="live-result-item" onclick="quickAdd(${p.id})">
-      <div><div style="font-size:.82rem;font-weight:600">${p.name}</div><div style="font-size:.68rem;color:var(--text3)">${p.unit}</div></div>
-      <div style="font-family:var(--mono);font-size:.85rem;color:var(--green-light)">${N(isWholesale?p.wholesale:p.retail)}</div>
-    </div>`).join('');
+  res.innerHTML = filtered.map(p=>{
+    const su = p.sellingUnits||[];
+    const displayUnit = su.find(u=>u.qty===1)||su[0];
+    const price = displayUnit?(isWholesale?(displayUnit.wholesale||displayUnit.retail):displayUnit.retail):(isWholesale?p.wholesale:p.retail);
+    const unitsStr = su.length>1?su.map(u=>u.name).join(', '):(displayUnit?.name||p.unit);
+    return `<div class="live-result-item" onclick="quickAdd(${p.id})">
+      <div><div style="font-size:.82rem;font-weight:600">${p.name}</div><div style="font-size:.68rem;color:var(--text3)">${unitsStr}</div></div>
+      <div style="font-family:var(--mono);font-size:.85rem;color:var(--green-light)">${price?N(price):'—'}</div>
+    </div>`;
+  }).join('');
   res.classList.add('open');
 }
 
@@ -2915,29 +2933,142 @@ function hideLiveSearch(e){
   if(res&&inp&&!inp.contains(e.target)&&!res.contains(e.target)){res.classList.remove('open');}
 }
 
-function quickAdd(id){addToCart(id);const r=document.getElementById('posLiveResults');if(r)r.classList.remove('open');}
+// ── POS UNIT SELECTOR ──────────────────────────────────────────────────────
+let _posSheetProduct = null;
+let _posSheetSelectedUnit = null;
+
+function openPosUnitSheet(id){
+  const p = DB.products.find(x=>x.id===id); if(!p) return;
+  const inv = DB.inventory.find(i=>i.id===id);
+  const stock = inv!==undefined ? inv.stock : p.stock;
+  if(stock <= 0){ showToast(`"${p.name}" is out of stock!`, false); return; }
+
+  _posSheetProduct = p;
+  _posSheetSelectedUnit = null;
+
+  document.getElementById('posSheetProductName').textContent = p.name;
+  document.getElementById('posSheetStockInfo').textContent = `${stock} ${p.unit}(s) in stock`;
+  document.getElementById('posSheetQty').value = 1;
+  document.getElementById('posSheetTotal').textContent = '₦0';
+
+  // Build unit options from sellingUnits
+  const sellingUnits = p.sellingUnits || [];
+  const optContainer = document.getElementById('posUnitOptions');
+  optContainer.innerHTML = '';
+
+  if(!sellingUnits.length){
+    // Legacy product: create a single unit option from retail/wholesale
+    const legacyUnit = {name: p.unit, qty: 1, retail: p.retail, wholesale: p.wholesale||0};
+    sellingUnits.push(legacyUnit);
+  }
+
+  sellingUnits.forEach((u,i) => {
+    const price = isWholesale ? (u.wholesale||u.retail) : u.retail;
+    const maxQtyInUnit = Math.floor(stock / u.qty);
+    const btn = document.createElement('button');
+    btn.className = 'unit-opt-btn' + (i===0?' selected':'');
+    btn.dataset.idx = i;
+    btn.innerHTML = `
+      <div>
+        <div class="uname">${escapeHTML(u.name)}</div>
+        <div class="ustock">1 ${escapeHTML(u.name)} = ${u.qty} ${escapeHTML(p.unit)}${maxQtyInUnit<1?' · <span style="color:var(--red)">Not enough stock</span>':' · Max: '+maxQtyInUnit}</div>
+      </div>
+      <div class="uprice">${N(price)}</div>
+    `;
+    btn.onclick = function(){
+      optContainer.querySelectorAll('.unit-opt-btn').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+      _posSheetSelectedUnit = sellingUnits[parseInt(btn.dataset.idx)];
+      updatePosSheetTotal();
+    };
+    if(i===0){ _posSheetSelectedUnit = u; }
+    optContainer.appendChild(btn);
+  });
+
+  updatePosSheetTotal();
+  document.getElementById('posUnitSheet').classList.add('open');
+  setTimeout(()=>document.getElementById('posSheetQty').focus(), 200);
+}
+
+function closePosUnitSheet(){
+  document.getElementById('posUnitSheet').classList.remove('open');
+  _posSheetProduct = null;
+  _posSheetSelectedUnit = null;
+}
+
+function updatePosSheetTotal(){
+  const u = _posSheetSelectedUnit; if(!u) return;
+  const qty = parseInt(document.getElementById('posSheetQty').value) || 1;
+  const price = isWholesale ? (u.wholesale||u.retail) : u.retail;
+  document.getElementById('posSheetTotal').textContent = N(price * qty);
+}
+
+function confirmPosUnitAdd(){
+  const p = _posSheetProduct; if(!p) return;
+  const u = _posSheetSelectedUnit; if(!u) return;
+  const qty = parseInt(document.getElementById('posSheetQty').value) || 1;
+  if(qty < 1){ showToast('Quantity must be at least 1.', false); return; }
+
+  const inv = DB.inventory.find(i=>i.id===p.id);
+  const stock = inv!==undefined ? inv.stock : p.stock;
+  const baseUnitsNeeded = qty * u.qty;
+
+  if(baseUnitsNeeded > stock){
+    showToast(`Not enough stock! Need ${baseUnitsNeeded} ${p.unit}(s), only ${stock} available.`, false);
+    return;
+  }
+
+  const price = isWholesale ? (u.wholesale||u.retail) : u.retail;
+  const cartKey = `${p.id}::${u.name}`;
+  const existing = cart.find(x => x._cartKey === cartKey);
+
+  if(existing){
+    const newQty = existing.qty + qty;
+    const newBaseUnits = newQty * u.qty;
+    if(newBaseUnits > stock){ showToast(`Only ${Math.floor(stock/u.qty)} ${u.name}(s) available.`, false); return; }
+    existing.qty = newQty;
+  } else {
+    cart.push({
+      id: p.id,
+      name: p.name,
+      unit: u.name,
+      _unitDef: u,
+      _cartKey: cartKey,
+      qty,
+      price,
+      retail: u.retail,
+      wholesale: u.wholesale||0,
+      _baseQtyPerUnit: u.qty,
+      costPrice: p.costPrice || 0
+    });
+  }
+
+  closePosUnitSheet();
+  renderCart();
+  renderProductGrid(DB.products);
+  showToast(`${qty} ${u.name} added to cart`, true);
+}
+
+function addToCart(id){
+  // Open unit selector instead of directly adding
+  openPosUnitSheet(id);
+}
+
+function quickAdd(id){
+  openPosUnitSheet(id);
+  const r=document.getElementById('posLiveResults');
+  if(r)r.classList.remove('open');
+}
 
 function setPriceMode(ws){
   isWholesale=ws;
   const r=document.getElementById('btnRetail'),w=document.getElementById('btnWholesale');
   if(r&&w){r.classList.toggle('active',!ws);w.classList.toggle('active',ws);}
-  cart.forEach(item=>{item.price=isWholesale?item.wholesale:item.retail;});
+  cart.forEach(item=>{item.price=isWholesale?(item.wholesale||item.retail):item.retail;});
   renderProductGrid(DB.products);renderCart();
 }
 
-function addToCart(id){
-  const p=DB.products.find(x=>x.id===id);if(!p)return;
-  const inv=DB.inventory.find(i=>i.id===id);
-  const stock=inv!==undefined?inv.stock:p.stock;
-  if(stock<=0){showToast(`"${p.name}" is out of stock!`,false);return;}
-  const existing=cart.find(x=>x.id===id);
-  if(existing){
-    if(existing.qty>=stock){showToast(`Only ${stock} ${p.unit}(s) available for "${p.name}"`,false);return;}
-    existing.qty++;
-  }else{cart.push({...p,qty:1,price:isWholesale?p.wholesale:p.retail});}
-  renderCart();
-  renderProductGrid(DB.products);
-}
+
 
 function renderCart(){
   const el=document.getElementById('cartItems');
@@ -2948,11 +3079,13 @@ function renderCart(){
     const inv=DB.inventory.find(x=>x.id===item.id);
     const prod=DB.products.find(x=>x.id===item.id);
     const stock=inv!==undefined?inv.stock:(prod?prod.stock:999);
-    const isOver=item.qty>stock;
+    const baseUnitsNeeded = item.qty * (item._baseQtyPerUnit||1);
+    const isOver=baseUnitsNeeded>stock;
+    const maxUnits = Math.floor(stock/(item._baseQtyPerUnit||1));
     return `
     <div class="cart-item" style="${isOver?'border:1px solid var(--red);background:rgba(192,57,43,.06)':''}">
       <div class="flex-between">
-        <div><div class="cart-item-name" style="${isOver?'color:var(--red)':''}">${item.name}${isOver?` <span style="font-size:.65rem;color:var(--red);font-weight:700">(only ${stock} in stock!)</span>`:''}</div><div class="cart-item-unit">${item.unit}</div></div>
+        <div><div class="cart-item-name" style="${isOver?'color:var(--red)':''}">${item.name}${isOver?` <span style="font-size:.65rem;color:var(--red);font-weight:700">(max ${maxUnits} ${item.unit})</span>`:''}</div><div class="cart-item-unit">${item.unit} · ${item._baseQtyPerUnit||1} ${prod?.unit||'unit'} each</div></div>
         <button class="btn btn-icon" style="color:var(--text3);background:none;border:none;cursor:pointer;font-size:.9rem" onclick="removeFromCart(${i})"><i class="fas fa-times"></i></button>
       </div>
       <div class="cart-qty-row">
@@ -2977,7 +3110,9 @@ function changeQty(i,d){
     const inv=DB.inventory.find(x=>x.id===item.id);
     const prod=DB.products.find(x=>x.id===item.id);
     const stock=inv!==undefined?inv.stock:(prod?prod.stock:0);
-    if(item.qty>=stock){showToast(`Only ${stock} ${item.unit}(s) available for "${item.name}"`,false);return;}
+    const basePerUnit = item._baseQtyPerUnit||1;
+    const newBaseUnits = (item.qty+1)*basePerUnit;
+    if(newBaseUnits>stock){showToast(`Only ${Math.floor(stock/basePerUnit)} ${item.unit}(s) available for "${item.name}"`,false);return;}
   }
   cart[i].qty=Math.max(1,cart[i].qty+d);
   renderCart();
@@ -3009,10 +3144,11 @@ function showPaymentModal(){
     const inv=DB.inventory.find(x=>x.id===item.id);
     const prod=DB.products.find(x=>x.id===item.id);
     const stock=inv!==undefined?inv.stock:(prod?prod.stock:999);
-    return item.qty>stock;
+    const baseUnitsNeeded = item.qty * (item._baseQtyPerUnit||1);
+    return baseUnitsNeeded>stock;
   });
   if(stockViolations.length){
-    alert('Cannot complete sale!\n\nThe following items exceed available stock:\n'+stockViolations.map(item=>{const inv=DB.inventory.find(x=>x.id===item.id);const prod=DB.products.find(x=>x.id===item.id);const stock=inv!==undefined?inv.stock:(prod?prod.stock:0);return `• ${item.name}: ${item.qty} requested, only ${stock} in stock`;}).join('\n')+'\n\nPlease reduce the quantities before proceeding.');
+    alert('Cannot complete sale!\n\nThe following items exceed available stock:\n'+stockViolations.map(item=>{const inv=DB.inventory.find(x=>x.id===item.id);const prod=DB.products.find(x=>x.id===item.id);const stock=inv!==undefined?inv.stock:(prod?prod.stock:0);const baseNeeded=item.qty*(item._baseQtyPerUnit||1);return `• ${item.name} (${item.unit}): needs ${baseNeeded} ${prod?.unit||'units'}, only ${stock} in stock`;}).join('\n')+'\n\nPlease reduce the quantities before proceeding.');
     return;
   }
   const total=recalcCart();
@@ -3106,15 +3242,16 @@ function processCheckout(){
   const transferRef=(selectedPayType==='transfer'?document.getElementById('transferRef')?.value.trim():'') || '';
   const paystackRef=(selectedPayType==='paystack'?(_paystackRef||''):'');
   _paystackRef=null;
-  // Deduct from inventory
+  // Deduct from inventory using base unit conversion
   cart.forEach(item=>{
+    const baseUnitsToDeduct = item.qty * (item._baseQtyPerUnit || 1);
     const inv=DB.inventory.find(i=>i.id===item.id);
     if(inv){
-      inv.stock=Math.max(0,inv.stock-item.qty);
-      DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,timestamp:new Date().toISOString(),action:'sale',delta:-item.qty,newStock:inv.stock,unit:item.unit,reason:'POS Sale · '+code});
+      inv.stock=Math.max(0,inv.stock-baseUnitsToDeduct);
+      DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,timestamp:new Date().toISOString(),action:'sale',delta:-baseUnitsToDeduct,newStock:inv.stock,unit:inv.unit,reason:`POS Sale · ${item.qty} ${item.unit} · Code: ${code}`});
     }
     const prod=DB.products.find(p=>p.id===item.id);
-    if(prod)prod.stock=Math.max(0,prod.stock-item.qty);
+    if(prod)prod.stock=Math.max(0,prod.stock-baseUnitsToDeduct);
   });
   persist('inventory');persist('stockHistory');persist('products');
   // Record debt/deposit if needed
@@ -3133,9 +3270,13 @@ function processCheckout(){
     DB.debt.unshift(rec);persist('debt');
   }
   lastReceipt={code,items:[...cart],total:currentPayTotal,collected,depositAmt,balance:Math.max(0,total-collected),payType:selectedPayType,custName,date:new Date(),soldBy:currentUserName||'Staff',transferRef,paystackRef};
-  // Record sale for accounting/dashboard
-  const saleCOGS=cart.reduce((s,item)=>{const p=DB.products.find(x=>x.id===item.id);return s+(p?(item.qty*(p.costPrice||0)):0);},0);
-  DB.sales.unshift({id:uid(),code,date:new Date().toISOString(),total:currentPayTotal,collected,payType:selectedPayType,custName:custName||'Walk-in',soldBy:currentUserName||'Staff',transferRef,paystackRef,cogs:saleCOGS,items:cart.map(i=>({name:i.name,qty:i.qty,price:i.price,id:i.id,costPrice:DB.products.find(x=>x.id===i.id)?.costPrice||0}))});
+  // Record sale for accounting/dashboard — COGS uses base unit cost × base units sold
+  const saleCOGS=cart.reduce((s,item)=>{
+    const p=DB.products.find(x=>x.id===item.id);
+    const baseUnits=item.qty*(item._baseQtyPerUnit||1);
+    return s+(p?(baseUnits*(p.costPrice||0)):0);
+  },0);
+  DB.sales.unshift({id:uid(),code,date:new Date().toISOString(),total:currentPayTotal,collected,payType:selectedPayType,custName:custName||'Walk-in',soldBy:currentUserName||'Staff',transferRef,paystackRef,cogs:saleCOGS,items:cart.map(i=>({name:i.name,unit:i.unit,qty:i.qty,price:i.price,id:i.id,_baseQtyPerUnit:i._baseQtyPerUnit||1,costPrice:DB.products.find(x=>x.id===i.id)?.costPrice||0}))});
   persist('sales');
   logActivity('Sale', `Sale ${code} — ${N(currentPayTotal)} — ${selectedPayType} — by ${currentUserName||'Staff'}`);
   pushNotif('sale',`New sale: ${N(currentPayTotal)} via ${selectedPayType} (${code})`,'fa-bag-shopping');
@@ -3168,7 +3309,7 @@ function generateReceipt(r){
     </div>
     <div class="receipt-items-head"><span>ITEM</span><span>AMOUNT</span></div>
     <hr class="receipt-divider">
-    ${r.items.map(i=>`<div class="receipt-row"><span class="item-name">${i.name} <span style="color:#7a9a7a;font-size:.68rem">×${i.qty}</span></span><span class="item-amount">${N(i.price*i.qty)}</span></div>`).join('')}
+    ${r.items.map(i=>`<div class="receipt-row"><span class="item-name">${i.name} <span style="color:#7a9a7a;font-size:.68rem">${i.unit?i.unit+' ×':'×'}${i.qty}</span></span><span class="item-amount">${N(i.price*i.qty)}</span></div>`).join('')}
     <hr class="receipt-divider">
     <div class="receipt-total-section">
       <div class="receipt-grand">
@@ -3378,10 +3519,13 @@ function renderDebtTable(){
       <td><span class="badge ${r.status==='cleared'?'badge-green':r.status==='overdue'?'badge-red':r.type==='deposit'?'badge-blue':'badge-amber'}">${r.status}</span></td>
       <td style="font-size:.75rem;color:var(--text3)">${dateStr(r.date)}</td>
       <td style="text-align:right" onclick="event.stopPropagation()">
+        <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center">
         ${r.status!=='cleared'?r.type==='deposit'
           ?`<button class="btn btn-sm btn-primary" onclick="clearDeposit('${r.id}')"><i class="fas fa-check"></i>Clear</button>`
           :`<button class="btn btn-sm btn-amber" onclick="openRepay('${r.id}')"><i class="fas fa-coins"></i>Repay</button>`
           :'<span class="badge badge-green"><i class="fas fa-check-circle"></i> Done</span>'}
+        ${canRemoveStock()?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteDebtRecord('${r.id}')" title="Delete &amp; restore stock"><i class="fas fa-trash"></i></button>`:''}
+        </div>
       </td>
     </tr>`).join('');
   document.getElementById('debtInfo').textContent=`Showing ${slice.length} of ${filtered.length} records`;
@@ -3441,7 +3585,9 @@ function showDebtDetail(id){
     ?(r.type==='deposit'
       ?`<button class="btn btn-primary" onclick="clearDeposit('${r.id}')"><i class="fas fa-check-circle"></i>Clear Deposit</button>`
       :`<button class="btn btn-amber" onclick="openRepay('${r.id}')"><i class="fas fa-coins"></i>Record Repayment</button>`)
-    :'')+`<button class="btn btn-ghost" onclick="closeModal('detailModal')">Close</button>`;
+    :'')+
+    (canRemoveStock()?`<button class="btn btn-danger" onclick="deleteDebtRecord('${r.id}')"><i class="fas fa-trash"></i>Delete &amp; Restore Stock</button>`:'')+
+    `<button class="btn btn-ghost" onclick="closeModal('detailModal')">Close</button>`;
   openModal('detailModal');
 }
 
@@ -3974,11 +4120,24 @@ function saveNewSupplier(){
 function deleteSupplier(id){
   if(!isAdmin()){showToast('Admin only.',false);return;}
   const s=DB.suppliers.find(x=>x.id===id);if(!s)return;
-  if(!confirm('Remove supplier "'+s.name+'"?')) return;
+  if(!confirm(`Remove supplier "${s.name}"?\n\nPurchase records will be kept for accounting but will no longer be linked to this supplier.`)) return;
+
+  // Disassociate purchases that reference this supplier by name
+  // (Purchases are financial records — deleting them would corrupt accounting)
+  let purchasesUpdated = false;
+  DB.purchases.forEach(r=>{
+    if(r.supplier && r.supplier.toLowerCase()===s.name.toLowerCase()){
+      r.supplier = `[Deleted: ${s.name}]`;
+      purchasesUpdated = true;
+    }
+  });
+  if(purchasesUpdated) persist('purchases');
+
   DB.suppliers=DB.suppliers.filter(x=>x.id!==id);
   persist('suppliers');
+  logActivity('Supplier',`Supplier deleted: ${s.name} — by ${currentUserName||'Admin'}`);
   renderSupplierList();
-  showToast('Supplier removed.');
+  showToast(`Supplier "${s.name}" removed.`);
 }
 
 function openSupPayModal(id){
@@ -4024,7 +4183,7 @@ function openPurchaseModal(){
   // Populate product select
   const sel=document.getElementById('purchProductSel');
   sel.innerHTML='<option value="">— choose product —</option>'+
-    DB.products.map(p=>`<option value="${p.id}">${p.name} (${p.unit}) · Stock: ${p.stock}</option>`).join('');
+    DB.products.map(p=>`<option value="${p.id}">${p.name} (base: ${p.unit}) · Stock: ${p.stock} ${p.unit}</option>`).join('');
   document.getElementById('purchExistingInfo').textContent='';
   // Populate supplier datalist
   const dl=document.getElementById('supplierList');
@@ -4065,7 +4224,10 @@ function onPurchProductSelect(){
   if(!id){el.textContent='';return;}
   const p=DB.products.find(x=>x.id===id);
   if(!p){el.textContent='';return;}
-  el.innerHTML=`<span style="color:var(--text2)">Category: <strong>${escapeHTML(p.category)}</strong> · Unit: <strong>${escapeHTML(p.unit)}</strong> · Current Stock: <strong style="color:var(--green-light)">${p.stock}</strong></span>`;
+  const su=(p.sellingUnits||[]);
+  const suStr=su.length?su.map(u=>`${u.name}=${u.qty}`).join(', '):'None configured';
+  el.innerHTML=`<span style="color:var(--text2)">Category: <strong>${escapeHTML(p.category)}</strong> · Base Unit: <strong>${escapeHTML(p.unit)}</strong> · Current Stock: <strong style="color:var(--green-light)">${p.stock} ${p.unit}</strong> · Selling Units: <span style="color:var(--text3)">${escapeHTML(suStr)}</span></span>
+  <div style="margin-top:4px;font-size:.72rem;color:var(--amber)"><i class="fas fa-info-circle"></i> Enter quantity in base units (${escapeHTML(p.unit)}). Use conversions above if needed.</div>`;
 }
 
 function calcPurchTotal(){
@@ -4115,7 +4277,7 @@ function savePurchase(){
     persist('stockHistory');
 
   } else {
-    // Create new product
+    // Create new product (basic — user should edit via Inventory to add selling units)
     const newName=document.getElementById('purchNewName').value.trim();
     const newCat=document.getElementById('purchNewCategory').value.trim();
     const newUnit=document.getElementById('purchNewUnit').value;
@@ -4131,10 +4293,13 @@ function savePurchase(){
     if(dup){alert(`A product named "${dup.name}" already exists. Please use "Select Existing" mode.`);return;}
 
     const newId=Date.now();
+    // Create a default selling unit matching the base unit
+    const defaultSellingUnits=newRetail>0?[{name:newUnit,qty:1,retail:newRetail,wholesale:newWholesale}]:[];
     const newProd={
       id:newId, name:newName, category:newCat, emoji:'',
       retail:newRetail, wholesale:newWholesale,
-      unit:newUnit, stock:qty, lowStock:newLow, conversions:{}
+      unit:newUnit, stock:qty, lowStock:newLow, conversions:{},
+      sellingUnits:defaultSellingUnits
     };
     DB.products.push(newProd);
     DB.inventory.push({...newProd});
@@ -4239,13 +4404,16 @@ function renderInvTable(search){
   const el=document.getElementById('invTabContent');if(!el)return;
   const list=DB.inventory.filter(p=>p.name.toLowerCase().includes(search));
   el.innerHTML=`<table>
-    <thead><tr><th>Product</th><th>Unit</th><th>Stock</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+    <thead><tr><th>Product</th><th>Base Unit</th><th>Selling Units</th><th>Stock (Base)</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
     <tbody>${list.map(p=>{
       const low=p.stock<=0;const warn=p.stock<=(p.lowStock||0);
+      const su=(p.sellingUnits||[]);
+      const unitsStr=su.length?su.map(u=>`${u.name}`).join(' · '):'—';
       return `<tr class="${low?'out-stock-row':warn?'low-stock-row':''}">
         <td class="td-name">${p.name}<div style="font-size:.68rem;color:var(--text3)">${p.category}</div></td>
-        <td style="color:var(--text3)">${p.unit}</td>
-        <td class="mono" style="color:${low?'var(--red)':warn?'var(--amber)':'var(--text)'}">${p.stock}</td>
+        <td style="color:var(--text3);font-size:.78rem">${p.unit}</td>
+        <td style="font-size:.72rem;color:var(--text2);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${unitsStr}</td>
+        <td class="mono" style="color:${low?'var(--red)':warn?'var(--amber)':'var(--text)'}">${p.stock} ${p.unit}</td>
         <td><span class="badge ${low?'badge-red':warn?'badge-amber':'badge-green'}">${low?'Out of Stock':warn?'Low Stock':'In Stock'}</span></td>
         <td style="text-align:right" onclick="event.stopPropagation()">
           <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
@@ -4257,7 +4425,7 @@ function renderInvTable(search){
             ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'inventory')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
           </div>
         </td>
-      </tr>`;}).join('')||`<tr><td colspan="5"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products</p></div></td></tr>`}
+      </tr>`;}).join('')||`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products</p></div></td></tr>`}
     </tbody>
   </table>`;
 }
@@ -4306,15 +4474,23 @@ function openStockModal(id,mode){
   stockModalProduct=p;stockModalMode=mode;
   const titles={add:'Add Stock',sale:'Record Sale (Deduct)',damage:'Report Damaged Goods'};
   document.getElementById('stockModalTitle').textContent=titles[mode];
-  document.getElementById('stockModalInfo').innerHTML=`<strong>${escapeHTML(p.name)}</strong> <span style="color:var(--text3)">· Current: ${p.stock} ${escapeHTML(p.unit)}</span>`;
+  document.getElementById('stockModalInfo').innerHTML=`<strong>${escapeHTML(p.name)}</strong> <span style="color:var(--text3)">· Current: ${p.stock} ${escapeHTML(p.unit)} (base)</span>`;
   document.getElementById('stockQty').value=1;
   document.getElementById('stockReasonRow').style.display=mode==='damage'?'block':'none';
   document.getElementById('stockReason').value='';
   const unitSel=document.getElementById('stockUnit');
   if(mode==='add'){
     document.getElementById('stockUnitRow').style.display='block';
-    let opts=`<option value="${p.unit}">${p.unit} (base)</option>`;
-    if(p.conversions)Object.entries(p.conversions).forEach(([u,f])=>{opts+=`<option value="${u}">${u} (1 ${u} = ${f} ${p.unit})</option>`;});
+    // Use sellingUnits first, then fall back to legacy conversions
+    const su=p.sellingUnits||[];
+    let opts=`<option value="${p.unit}" data-factor="1">${p.unit} (base unit)</option>`;
+    if(su.length){
+      su.filter(u=>u.qty>1).forEach(u=>{
+        opts+=`<option value="${u.name}" data-factor="${u.qty}">${u.name} (1 ${u.name} = ${u.qty} ${p.unit})</option>`;
+      });
+    } else if(p.conversions){
+      Object.entries(p.conversions).forEach(([u,f])=>{opts+=`<option value="${u}" data-factor="${f}">${u} (1 ${u} = ${f} ${p.unit})</option>`;});
+    }
     unitSel.innerHTML=opts;
   } else {
     document.getElementById('stockUnitRow').style.display='none';
@@ -4326,16 +4502,29 @@ function openStockModal(id,mode){
   openModal('stockModal');
 }
 
+function _getStockFactor(){
+  const p=stockModalProduct; if(!p) return 1;
+  const unitSel=document.getElementById('stockUnit');
+  const selectedOpt=unitSel?.options[unitSel.selectedIndex];
+  if(selectedOpt && selectedOpt.dataset.factor) return parseFloat(selectedOpt.dataset.factor)||1;
+  const selectedVal=unitSel?.value||p.unit;
+  if(selectedVal===p.unit) return 1;
+  const su=(p.sellingUnits||[]).find(u=>u.name===selectedVal);
+  if(su) return su.qty||1;
+  return (p.conversions&&p.conversions[selectedVal])||1;
+}
+
 function updateStockPreview(){
   const p=stockModalProduct;if(!p)return;
   const qty=parseInt(document.getElementById('stockQty').value)||0;
   const box=document.getElementById('stockPreview');
   if(stockModalMode==='add'){
-    const unit=document.getElementById('stockUnit').value;
-    const factor=(unit!==p.unit&&p.conversions&&p.conversions[unit])?p.conversions[unit]:1;
+    const factor=_getStockFactor();
     const total=qty*factor;
+    const unitSel=document.getElementById('stockUnit');
+    const unitName=unitSel?.value||p.unit;
     box.className='balance-box balance-change';
-    box.innerHTML=`Will add <strong>${total}</strong> ${p.unit} (${qty} ${unit})`;
+    box.innerHTML=`Will add <strong>${total}</strong> ${p.unit} to stock (${qty} × ${unitName})`;
   } else {
     const newStock=Math.max(0,p.stock-qty);
     box.className=`balance-box ${newStock<=(p.lowStock||0)?'balance-owe':'balance-change'}`;
@@ -4349,9 +4538,10 @@ function confirmStockAction(){
   if(qty<=0){alert('Enter a valid quantity.');return;}
   let delta,reason;
   if(stockModalMode==='add'){
-    const unit=document.getElementById('stockUnit').value;
-    const factor=(unit!==p.unit&&p.conversions&&p.conversions[unit])?p.conversions[unit]:1;
-    delta=qty*factor;reason=`Added ${qty} ${unit}`;
+    const factor=_getStockFactor();
+    const unitSel=document.getElementById('stockUnit');
+    const unitName=unitSel?.value||p.unit;
+    delta=qty*factor;reason=`Added ${qty} ${unitName} (= ${delta} ${p.unit})`;
   } else {
     if(qty>p.stock){alert('Quantity exceeds current stock.');return;}
     delta=-qty;
@@ -4439,21 +4629,22 @@ function renderPriceTable(){
   const search=(document.getElementById('priceSearch')?.value||'').toLowerCase();
   const list=search?DB.products.filter(p=>p.name.toLowerCase().includes(search)||(p.category||'').toLowerCase().includes(search)):DB.products;
   el.innerHTML=`<div class="tbl-wrap"><table>
-    <thead><tr><th>Product</th><th>Category</th><th>Retail (₦)</th><th>Wholesale (₦)</th><th>Unit</th><th style="text-align:right">Actions</th></tr></thead>
-    <tbody>${list.map(p=>`<tr>
-      <td class="td-name">${p.name}</td>
-      <td style="color:var(--text3)">${p.category}</td>
-      <td class="mono" style="color:var(--green-light)">${N(p.retail)}</td>
-      <td class="mono" style="color:var(--gold-light)">${N(p.wholesale)}</td>
-      <td style="color:var(--text3)">${p.unit}</td>
-      <td style="text-align:right">
-        <div style="display:flex;gap:6px;justify-content:flex-end">
-          <button class="btn btn-sm btn-ghost" onclick="openEditProductModal(${p.id},'price')" title="Edit product"><i class="fas fa-pen"></i>Edit</button>
-          <button class="btn btn-sm btn-primary" onclick="openPriceEditor(${p.id})"><i class="fas fa-tag"></i>Prices</button>
-          ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'price')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
-        </div>
-      </td>
-    </tr>`).join('')||`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-search"></i><p>No products match your search</p></div></td></tr>`}
+    <thead><tr><th>Product</th><th>Category</th><th>Base Unit</th><th>Selling Units</th><th style="text-align:right">Actions</th></tr></thead>
+    <tbody>${list.map(p=>{
+      const su=(p.sellingUnits||[]);
+      const suHtml=su.length?su.map(u=>`<div style="font-size:.7rem;line-height:1.6"><span style="font-weight:600">${escapeHTML(u.name)}</span> · R: <span style="color:var(--green-light)">${N(u.retail)}</span> · WS: <span style="color:var(--gold-light)">${N(u.wholesale||0)}</span> · =${u.qty} ${escapeHTML(p.unit)}</div>`).join(''):'<span style="color:var(--text3);font-size:.72rem">No units — edit to add</span>';
+      return `<tr>
+        <td class="td-name">${p.name}</td>
+        <td style="color:var(--text3)">${p.category}</td>
+        <td style="color:var(--text2);font-size:.78rem">${p.unit}</td>
+        <td>${suHtml}</td>
+        <td style="text-align:right">
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button class="btn btn-sm btn-ghost" onclick="openEditProductModal(${p.id},'price')" title="Edit selling units &amp; prices"><i class="fas fa-pen"></i>Edit Units &amp; Prices</button>
+            ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'price')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
+          </div>
+        </td>
+      </tr>`;}).join('')||`<tr><td colspan="5"><div class="empty-state"><i class="fas fa-search"></i><p>No products match your search</p></div></td></tr>`}
     </tbody>
   </table></div>`;
 }
@@ -5049,7 +5240,7 @@ function renderReportTable(){
   const el=document.getElementById('repTable');if(!el)return;
   if(!sales.length){el.innerHTML=`<div class="empty-state"><i class="fas fa-file-slash"></i><p>No transactions found for selected filters</p></div>`;return;}
   el.innerHTML=`<table>
-    <thead><tr><th>Code</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th><th>Staff</th><th>Total</th>${isSuperAdmin()?'<th style="text-align:right">Delete</th>':''}</tr></thead>
+    <thead><tr><th>Code</th><th>Date</th><th>Customer</th><th>Items</th><th>Payment</th><th>Staff</th><th>Total</th>${canRemoveStock()?'<th style="text-align:right">Delete</th>':''}</tr></thead>
     <tbody>${sales.slice(0,200).map(s=>`<tr>
       <td class="mono" style="color:var(--green-light);font-size:.72rem">${s.code}</td>
       <td style="font-size:.72rem;color:var(--text3);white-space:nowrap">${dateStr(s.date)}</td>
@@ -5058,7 +5249,7 @@ function renderReportTable(){
       <td><span class="badge ${s.payType==='cash'?'badge-green':s.payType==='paystack'?'badge-blue':s.payType==='transfer'?'badge-gold':s.payType==='credit'?'badge-red':'badge-gray'}">${s.payType}</span></td>
       <td style="color:var(--text3);font-size:.78rem">${s.soldBy||'Staff'}</td>
       <td class="mono" style="color:var(--gold-light);font-weight:700">${N(s.total)}</td>
-      ${isSuperAdmin()?`<td style="text-align:right"><button class="btn btn-icon btn-danger btn-sm" title="Delete Sale" onclick="confirmDeleteSale('${s.id}')"><i class="fas fa-trash"></i></button></td>`:''}
+      ${canRemoveStock()?`<td style="text-align:right"><button class="btn btn-icon btn-danger btn-sm" title="Delete Sale" onclick="confirmDeleteSale('${s.id}')"><i class="fas fa-trash"></i></button></td>`:''}
     </tr>`).join('')}
     </tbody>
   </table>`;
@@ -5066,7 +5257,7 @@ function renderReportTable(){
 
 // ══ DELETE SALE (Super Admin Only) ══
 function confirmDeleteSale(saleId){
-  if(!isSuperAdmin()){showToast('Only Super Admin can delete sales.',false);return;}
+  if(!canRemoveStock()){showToast('Only Super Admin or Staff Controller can delete sales.',false);return;}
   const s=DB.sales.find(x=>x.id===saleId);
   if(!s){showToast('Sale not found.',false);return;}
   const itemsStr=s.items.map(i=>i.name+' ×'+i.qty).join(', ');
@@ -5074,18 +5265,19 @@ function confirmDeleteSale(saleId){
   deleteSale(saleId);
 }
 function deleteSale(saleId){
-  if(!isSuperAdmin()){showToast('Only Super Admin can delete sales.',false);return;}
+  if(!canRemoveStock()){showToast('Only Super Admin or Staff Controller can delete sales.',false);return;}
   const idx=DB.sales.findIndex(x=>x.id===saleId);
   if(idx===-1){showToast('Sale not found.',false);return;}
   const s=DB.sales[idx];
-  // 1. Restore inventory
+  // 1. Restore inventory (multi-unit aware)
   (s.items||[]).forEach(item=>{
+    const baseUnitsPerUnit = item._baseQtyPerUnit || 1;
+    const baseUnitsToRestore = item.qty * baseUnitsPerUnit;
     const inv=DB.inventory.find(i=>i.id===item.id);
-    if(inv){inv.stock+=item.qty;}
+    if(inv){inv.stock+=baseUnitsToRestore;}
     const prod=DB.products.find(p=>p.id===item.id);
-    if(prod){prod.stock+=item.qty;}
-    // Add stock history entry
-    DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,timestamp:new Date().toISOString(),action:'sale_deleted',delta:+item.qty,newStock:(inv?inv.stock:0),unit:item.unit||'',reason:'Sale deleted: '+s.code+' by '+currentUserName});
+    if(prod){prod.stock+=baseUnitsToRestore;}
+    DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,timestamp:new Date().toISOString(),action:'sale_deleted',delta:+baseUnitsToRestore,newStock:(inv?inv.stock:0),unit:item.unit||'',reason:'Sale deleted: '+s.code+' by '+currentUserName});
   });
   persist('inventory');persist('products');persist('stockHistory');
   // 2. Remove related debt/credit record
@@ -5097,9 +5289,48 @@ function deleteSale(saleId){
   DB.activityLog=DB.activityLog.filter(l=>!l.detail.includes(s.code));persist('activityLog');
   // 5. Remove the sale itself
   DB.sales.splice(idx,1);persist('sales');
-  logActivity('Settings',`Sale ${s.code} DELETED by ${currentUserName} (Super Admin)`);
+  logActivity('Settings',`Sale ${s.code} DELETED by ${currentUserName} — stock restored`);
   showToast('Sale '+s.code+' deleted and inventory restored.');
   renderReportTable();
+}
+
+// Delete a credit or deposit record — restores stock as if the sale never happened
+function deleteDebtRecord(id){
+  if(!canRemoveStock()){showToast('Only Super Admin or Staff Controller can do this.',false);return;}
+  const r=DB.debt.find(x=>x.id===id);if(!r)return;
+  const label=r.type==='deposit'?'Deposit':'Credit';
+  const itemsStr=(r.items||[]).map(i=>i.name+' ×'+i.qty).join(', ')||'No items recorded';
+  if(!confirm(`DELETE ${label.toUpperCase()} RECORD?\n\nCode: ${r.code}\nCustomer: ${r.customerName||'Walk-in'}\nAmount: ${N(r.totalAmount)}\nItems: ${itemsStr}\n\nAll items will be returned to inventory. This cannot be undone.`))return;
+
+  // If a linked sale exists, let deleteSale() handle everything (stock restore + debt removal)
+  const linkedSale=DB.sales.find(s=>s.code===r.code);
+  if(linkedSale){
+    deleteSale(linkedSale.id);
+    closeModal('detailModal');
+    renderDebt();
+    return;
+  }
+
+  // No linked sale — restore stock directly from debt record items
+  (r.items||[]).forEach(item=>{
+    const baseUnitsPerUnit=item._baseQtyPerUnit||1;
+    const baseUnitsToRestore=item.qty*baseUnitsPerUnit;
+    const inv=DB.inventory.find(i=>i.id===item.id);
+    if(inv)inv.stock+=baseUnitsToRestore;
+    const prod=DB.products.find(p=>p.id===item.id);
+    if(prod)prod.stock+=baseUnitsToRestore;
+    DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,
+      timestamp:new Date().toISOString(),action:'debt_deleted',
+      delta:+baseUnitsToRestore,newStock:(inv?inv.stock:0),
+      unit:item.unit||'',reason:`${label} deleted: ${r.code} by ${currentUserName}`});
+  });
+  persist('inventory');persist('products');persist('stockHistory');
+
+  DB.debt=DB.debt.filter(x=>x.id!==id);persist('debt');
+  logActivity('Debt',`${label} ${r.code} deleted by ${currentUserName} — stock restored`);
+  closeModal('detailModal');
+  showToast(`${label} deleted and stock restored.`);
+  renderDebt();
 }
 
 function exportReportPDF(){
@@ -5313,82 +5544,91 @@ window.onload = async function(){
   });
 };
 </script>
-<!-- ══ ADD NEW PRODUCT MODAL ══ -->
+<!-- ══ ADD NEW PRODUCT MODAL (Multi-Unit System) ══ -->
 <div class="modal-overlay" id="addProductModal">
-  <div class="modal-box md">
+  <div class="modal-box lg">
     <div class="modal-head">
       <h3><i class="fas fa-box-open" style="color:var(--gold);margin-right:6px"></i>Add New Product</h3>
       <button class="modal-close" onclick="closeModal('addProductModal')">×</button>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
-      <div class="grid-2" style="gap:18px">
-        <div>
-          <label>Product Name <span style="color:var(--red)">*</span></label>
-          <input type="text" id="apName" placeholder="e.g. Bigi Cola 50cl" oninput="document.getElementById('apNameError').style.display='none'">
-          <div id="apNameError" style="font-size:.72rem;color:var(--red);margin-top:4px;display:none"></div>
-        </div>
-        <div>
-          <label>Category <span style="color:var(--red)">*</span></label>
-          <input type="text" id="apCategory" placeholder="e.g. Drinks" list="apCategoryList" oninput="onProductCategoryChange('apCategory','apImgPreview','apImageData')">
-          <datalist id="apCategoryList">
-            <option value="Drinks"><option value="Groceries"><option value="Provisions">
-            <option value="Beverages"><option value="Toiletries"><option value="Frozen Foods">
-          </datalist>
-        </div>
-        <div>
-          <label>Unit Type <span style="color:var(--red)">*</span></label>
-          <select id="apUnit">
-            <option value="piece">Piece</option>
-            <option value="bottle">Bottle</option>
-            <option value="pack">Pack</option>
-            <option value="carton">Carton</option>
-            <option value="crate">Crate</option>
-            <option value="bag">Bag</option>
-            <option value="tin">Tin</option>
-            <option value="box">Box</option>
-            <option value="sachet">Sachet</option>
-            <option value="kg">Kg</option>
-          </select>
-        </div>
-        <div>
-          <label>Initial Stock Quantity</label>
-          <input type="number" id="apStock" value="0" min="0" placeholder="e.g. 50">
-        </div>
-        <div>
-          <label>Retail Price (₦) <span style="color:var(--red)">*</span></label>
-          <input type="number" id="apRetail" value="0" min="0" step="0.01">
-        </div>
-        <div>
-          <label>Wholesale Price (₦)</label>
-          <input type="number" id="apWholesale" value="0" min="0" step="0.01">
-        </div>
-        <div>
-          <label>Cost Price (₦)</label>
-          <input type="number" id="apCostPrice" value="0" min="0" step="0.01">
-        </div>
-        <div>
-          <label>Low Stock Threshold</label>
-          <input type="number" id="apLowStock" value="10" min="0" placeholder="e.g. 10">
-        </div>
-      </div>
-      <div style="background:rgba(26,92,46,.07);border:1px solid rgba(26,92,46,.2);border-radius:var(--radius);padding:12px 16px;font-size:.8rem;color:var(--text2)">
-        <i class="fas fa-info-circle" style="color:var(--green-light);margin-right:6px"></i>
-        This product will appear immediately in Inventory, POS, and Price Configuration.
-      </div>
-      <!-- Product Image -->
-      <div>
-        <label>Product Photo <span style="color:var(--text3);font-weight:400">(optional)</span></label>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
-          <div id="apImgPreview" style="width:64px;height:64px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;flex-shrink:0">📦</div>
-          <div style="flex:1">
-            <input type="file" id="apImageFile" accept="image/*" style="display:none" onchange="handleProductImageUpload('apImageFile','apImgPreview','apImageData','apCategory')">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('apImageFile').click()"><i class="fas fa-camera"></i>Choose Photo</button>
-            <button type="button" class="btn btn-ghost btn-sm" style="margin-left:6px;color:var(--text3)" onclick="clearProductImage('apImgPreview','apImageData','apCategory')"><i class="fas fa-times"></i>Remove</button>
-            <div style="font-size:.68rem;color:var(--text3);margin-top:5px">JPG or PNG · auto-resized to save space</div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:20px">
+
+      <!-- SECTION 1: Basic Info -->
+      <div style="background:rgba(26,92,46,.05);border:1px solid rgba(26,92,46,.18);border-radius:var(--radius);padding:16px">
+        <div style="font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--green-dark);margin-bottom:14px"><i class="fas fa-info-circle" style="margin-right:6px"></i>Section 1 — Basic Product Information</div>
+        <div class="grid-2" style="gap:14px">
+          <div>
+            <label>Product Name <span style="color:var(--red)">*</span></label>
+            <input type="text" id="apName" placeholder="e.g. Big Pen" oninput="document.getElementById('apNameError').style.display='none'">
+            <div id="apNameError" style="font-size:.72rem;color:var(--red);margin-top:4px;display:none"></div>
+          </div>
+          <div>
+            <label>Category <span style="color:var(--red)">*</span></label>
+            <input type="text" id="apCategory" placeholder="e.g. Stationery" list="apCategoryList" oninput="onProductCategoryChange('apCategory','apImgPreview','apImageData')">
+            <datalist id="apCategoryList">
+              <option value="Drinks"><option value="Groceries"><option value="Provisions">
+              <option value="Beverages"><option value="Toiletries"><option value="Frozen Foods">
+              <option value="Stationery"><option value="Pharmaceuticals"><option value="Electronics">
+            </datalist>
+          </div>
+          <div>
+            <label>Base Unit <span style="color:var(--red)">*</span> <span style="font-weight:400;color:var(--text3);font-size:.68rem">(smallest stock unit)</span></label>
+            <select id="apUnit">
+              <option value="piece">Piece</option>
+              <option value="bottle">Bottle</option>
+              <option value="sachet">Sachet</option>
+              <option value="kg">Kg</option>
+              <option value="roll">Roll</option>
+              <option value="tablet">Tablet</option>
+              <option value="litre">Litre</option>
+              <option value="gram">Gram</option>
+              <option value="unit">Unit</option>
+            </select>
+          </div>
+          <div>
+            <label>Initial Stock (in Base Units) <span style="color:var(--red)">*</span></label>
+            <input type="number" id="apStock" value="0" min="0" placeholder="e.g. 480">
+          </div>
+          <div>
+            <label>Cost Price per Base Unit (₦)</label>
+            <input type="number" id="apCostPrice" value="0" min="0" step="0.01" placeholder="e.g. 20">
+          </div>
+          <div>
+            <label>Low Stock Threshold (Base Units)</label>
+            <input type="number" id="apLowStock" value="10" min="0" placeholder="e.g. 10">
           </div>
         </div>
-        <input type="hidden" id="apImageData" value="">
+        <!-- Product Image -->
+        <div style="margin-top:14px">
+          <label>Product Photo <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+            <div id="apImgPreview" style="width:64px;height:64px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;flex-shrink:0">📦</div>
+            <div style="flex:1">
+              <input type="file" id="apImageFile" accept="image/*" style="display:none" onchange="handleProductImageUpload('apImageFile','apImgPreview','apImageData','apCategory')">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('apImageFile').click()"><i class="fas fa-camera"></i>Choose Photo</button>
+              <button type="button" class="btn btn-ghost btn-sm" style="margin-left:6px;color:var(--text3)" onclick="clearProductImage('apImgPreview','apImageData','apCategory')"><i class="fas fa-times"></i>Remove</button>
+              <div style="font-size:.68rem;color:var(--text3);margin-top:5px">JPG or PNG · stored locally · auto-compressed</div>
+            </div>
+          </div>
+          <input type="hidden" id="apImageData" value="">
+        </div>
       </div>
+
+      <!-- SECTION 2: Selling Units -->
+      <div style="background:rgba(184,134,11,.05);border:1px solid rgba(184,134,11,.2);border-radius:var(--radius);padding:16px">
+        <div style="font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:4px"><i class="fas fa-layer-group" style="margin-right:6px"></i>Section 2 — Selling Units & Prices</div>
+        <div style="font-size:.75rem;color:var(--text3);margin-bottom:14px">Define how this product is sold. Each unit must specify how many <strong id="apBaseUnitLabel">base units</strong> it equals, plus retail and wholesale prices.</div>
+        <div id="apSellingUnitsContainer" style="display:flex;flex-direction:column;gap:10px"></div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:10px;border-style:dashed" onclick="addSellingUnitRow('apSellingUnitsContainer','apUnit')">
+          <i class="fas fa-plus"></i> Add Selling Unit
+        </button>
+        <div style="margin-top:10px;padding:10px 14px;background:rgba(26,92,46,.07);border-radius:var(--radius);font-size:.75rem;color:var(--text2)">
+          <i class="fas fa-lightbulb" style="color:var(--gold);margin-right:5px"></i>
+          <strong>Example (Big Pen):</strong> Base Unit = Piece · Carton = 240 pieces · Pack = 12 pieces · Piece = 1 piece.
+          Stock is always stored in the base unit. All sales deduct from the same pool.
+        </div>
+      </div>
+
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('addProductModal')">Cancel</button>
@@ -5397,60 +5637,83 @@ window.onload = async function(){
   </div>
 </div>
 
-<!-- ══ EDIT PRODUCT MODAL ══ -->
+<!-- ══ EDIT PRODUCT MODAL (Multi-Unit System) ══ -->
 <div class="modal-overlay" id="editProductModal">
-  <div class="modal-box md">
+  <div class="modal-box lg">
     <div class="modal-head">
       <h3><i class="fas fa-pen-to-square" style="color:var(--amber);margin-right:6px"></i>Edit Product</h3>
       <button class="modal-close" onclick="closeModal('editProductModal')">×</button>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:16px">
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:20px">
       <input type="hidden" id="epId">
-      <div class="grid-2" style="gap:18px">
-        <div>
-          <label>Product Name <span style="color:var(--red)">*</span></label>
-          <input type="text" id="epName" placeholder="e.g. Bigi Cola 50cl">
-          <div id="epNameError" style="font-size:.72rem;color:var(--red);margin-top:4px;display:none"></div>
-        </div>
-        <div>
-          <label>Category</label>
-          <input type="text" id="epCategory" list="epCategoryList">
-          <datalist id="epCategoryList">
-            <option value="Drinks"><option value="Groceries"><option value="Provisions">
-            <option value="Beverages"><option value="Toiletries"><option value="Frozen Foods">
-          </datalist>
-        </div>
-        <div>
-          <label>Retail Price (₦) <span style="color:var(--red)">*</span></label>
-          <input type="number" id="epRetail" value="0" min="0" step="0.01">
-        </div>
-        <div>
-          <label>Wholesale Price (₦)</label>
-          <input type="number" id="epWholesale" value="0" min="0" step="0.01">
-        </div>
-        <div>
-          <label>Cost Price (₦)</label>
-          <input type="number" id="epCostPrice" value="0" min="0" step="0.01">
-        </div>
-        <div>
-          <label>Low Stock Threshold</label>
-          <input type="number" id="epLowStock" value="10" min="0">
-        </div>
-      </div>
-      <!-- Product Image -->
-      <div>
-        <label>Product Photo <span style="color:var(--text3);font-weight:400">(optional)</span></label>
-        <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
-          <div id="epImgPreview" style="width:64px;height:64px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;flex-shrink:0">📦</div>
-          <div style="flex:1">
-            <input type="file" id="epImageFile" accept="image/*" style="display:none" onchange="handleProductImageUpload('epImageFile','epImgPreview','epImageData','epCategory')">
-            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('epImageFile').click()"><i class="fas fa-camera"></i>Change Photo</button>
-            <button type="button" class="btn btn-ghost btn-sm" style="margin-left:6px;color:var(--red)" onclick="epClearImage()"><i class="fas fa-times"></i>Remove</button>
-            <div style="font-size:.68rem;color:var(--text3);margin-top:5px">Removing falls back to default avatar</div>
+
+      <!-- SECTION 1: Basic Info -->
+      <div style="background:rgba(26,92,46,.05);border:1px solid rgba(26,92,46,.18);border-radius:var(--radius);padding:16px">
+        <div style="font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--green-dark);margin-bottom:14px"><i class="fas fa-info-circle" style="margin-right:6px"></i>Basic Product Information</div>
+        <div class="grid-2" style="gap:14px">
+          <div>
+            <label>Product Name <span style="color:var(--red)">*</span></label>
+            <input type="text" id="epName" placeholder="e.g. Bigi Cola 50cl">
+            <div id="epNameError" style="font-size:.72rem;color:var(--red);margin-top:4px;display:none"></div>
+          </div>
+          <div>
+            <label>Category</label>
+            <input type="text" id="epCategory" list="epCategoryList">
+            <datalist id="epCategoryList">
+              <option value="Drinks"><option value="Groceries"><option value="Provisions">
+              <option value="Beverages"><option value="Toiletries"><option value="Frozen Foods">
+              <option value="Stationery"><option value="Pharmaceuticals"><option value="Electronics">
+            </datalist>
+          </div>
+          <div>
+            <label>Base Unit <span style="font-weight:400;color:var(--text3);font-size:.68rem">(smallest stock unit)</span></label>
+            <select id="epUnit">
+              <option value="piece">Piece</option>
+              <option value="bottle">Bottle</option>
+              <option value="sachet">Sachet</option>
+              <option value="kg">Kg</option>
+              <option value="roll">Roll</option>
+              <option value="tablet">Tablet</option>
+              <option value="litre">Litre</option>
+              <option value="gram">Gram</option>
+              <option value="unit">Unit</option>
+            </select>
+          </div>
+          <div>
+            <label>Cost Price per Base Unit (₦)</label>
+            <input type="number" id="epCostPrice" value="0" min="0" step="0.01">
+          </div>
+          <div>
+            <label>Low Stock Threshold</label>
+            <input type="number" id="epLowStock" value="10" min="0">
           </div>
         </div>
-        <input type="hidden" id="epImageData" value="">
+        <!-- Product Image -->
+        <div style="margin-top:14px">
+          <label>Product Photo <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:6px">
+            <div id="epImgPreview" style="width:64px;height:64px;border-radius:12px;background:var(--surface3);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;flex-shrink:0">📦</div>
+            <div style="flex:1">
+              <input type="file" id="epImageFile" accept="image/*" style="display:none" onchange="handleProductImageUpload('epImageFile','epImgPreview','epImageData','epCategory')">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('epImageFile').click()"><i class="fas fa-camera"></i>Change Photo</button>
+              <button type="button" class="btn btn-ghost btn-sm" style="margin-left:6px;color:var(--red)" onclick="epClearImage()"><i class="fas fa-times"></i>Remove</button>
+              <div style="font-size:.68rem;color:var(--text3);margin-top:5px">Stored locally · auto-compressed</div>
+            </div>
+          </div>
+          <input type="hidden" id="epImageData" value="">
+        </div>
       </div>
+
+      <!-- SECTION 2: Selling Units -->
+      <div style="background:rgba(184,134,11,.05);border:1px solid rgba(184,134,11,.2);border-radius:var(--radius);padding:16px">
+        <div style="font-size:.7rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:4px"><i class="fas fa-layer-group" style="margin-right:6px"></i>Selling Units & Prices</div>
+        <div style="font-size:.75rem;color:var(--text3);margin-bottom:14px">Each unit specifies how many base units it equals, plus retail &amp; wholesale prices.</div>
+        <div id="epSellingUnitsContainer" style="display:flex;flex-direction:column;gap:10px"></div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:10px;border-style:dashed" onclick="addSellingUnitRow('epSellingUnitsContainer','epUnit')">
+          <i class="fas fa-plus"></i> Add Selling Unit
+        </button>
+      </div>
+
     </div>
     <div class="modal-foot">
       <button class="btn btn-ghost" onclick="closeModal('editProductModal')">Cancel</button>
@@ -5569,19 +5832,82 @@ function applyLoginBranding(){
 
 let _addProductCalledFrom = 'inventory';
 
+// ══════════════════════════════════════════════════════════════════════════════
+// MULTI-UNIT SELLING UNIT HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Shared datalist for unit names — injected once into body
+(function injectSuDatalist(){
+  if(document.getElementById('suUnitNamesList')) return;
+  const dl = document.createElement('datalist');
+  dl.id = 'suUnitNamesList';
+  ['Piece','Bottle','Pack','Carton','Crate','Bag','Tin','Box','Sachet','Kg',
+   'Dozen','Half Dozen','Roll','Litre','Tablet','Gram','Half Pack',
+   'Mudu','Paint Bucket','Bundle','Sheet','Unit'].forEach(n=>{
+    const o=document.createElement('option'); o.value=n; dl.appendChild(o);
+  });
+  document.body.appendChild(dl);
+})();
+
+/**
+ * Append a selling-unit row to a container.
+ * @param {string} containerId  - id of the flex-column container div
+ * @param {string} baseUnitSelId - id of the <select> holding the base unit (for placeholder text)
+ * @param {string} [name]       - prefill unit name
+ * @param {number} [qty]        - prefill base qty
+ * @param {number} [retail]     - prefill retail price
+ * @param {number} [wholesale]  - prefill wholesale price
+ */
+function addSellingUnitRow(containerId, baseUnitSelId, name='', qty='', retail='', wholesale=''){
+  const cont = document.getElementById(containerId);
+  if(!cont) return;
+  const baseUnit = document.getElementById(baseUnitSelId)?.value || 'unit';
+  const row = document.createElement('div');
+  row.className = 'su-row';
+  row.innerHTML = `
+    <input type="text"   class="su-name"      placeholder="Unit name"        value="${escapeHTML(String(name))}"      list="suUnitNamesList" autocomplete="off">
+    <input type="number" class="su-qty"       placeholder="${baseUnit}s"      value="${qty}"       min="1"   step="1">
+    <input type="number" class="su-retail"    placeholder="Retail ₦"         value="${retail}"    min="0"   step="0.01">
+    <input type="number" class="su-wholesale" placeholder="WS ₦ (opt)"       value="${wholesale}" min="0"   step="0.01">
+    <button type="button" class="su-row-del" onclick="this.closest('.su-row').remove()" title="Remove unit"><i class="fas fa-times"></i></button>
+  `;
+  cont.appendChild(row);
+  // Focus name input on fresh row
+  if(!name) setTimeout(()=>row.querySelector('.su-name').focus(), 50);
+}
+
+/**
+ * Read all selling-unit rows from a container and return an array.
+ * Only rows with a name AND qty ≥ 1 AND retail > 0 are included.
+ */
+function getSellingUnitsFromContainer(containerId){
+  const cont = document.getElementById(containerId);
+  if(!cont) return [];
+  return Array.from(cont.querySelectorAll('.su-row')).map(row=>({
+    name:      (row.querySelector('.su-name')?.value      || '').trim(),
+    qty:       parseFloat(row.querySelector('.su-qty')?.value)       || 0,
+    retail:    parseFloat(row.querySelector('.su-retail')?.value)    || 0,
+    wholesale: parseFloat(row.querySelector('.su-wholesale')?.value) || 0,
+  })).filter(u => u.name && u.qty >= 1 && u.retail > 0);
+}
+
 function openAddProductModal(from){
   _addProductCalledFrom = from || 'inventory';
   document.getElementById('apName').value = '';
   document.getElementById('apCategory').value = '';
   document.getElementById('apUnit').value = 'piece';
   document.getElementById('apStock').value = '0';
-  document.getElementById('apRetail').value = '0';
-  document.getElementById('apWholesale').value = '0';
   document.getElementById('apCostPrice').value = '0';
   document.getElementById('apLowStock').value = '10';
   document.getElementById('apImageData').value = '';
+  document.getElementById('apNameError').style.display = 'none';
   const prev = document.getElementById('apImgPreview');
   if(prev){ prev.innerHTML=''; prev.textContent='📦'; prev.style.padding=''; }
+  const lbl = document.getElementById('apBaseUnitLabel');
+  if(lbl) lbl.textContent = 'piece';
+  // Clear and seed one default selling unit row
+  const cont = document.getElementById('apSellingUnitsContainer');
+  if(cont){ cont.innerHTML=''; addSellingUnitRow('apSellingUnitsContainer','apUnit'); }
   openModal('addProductModal');
   setTimeout(()=>document.getElementById('apName').focus(), 200);
 }
@@ -5594,8 +5920,7 @@ function openEditProductModal(id, from){
   document.getElementById('epId').value = id;
   document.getElementById('epName').value = p.name;
   document.getElementById('epCategory').value = p.category || '';
-  document.getElementById('epRetail').value = p.retail;
-  document.getElementById('epWholesale').value = p.wholesale || 0;
+  document.getElementById('epUnit').value = p.unit || 'piece';
   document.getElementById('epCostPrice').value = p.costPrice || 0;
   document.getElementById('epLowStock').value = p.lowStock || 10;
   document.getElementById('epImageData').value = p.image || '';
@@ -5603,65 +5928,86 @@ function openEditProductModal(id, from){
   const prev = document.getElementById('epImgPreview');
   if(p.image){
     prev.innerHTML = `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+    prev.style.padding = '0';
   } else {
-    prev.innerHTML = '📦'; prev.style.padding = '';
+    prev.innerHTML = ''; prev.textContent = getCategoryEmoji(p.category) || '📦'; prev.style.padding = '';
+  }
+  // Load selling units
+  const cont = document.getElementById('epSellingUnitsContainer');
+  if(cont){
+    cont.innerHTML = '';
+    const sellingUnits = p.sellingUnits || [];
+    if(sellingUnits.length){
+      sellingUnits.forEach(u => addSellingUnitRow('epSellingUnitsContainer','epUnit',u.name,u.qty,u.retail,u.wholesale));
+    } else {
+      // Legacy: try to build from retail/wholesale
+      addSellingUnitRow('epSellingUnitsContainer','epUnit', p.unit||'piece', 1, p.retail||0, p.wholesale||0);
+    }
   }
   openModal('editProductModal');
 }
 
+function apClearImage(){
+  clearProductImage('apImgPreview','apImageData','apCategory');
+}
+
 function epClearImage(){
-  document.getElementById('epImageData').value = '';
-  const prev = document.getElementById('epImgPreview');
-  prev.innerHTML = '📦'; prev.style.padding = '';
+  clearProductImage('epImgPreview','epImageData','epCategory');
 }
 
 function saveEditProduct(){
   const id = parseInt(document.getElementById('epId').value);
   const name = document.getElementById('epName').value.trim();
   const category = document.getElementById('epCategory').value.trim();
-  const retail = parseFloat(document.getElementById('epRetail').value) || 0;
-  const wholesale = parseFloat(document.getElementById('epWholesale').value) || 0;
+  const unit = document.getElementById('epUnit').value;
   const costPrice = parseFloat(document.getElementById('epCostPrice').value) || 0;
   const lowStock = parseInt(document.getElementById('epLowStock').value) || 10;
   const image = document.getElementById('epImageData').value || '';
 
   const errEl = document.getElementById('epNameError');
   if(!name){ errEl.textContent = 'Product name is required.'; errEl.style.display = 'block'; return; }
-  if(retail <= 0){ alert('Retail price must be greater than 0.'); return; }
+
+  const sellingUnits = getSellingUnitsFromContainer('epSellingUnitsContainer');
+  if(!sellingUnits.length){ alert('Please add at least one selling unit with a name, quantity, and retail price.'); return; }
+
+  const invalidUnit = sellingUnits.find(u => !u.name || u.qty < 1 || u.retail <= 0);
+  if(invalidUnit){ alert(`Selling unit "${invalidUnit.name||'(unnamed)'}" must have a name, quantity ≥ 1, and a retail price > 0.`); return; }
 
   // Duplicate name check — skip self
   const dup = DB.products.find(p => p.id !== id && p.name.toLowerCase() === name.toLowerCase());
   if(dup){
-    errEl.textContent = `A product named "${dup.name}" already exists. Choose a different name.`;
+    errEl.textContent = `A product named "${dup.name}" already exists.`;
     errEl.style.display = 'block';
-    document.getElementById('epName').focus();
-    return;
+    document.getElementById('epName').focus(); return;
   }
   errEl.style.display = 'none';
+
+  // Derive legacy retail/wholesale from first selling unit for backward compat
+  const firstUnit = sellingUnits[0];
+  const retail = firstUnit.retail;
+  const wholesale = firstUnit.wholesale || 0;
 
   const p = DB.products.find(x => x.id === id); if(!p) return;
   const inv = DB.inventory.find(x => x.id === id);
   const changes = [];
   if(p.name !== name) changes.push(`Name: "${p.name}" → "${name}"`);
-  if(p.retail !== retail) changes.push(`Retail: ${N(p.retail)} → ${N(retail)}`);
-  if(p.wholesale !== wholesale) changes.push(`WS: ${N(p.wholesale||0)} → ${N(wholesale)}`);
+  if(p.unit !== unit) changes.push(`Base unit: ${p.unit} → ${unit}`);
   if((p.costPrice||0) !== costPrice) changes.push(`Cost: ${N(p.costPrice||0)} → ${N(costPrice)}`);
   if(p.image !== image) changes.push('Photo updated');
 
-  // Apply to products
-  p.name = name; p.category = category; p.retail = retail;
-  p.wholesale = wholesale; p.costPrice = costPrice;
+  p.name = name; p.category = category; p.unit = unit;
+  p.retail = retail; p.wholesale = wholesale; p.costPrice = costPrice;
   p.lowStock = lowStock; p.image = image || '';
+  p.sellingUnits = sellingUnits;
 
-  // Sync to inventory
   if(inv){
-    inv.name = name; inv.category = category; inv.retail = retail;
-    inv.wholesale = wholesale; inv.costPrice = costPrice;
+    inv.name = name; inv.category = category; inv.unit = unit;
+    inv.retail = retail; inv.wholesale = wholesale; inv.costPrice = costPrice;
     inv.lowStock = lowStock; inv.image = image || '';
+    inv.sellingUnits = sellingUnits;
   }
 
-  // Log price history if prices changed
-  if(retail !== p.retail || wholesale !== p.wholesale || costPrice !== (p.costPrice||0)){
+  if(changes.length){
     DB.priceHistory.unshift({id:uid(),productId:id,productName:name,
       timestamp:new Date().toISOString(),user:currentUserName||'Staff',
       changes:changes.join(' · '),oldRetail:p.retail,newRetail:retail,
@@ -5670,9 +6016,9 @@ function saveEditProduct(){
   }
 
   persist('products'); persist('inventory');
-  logActivity('Product', `Product edited: ${changes.join(' · ')} — by ${currentUserName||'Staff'}`);
+  logActivity('Product', `Product edited: ${name}${changes.length?' — '+changes.join(', '):''} — by ${currentUserName||'Staff'}`);
   closeModal('editProductModal');
-  showToast(`"${name}" updated successfully!`);
+  showToast(`"${name}" updated!`);
   if(_editProductCalledFrom === 'price') renderPrice();
   else renderInventory();
 }
@@ -5681,7 +6027,7 @@ function deleteProduct(id, from){
   if(!isAdmin()){showToast('Only Admin or Super Admin can delete products.', false); return;}
   const p = DB.products.find(x => x.id === id);
   if(!p){
-    // Product already gone from DB.products — clean up any lingering inventory ghost
+    // Ghost: clean orphaned inventory entry only
     DB.inventory = DB.inventory.filter(x => x.id !== id);
     persist('inventory');
     showToast('Orphaned inventory entry removed.', true);
@@ -5689,47 +6035,31 @@ function deleteProduct(id, from){
     return;
   }
   const stockWarn = p.stock > 0 ? `\nThis product still has ${p.stock} ${p.unit}(s) in stock.` : '';
-  if(!confirm(`Delete "${p.name}"?${stockWarn}\n\nThis permanently removes it from Inventory, POS, Price Configuration, Stock History, and Purchase records.`)) return;
+  if(!confirm(`Delete "${p.name}"?${stockWarn}\n\nRemoves the product from Inventory, POS and Price Config. Previous sales and purchase records are kept for accounting.`)) return;
 
-  // ── 1. Delete bucket image if any ──────────────────────────────
+  // 1. Bucket image
   if(p.image && p.image.includes('/product-images/')){
-    const imgPath = p.image.split('/product-images/')[1];
-    _sb.storage.from('product-images').remove([imgPath]).catch(()=>{});
+    _sb.storage.from('product-images').remove([p.image.split('/product-images/')[1]]).catch(()=>{});
   }
 
-  // ── 2. Remove from core data stores ────────────────────────────
-  DB.products     = DB.products.filter(x => x.id !== id);
-  DB.inventory    = DB.inventory.filter(x => x.id !== id);
+  // 2. Remove from product catalogue and inventory — no orphan
+  DB.products  = DB.products.filter(x => x.id !== id);
+  DB.inventory = DB.inventory.filter(x => x.id !== id);
 
-  // ── 3. Remove all operational records tied to this product ─────
+  // 3. Remove operational/catalogue history only
   DB.stockHistory = DB.stockHistory.filter(x => x.productId !== id);
   DB.priceHistory = DB.priceHistory.filter(x => x.productId !== id);
 
-  // ── 4. Remove purchase records (and their linked expense entries) ──
-  const deletedPurchRefs = new Set(
-    DB.purchases.filter(x => x.productId === id).map(x => x.ref)
-  );
-  DB.purchases = DB.purchases.filter(x => x.productId !== id);
-  if(deletedPurchRefs.size){
-    DB.expenses = DB.expenses.filter(x => !deletedPurchRefs.has(x.ref));
-    persist('expenses');
-  }
-  DB.purchaseAudit = DB.purchaseAudit.filter(x =>
-    !deletedPurchRefs.has(x.ref)
-  );
+  // purchases, expenses, sales — intentionally untouched (financial records)
 
-  // ── 5. Persist everything ───────────────────────────────────────
   persist('products');
   persist('inventory');
   persist('stockHistory');
   persist('priceHistory');
-  persist('purchases');
-  persist('purchaseAudit');
 
   logActivity('Product', `Product deleted: ${p.name} — by ${currentUserName||'Admin'}`);
-  showToast(`"${p.name}" has been completely deleted.`);
-  if(from === 'price') renderPrice();
-  else renderInventory();
+  showToast(`"${p.name}" deleted. Sales and purchase records preserved.`);
+  if(from === 'price') renderPrice(); else renderInventory();
 }
 
 function saveNewProduct(){
@@ -5737,8 +6067,6 @@ function saveNewProduct(){
   const category = document.getElementById('apCategory').value.trim();
   const unit = document.getElementById('apUnit').value;
   const stock = parseInt(document.getElementById('apStock').value) || 0;
-  const retail = parseFloat(document.getElementById('apRetail').value) || 0;
-  const wholesale = parseFloat(document.getElementById('apWholesale').value) || 0;
   const costPrice = parseFloat(document.getElementById('apCostPrice').value) || 0;
   const lowStock = parseInt(document.getElementById('apLowStock').value) || 10;
   const image = document.getElementById('apImageData').value || '';
@@ -5749,23 +6077,33 @@ function saveNewProduct(){
     document.getElementById('apName').focus(); return;
   }
   if(!category){ alert('Category is required.'); return; }
-  if(retail <= 0){ alert('Please enter a retail price greater than 0.'); return; }
 
-  // Main store duplicate check (retail store uses DB_R — different namespace, allowed)
+  const sellingUnits = getSellingUnitsFromContainer('apSellingUnitsContainer');
+  if(!sellingUnits.length){ alert('Please add at least one selling unit.'); return; }
+  const invalidUnit = sellingUnits.find(u => !u.name || u.qty < 1 || u.retail <= 0);
+  if(invalidUnit){ alert(`Selling unit "${invalidUnit.name||'(unnamed)'}" needs a name, quantity ≥ 1, and retail price > 0.`); return; }
+
   const dup = DB.products.find(p => p.name.toLowerCase() === name.toLowerCase());
   if(dup){
     const e=document.getElementById('apNameError');
-    e.textContent=`"${dup.name}" already exists in the main store. Use a different name or update the existing product.`;
+    e.textContent=`"${dup.name}" already exists. Use a different name or edit the existing product.`;
     e.style.display='block';
     document.getElementById('apName').focus(); return;
   }
+
+  // Derive retail/wholesale from smallest unit (qty=1) or first unit
+  const baseUnit = sellingUnits.find(u=>u.qty===1) || sellingUnits[0];
+  const retail = baseUnit.retail;
+  const wholesale = baseUnit.wholesale || 0;
 
   const newId = Date.now();
   const newProd = {
     id: newId, name, category, emoji: '',
     image: image || '',
     retail, wholesale, costPrice,
-    unit, stock, lowStock, conversions: {}
+    unit, stock, lowStock,
+    sellingUnits,
+    conversions: {} // legacy field kept for backward compat
   };
 
   DB.products.push(newProd);
@@ -5784,9 +6122,9 @@ function saveNewProduct(){
     persist('stockHistory');
   }
 
-  logActivity('Product', `New product added: ${name} — Retail: ${N(retail)} — Stock: ${stock} ${unit}`);
+  logActivity('Product', `New product added: ${name} — Units: ${sellingUnits.map(u=>u.name).join(', ')} — Base stock: ${stock} ${unit}`);
   closeModal('addProductModal');
-  showToast(`"${name}" added successfully!`);
+  showToast(`"${name}" added with ${sellingUnits.length} selling unit(s)!`);
 
   if(_addProductCalledFrom === 'price') renderPrice();
   else renderInventory();
@@ -6360,11 +6698,38 @@ function openRAdjustStock(id){
 
 function deleteRProduct(id){
   const p=DB_R.products.find(x=>x.id===id);if(!p)return;
-  if(!confirm(`Delete "${p.name}" from retail inventory? This cannot be undone.`))return;
-  DB_R.products=DB_R.products.filter(x=>x.id!==id);
-  DB_R.inventory=DB_R.inventory.filter(x=>x.id!==id);
-  persistR('products');persistR('inventory');
-  showToast(`"${p.name}" removed.`);
+  if(!confirm(`Delete "${p.name}" from retail inventory?\n\nThis permanently removes all related stock history, price history, and purchase records. Cannot be undone.`))return;
+
+  // Bucket image
+  if(p.image && p.image.includes('/product-images/')){
+    _sb.storage.from('product-images').remove([p.image.split('/product-images/')[1]]).catch(()=>{});
+  }
+
+  // Core records
+  DB_R.products  = DB_R.products.filter(x=>x.id!==id);
+  DB_R.inventory = DB_R.inventory.filter(x=>x.id!==id);
+
+  // History
+  if(DB_R.stockHistory) DB_R.stockHistory = DB_R.stockHistory.filter(x=>x.productId!==id);
+  if(DB_R.priceHistory) DB_R.priceHistory = DB_R.priceHistory.filter(x=>x.productId!==id);
+
+  // Purchases + linked expenses
+  if(DB_R.purchases){
+    const linkedRefs = new Set(DB_R.purchases.filter(x=>x.productId===id).map(x=>x.ref));
+    DB_R.purchases = DB_R.purchases.filter(x=>x.productId!==id);
+    if(linkedRefs.size && DB_R.expenses){
+      DB_R.expenses = DB_R.expenses.filter(x=>!linkedRefs.has(x.ref));
+      persistR('expenses');
+    }
+    persistR('purchases');
+  }
+
+  persistR('products');
+  persistR('inventory');
+  if(DB_R.stockHistory) persistR('stockHistory');
+  if(DB_R.priceHistory) persistR('priceHistory');
+
+  showToast(`"${p.name}" completely deleted.`);
   renderR_Inventory();
 }
 
@@ -6816,6 +7181,30 @@ function onProductCategoryChange(catInputId, previewId, dataId){
     prev.textContent = getCategoryEmoji(cat);
   }
 }
-</script>
+</script><!-- ══ POS UNIT SELECTOR BOTTOM SHEET ══ -->
+<div id="posUnitSheet" onclick="if(event.target===this)closePosUnitSheet()">
+  <div id="posUnitSheetBox">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <div style="font-weight:800;font-size:1rem" id="posSheetProductName">Select Unit</div>
+        <div style="font-size:.72rem;color:var(--text3);margin-top:2px" id="posSheetStockInfo"></div>
+      </div>
+      <button onclick="closePosUnitSheet()" style="background:var(--surface2);border:none;cursor:pointer;width:32px;height:32px;border-radius:50%;font-size:1.2rem;color:var(--text3);display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div id="posUnitOptions" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto"></div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1">
+        <label style="font-size:.7rem;font-weight:600;color:var(--text3);letter-spacing:.05em">QUANTITY</label>
+        <input type="number" id="posSheetQty" value="1" min="1" style="font-size:1.4rem;font-weight:700;padding:8px 12px;margin-top:4px" oninput="updatePosSheetTotal()">
+      </div>
+      <div style="flex:1;text-align:right">
+        <div style="font-size:.7rem;font-weight:600;color:var(--text3);letter-spacing:.05em;margin-bottom:4px">SUBTOTAL</div>
+        <div id="posSheetTotal" style="font-size:1.6rem;font-weight:800;color:var(--gold);font-family:var(--mono)">₦0</div>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-lg" style="width:100%;margin-top:12px" onclick="confirmPosUnitAdd()"><i class="fas fa-cart-plus"></i>Add to Cart</button>
+  </div>
+</div>
+
 </body>
 </html>
