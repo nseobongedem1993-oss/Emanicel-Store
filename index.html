@@ -2665,11 +2665,18 @@ window.addEventListener('offline', updateOnlineStatus);
 
 // Sync inventory stock from products
 function syncInventoryFromProducts(){
+  // Add or update inventory entries that match a product
   DB.products.forEach(p=>{
     const inv=DB.inventory.find(i=>i.id===p.id);
     if(!inv){DB.inventory.push({...p});}
     else{inv.name=p.name;inv.category=p.category;inv.unit=p.unit;inv.conversions=p.conversions;}
   });
+  // Remove any inventory entries whose product no longer exists (prevents orphan ghosts)
+  const before = DB.inventory.length;
+  DB.inventory = DB.inventory.filter(i => DB.products.some(p => p.id === i.id));
+  if(DB.inventory.length !== before){
+    console.log(`[syncInventory] Pruned ${before - DB.inventory.length} orphaned inventory item(s).`);
+  }
   persist('inventory');
 }
 
@@ -5673,15 +5680,54 @@ function saveEditProduct(){
 function deleteProduct(id, from){
   if(!isAdmin()){showToast('Only Admin or Super Admin can delete products.', false); return;}
   const p = DB.products.find(x => x.id === id);
-  if(!p){showToast('Product not found.', false); return;}
+  if(!p){
+    // Product already gone from DB.products — clean up any lingering inventory ghost
+    DB.inventory = DB.inventory.filter(x => x.id !== id);
+    persist('inventory');
+    showToast('Orphaned inventory entry removed.', true);
+    if(from === 'price') renderPrice(); else renderInventory();
+    return;
+  }
   const stockWarn = p.stock > 0 ? `\nThis product still has ${p.stock} ${p.unit}(s) in stock.` : '';
-  if(!confirm(`Delete "${p.name}"?${stockWarn}\n\nThis removes it from Inventory, POS, and Price Configuration permanently.`)) return;
-  DB.products  = DB.products.filter(x => x.id !== id);
-  DB.inventory = DB.inventory.filter(x => x.id !== id);
+  if(!confirm(`Delete "${p.name}"?${stockWarn}\n\nThis permanently removes it from Inventory, POS, Price Configuration, Stock History, and Purchase records.`)) return;
+
+  // ── 1. Delete bucket image if any ──────────────────────────────
+  if(p.image && p.image.includes('/product-images/')){
+    const imgPath = p.image.split('/product-images/')[1];
+    _sb.storage.from('product-images').remove([imgPath]).catch(()=>{});
+  }
+
+  // ── 2. Remove from core data stores ────────────────────────────
+  DB.products     = DB.products.filter(x => x.id !== id);
+  DB.inventory    = DB.inventory.filter(x => x.id !== id);
+
+  // ── 3. Remove all operational records tied to this product ─────
+  DB.stockHistory = DB.stockHistory.filter(x => x.productId !== id);
+  DB.priceHistory = DB.priceHistory.filter(x => x.productId !== id);
+
+  // ── 4. Remove purchase records (and their linked expense entries) ──
+  const deletedPurchRefs = new Set(
+    DB.purchases.filter(x => x.productId === id).map(x => x.ref)
+  );
+  DB.purchases = DB.purchases.filter(x => x.productId !== id);
+  if(deletedPurchRefs.size){
+    DB.expenses = DB.expenses.filter(x => !deletedPurchRefs.has(x.ref));
+    persist('expenses');
+  }
+  DB.purchaseAudit = DB.purchaseAudit.filter(x =>
+    !deletedPurchRefs.has(x.ref)
+  );
+
+  // ── 5. Persist everything ───────────────────────────────────────
   persist('products');
   persist('inventory');
+  persist('stockHistory');
+  persist('priceHistory');
+  persist('purchases');
+  persist('purchaseAudit');
+
   logActivity('Product', `Product deleted: ${p.name} — by ${currentUserName||'Admin'}`);
-  showToast(`"${p.name}" has been deleted.`);
+  showToast(`"${p.name}" has been completely deleted.`);
   if(from === 'price') renderPrice();
   else renderInventory();
 }
@@ -6651,68 +6697,72 @@ function applySwUpdate() {
 </script>
 <script>
 // ══════════════════════════════════════════════════════
-//  PRODUCT IMAGE UPLOAD HELPERS  (bucket version)
+//  PRODUCT IMAGE UPLOAD HELPERS  (Supabase bucket)
+//  Requires bucket "product-images" with anon upload
+//  and delete policies set in Supabase dashboard.
 // ══════════════════════════════════════════════════════
 
 async function handleProductImageUpload(fileInputId, previewId, dataId, categoryInputId){
   const file = document.getElementById(fileInputId).files[0];
   if(!file) return;
 
-  const TARGET_BYTES = 35 * 1024; // 35kb hard limit
-  const MAX_DIM = 220;            // max width or height in px
+  const TARGET_BYTES = 35 * 1024; // 35 KB hard limit
+  const MAX_DIM      = 220;       // max width or height in px
 
   const reader = new FileReader();
   reader.onload = async function(e){
     const img = new Image();
     img.onload = async function(){
 
-      // ── 1. Compress (same logic as before) ──────────
+      // ── 1. Scale down to MAX_DIM ───────────────────────
       const canvas = document.createElement('canvas');
       const ratio  = Math.min(MAX_DIM / img.width, MAX_DIM / img.height, 1);
       canvas.width  = Math.round(img.width  * ratio);
       canvas.height = Math.round(img.height * ratio);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
 
+      // ── 2. Compress quality until under target ─────────
       let quality = 0.75;
       let base64  = canvas.toDataURL('image/jpeg', quality);
 
       while(base64.length > TARGET_BYTES * 1.37 && quality > 0.15){
-        // base64 is ~37% larger than raw bytes, so multiply target by 1.37
         quality = Math.round((quality - 0.08) * 100) / 100;
         base64  = canvas.toDataURL('image/jpeg', quality);
       }
 
-      // If still too big, shrink canvas further and retry
+      // ── 3. If still too big, shrink canvas and retry ───
       if(base64.length > TARGET_BYTES * 1.37){
-        const s2 = 0.65; // scale canvas to 65%
         const c2 = document.createElement('canvas');
-        c2.width  = Math.round(canvas.width  * s2);
-        c2.height = Math.round(canvas.height * s2);
+        c2.width  = Math.round(canvas.width  * 0.65);
+        c2.height = Math.round(canvas.height * 0.65);
         c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
         base64 = c2.toDataURL('image/jpeg', 0.65);
       }
 
-      // ── 2. Convert base64 → Blob for upload ─────────
+      // ── 4. Convert base64 → Blob ───────────────────────
       const res      = await fetch(base64);
       const blob     = await res.blob();
       const kb       = Math.round(blob.size / 1024);
       const fileName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
 
-      // ── 3. Delete old image from bucket (avoids orphans) ──
+      // ── 5. Delete old bucket image if replacing ────────
       const oldUrl = document.getElementById(dataId).value;
       if(oldUrl && oldUrl.includes('/product-images/')){
         const oldPath = oldUrl.split('/product-images/')[1];
-        await _sb.storage.from('product-images').remove([oldPath]);
+        await _sb.storage.from('product-images').remove([oldPath]).catch(()=>{});
       }
 
-      // ── 4. Upload to bucket ──────────────────────────
+      // ── 6. Upload to bucket ────────────────────────────
       const { error } = await _sb.storage
         .from('product-images')
         .upload(fileName, blob, { contentType: 'image/jpeg', upsert: false });
 
-      if(error){ showToast('Upload failed: ' + error.message); return; }
+      if(error){
+        showToast('Upload failed: ' + error.message, false);
+        return;
+      }
 
-      // ── 5. Get public URL & store it ─────────────────
+      // ── 7. Get public URL & store ──────────────────────
       const { data: { publicUrl } } = _sb.storage
         .from('product-images')
         .getPublicUrl(fileName);
@@ -6727,19 +6777,20 @@ async function handleProductImageUpload(fileInputId, previewId, dataId, category
 
       showToast(`Photo uploaded · ${kb}kb`);
     };
+    img.onerror = ()=> showToast('Could not read image file.', false);
     img.src = e.target.result;
   };
+  reader.onerror = ()=> showToast('Failed to read file.', false);
   reader.readAsDataURL(file);
 }
 
 async function clearProductImage(previewId, dataId, categoryInputId){
-  // Delete from bucket if a URL is stored
+  // Delete from bucket if a bucket URL is stored
   const oldUrl = document.getElementById(dataId).value;
   if(oldUrl && oldUrl.includes('/product-images/')){
     const oldPath = oldUrl.split('/product-images/')[1];
-    await _sb.storage.from('product-images').remove([oldPath]);
+    await _sb.storage.from('product-images').remove([oldPath]).catch(()=>{});
   }
-
   document.getElementById(dataId).value = '';
   const prev = document.getElementById(previewId);
   if(prev){
