@@ -297,7 +297,7 @@ tbody td{padding:12px 16px;color:var(--text2);vertical-align:middle}
 .cart-total-section{padding:18px 20px;border-top:2px solid var(--border);flex-shrink:0;background:linear-gradient(to bottom,var(--surface),rgba(26,92,46,.03))}
 .total-row{display:flex;justify-content:space-between;align-items:center;font-size:.82rem;color:var(--text2);margin-bottom:8px}
 .grand-total{font-size:2.2rem;font-weight:800;color:var(--gold);font-family:var(--mono);letter-spacing:-.03em;text-shadow:0 2px 8px rgba(184,134,11,.2)}
-.cart-actions{padding:14px 18px;padding-bottom:calc(14px + env(safe-area-inset-bottom, 0px));border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 2fr;gap:12px;flex-shrink:0}
+.cart-actions{padding:14px 18px;padding-bottom:calc(14px + env(safe-area-inset-bottom, 0px));border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;flex-shrink:0}
 
 /* ── RECEIPT ── */
 .receipt-print{
@@ -683,6 +683,34 @@ body{font-display:swap;}
 .unit-remove-btn:hover{background:var(--red);color:#fff}
 @media(max-width:640px){.selling-unit-row{grid-template-columns:1fr 1fr;gap:8px}.selling-unit-row .unit-remove-btn{grid-column:1/-1;width:100%;height:30px;border-radius:8px}}
 
+/* ── PENDING ORDERS SHEET ── */
+#pendingOrdersSheet{
+  position:fixed;inset:0;background:rgba(26,46,26,.55);z-index:700;
+  display:none;align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+#pendingOrdersSheet.open{display:flex}
+#pendingOrdersSheetBox{
+  background:var(--surface);border-radius:var(--radius-xl) var(--radius-xl) 0 0;
+  width:100%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;
+  overflow:hidden;animation:slideUp .25s ease;
+  box-shadow:0 -12px 48px rgba(0,0,0,.2);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.pending-order-card{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px;cursor:pointer;transition:all .15s;
+  display:flex;flex-direction:column;gap:6px;
+}
+.pending-order-card:hover{border-color:var(--gold);background:var(--surface);box-shadow:0 4px 20px rgba(184,134,11,.12)}
+.pending-order-card-head{display:flex;align-items:center;justify-content:space-between}
+.pending-order-label{font-size:.92rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:7px}
+.pending-order-label i{color:var(--gold)}
+.pending-order-meta{font-size:.7rem;color:var(--text3)}
+.pending-order-items{font-size:.75rem;color:var(--text2);line-height:1.6;margin-top:2px}
+.pending-order-total{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--green-dark)}
+.pending-order-actions{display:flex;gap:7px;margin-top:8px}
 /* ── POS UNIT SELECTOR BOTTOM SHEET ── */
 #posUnitSheet{position:fixed;inset:0;z-index:700;display:none;align-items:flex-end;justify-content:center;background:rgba(26,46,26,.5);backdrop-filter:blur(4px)}
 #posUnitSheet.open{display:flex}
@@ -2381,6 +2409,7 @@ const KEYS = {
   activityLog: 'env_activity_log',
   notifications: 'env_notifications',
   bizSettings: 'env_biz_settings',
+  pendingOrders: 'env_pending_orders',
 };
 
 function seedProducts() {
@@ -2500,6 +2529,7 @@ let DB = {
     colorGold:'#b8860b',
     bankAccounts:[],
   })),
+  pendingOrders: load(KEYS.pendingOrders, ()=>[]),
 };
 
 function persist(key){save(KEYS[key],DB[key]);}
@@ -2512,6 +2542,7 @@ const KEYS_R={
   stockHistory:'env_r_stock_history',priceHistory:'env_r_price_history',
   purchases:'env_r_purchases',expenses:'env_r_expenses',
   sales:'env_r_sales',debt:'env_r_debt',
+  pendingOrders:'env_r_pending_orders',
 };
 let DB_R={
   products:load(KEYS_R.products,()=>[]),
@@ -2522,6 +2553,7 @@ let DB_R={
   expenses:load(KEYS_R.expenses,()=>[]),
   sales:load(KEYS_R.sales,()=>[]),
   debt:load(KEYS_R.debt,()=>[]),
+  pendingOrders:load(KEYS_R.pendingOrders,()=>[]),
 };
 function persistR(k){save(KEYS_R[k],DB_R[k]);}
 
@@ -2544,6 +2576,7 @@ const _DB_SEEDS = {
     address:'Abuja, Nigeria',owner:'',logo:'',signature:'',stamp:'',
     paystackKey:'',colorGreen:'#1a5c2e',colorGold:'#b8860b',bankAccounts:[],
   }),
+  pendingOrders: ()=>[],
 };
 
 // Load ALL business data from Supabase after auth
@@ -2831,6 +2864,7 @@ let isWholesale = false;
 let selectedPayType = 'cash';
 let lastReceipt = null;
 let currentPayTotal = 0;
+let _parkingRetail = false; // true when park/resume actions are for the Retail store
 
 function renderPOS(){
   document.getElementById('content').innerHTML = `
@@ -2851,7 +2885,10 @@ function renderPOS(){
     <div class="cart-panel">
       <div class="cart-head">
         <h2><i class="fas fa-shopping-cart" style="color:var(--green-light)"></i>Cart</h2>
-        <span id="cartCount" class="badge badge-green">0 items</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-sm btn-amber" id="openOrdersBtn" onclick="openPendingOrdersSheet()" style="display:none"><i class="fas fa-layer-group"></i>Open Orders <span id="pendingOrdersBadge" class="badge badge-gold" style="margin-left:2px;padding:2px 7px"></span></button>
+          <span id="cartCount" class="badge badge-green">0 items</span>
+        </div>
       </div>
       <div class="cart-items" id="cartItems"><div class="cart-empty"><i class="fas fa-cart-plus"></i>Cart is empty<br><small style="color:var(--text3)">Click a product to add</small></div></div>
       <div class="cart-total-section">
@@ -2865,12 +2902,13 @@ function renderPOS(){
       </div>
       <div class="cart-actions">
         <button class="btn btn-ghost" onclick="clearCart()"><i class="fas fa-trash"></i>Clear</button>
+        <button class="btn btn-amber" onclick="parkOrder()" title="Save this order and start a new one"><i class="fas fa-pause-circle"></i>Park Order</button>
         <button class="btn btn-primary btn-lg" onclick="showPaymentModal()"><i class="fas fa-check-circle"></i>Checkout</button>
       </div>
     </div>
   </div>`;
   renderProductGrid(DB.products);
-  renderCart();
+  renderCart();  // also refreshes pending orders badge
   document.addEventListener('click', hideLiveSearch);
 }
 
@@ -3074,6 +3112,12 @@ function renderCart(){
   const el=document.getElementById('cartItems');
   const cc=document.getElementById('cartCount');
   if(!el)return;
+  // Update pending orders badge
+  const pendingCount=(DB.pendingOrders||[]).length;
+  const openBtn=document.getElementById('openOrdersBtn');
+  const pendingBadge=document.getElementById('pendingOrdersBadge');
+  if(openBtn) openBtn.style.display=pendingCount>0?'flex':'none';
+  if(pendingBadge) pendingBadge.textContent=pendingCount>0?pendingCount:'';
   if(!cart.length){el.innerHTML='<div class="cart-empty"><i class="fas fa-cart-plus"></i>Cart is empty<br><small style="color:var(--text3)">Click a product to add</small></div>';if(cc)cc.textContent='0 items';recalcCart();return;}
   el.innerHTML=cart.map((item,i)=>{
     const inv=DB.inventory.find(x=>x.id===item.id);
@@ -3120,6 +3164,227 @@ function changeQty(i,d){
 }
 function removeFromCart(i){cart.splice(i,1);renderCart();}
 function clearCart(){if(!canDelete()&&cart.length){if(!confirm('Clear the entire cart?')){return;}}else if(!cart.length){return;}if(confirm('Clear the entire cart?')){cart=[];renderCart();}}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PARKED / PENDING ORDERS — Save cart mid-session, serve another customer,
+// resume any time before payment. Orders persist across page reloads via DB.
+// ══════════════════════════════════════════════════════════════════════════════
+
+function parkOrder(){
+  if(isRetailStaff()){ showToast('Access restricted.', false); return; }
+  if(!cart.length){ showToast('Cart is empty — nothing to park.', false); return; }
+  _parkingRetail = false;
+  _showParkModal(cart);
+}
+
+function parkOrderR(){
+  if(!cartR.length){ showToast('Cart is empty — nothing to park.', false); return; }
+  _parkingRetail = true;
+  _showParkModal(cartR);
+}
+
+function _showParkModal(activeCart){
+  const labelEl = document.getElementById('parkOrderLabel');
+  if(labelEl) labelEl.value = '';
+  const preview = document.getElementById('parkCartPreview');
+  if(preview){
+    const sub = activeCart.reduce((s,x)=>s+x.price*x.qty,0);
+    preview.innerHTML = activeCart.map(item=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--border);font-size:.78rem">
+        <span style="color:var(--text);font-weight:500">${escapeHTML(item.name)} <span style="color:var(--text3)">${item.unit?escapeHTML(item.unit)+' ':''} ×${item.qty}</span></span>
+        <span style="font-family:var(--mono);color:var(--green-dark);font-weight:600">${N(item.price*item.qty)}</span>
+      </div>`).join('')
+    +`<div style="display:flex;justify-content:space-between;padding-top:8px;font-size:.82rem;font-weight:700;color:var(--gold)"><span>Total</span><span style="font-family:var(--mono)">${N(sub)}</span></div>`;
+  }
+  openModal('parkOrderModal');
+  setTimeout(()=>document.getElementById('parkOrderLabel')?.focus(), 200);
+}
+
+function confirmParkOrder(){
+  const isRetail = _parkingRetail;
+  const activeCart = isRetail ? cartR : cart;
+  if(!activeCart.length){ closeModal('parkOrderModal'); _parkingRetail=false; return; }
+
+  const dbTarget   = isRetail ? DB_R : DB;
+  const persistFn  = isRetail ? (k=>persistR(k)) : (k=>persist(k));
+  const storeLabel = isRetail ? '[Retail] ' : '';
+
+  if(!dbTarget.pendingOrders) dbTarget.pendingOrders = [];
+  const label = (document.getElementById('parkOrderLabel')?.value.trim()) || (storeLabel + 'Order #' + (dbTarget.pendingOrders.length + 1));
+  const discVal = isRetail ? '' : (document.getElementById('discountInput')?.value.trim() || '');
+  const order = {
+    id: uid(),
+    label,
+    cart: JSON.parse(JSON.stringify(activeCart)),
+    isWholesale: isRetail ? false : isWholesale,
+    discountInput: discVal,
+    savedAt: new Date().toISOString(),
+    savedBy: currentUserName || 'Staff',
+    total: activeCart.reduce((s,x)=>s+x.price*x.qty, 0),
+  };
+  dbTarget.pendingOrders.unshift(order);
+  persistFn('pendingOrders');
+
+  // Clear the active cart
+  if(isRetail){
+    cartR = [];
+    renderCartR();
+    renderProductGridR();
+  } else {
+    cart = [];
+    const discEl = document.getElementById('discountInput');
+    if(discEl) discEl.value = '';
+    renderCart();
+    renderProductGrid(DB.products);
+  }
+  _parkingRetail = false;
+  closeModal('parkOrderModal');
+  showToast(`"${label}" parked — cart cleared for next customer.`);
+  logActivity('POS', `${isRetail?'Retail ':''} Order parked: "${label}" · ${N(order.total)} · by ${currentUserName||'Staff'}`);
+}
+
+function openPendingOrdersSheet(){
+  if(isRetailStaff()){ showToast('Access restricted.', false); return; }
+  _parkingRetail = false;
+  if(!DB.pendingOrders || !DB.pendingOrders.length){
+    showToast('No parked orders yet.', false); return;
+  }
+  renderPendingOrdersList();
+  document.getElementById('pendingOrdersSheet').classList.add('open');
+}
+
+function openPendingOrdersSheetR(){
+  _parkingRetail = true;
+  if(!DB_R.pendingOrders || !DB_R.pendingOrders.length){
+    showToast('No parked orders yet.', false); return;
+  }
+  renderPendingOrdersList();
+  document.getElementById('pendingOrdersSheet').classList.add('open');
+}
+
+function closePendingOrdersSheet(){
+  document.getElementById('pendingOrdersSheet').classList.remove('open');
+  _parkingRetail = false;
+}
+
+function renderPendingOrdersList(){
+  const el = document.getElementById('pendingOrdersList');
+  if(!el) return;
+  // Retail staff can never see main store orders — force retail mode if needed
+  const isRetail = _parkingRetail || isRetailStaff();
+  const orders = (isRetail ? DB_R.pendingOrders : DB.pendingOrders) || [];
+  const sheetTitle = document.querySelector('#pendingOrdersSheetBox [style*="font-weight:800"]');
+  if(sheetTitle) sheetTitle.innerHTML = `<i class="fas fa-layer-group" style="color:var(--gold)"></i>${isRetail ? 'Retail' : 'Main Store'} — Open / Parked Orders`;
+  if(!orders.length){
+    el.innerHTML='<div class="empty-state" style="padding:32px 20px"><i class="fas fa-inbox"></i><p>No parked orders</p></div>';
+    return;
+  }
+  const r = isRetail ? 'true' : 'false';
+  el.innerHTML = orders.map((o)=>{
+    const itemsSummary = o.cart.map(i=>`${i.name} ×${i.qty}`).join(', ');
+    const timeAgo = formatTimeAgo(o.savedAt);
+    return `
+    <div class="pending-order-card" onclick="resumePendingOrder('${o.id}',${r})">
+      <div class="pending-order-card-head">
+        <div class="pending-order-label"><i class="fas fa-receipt"></i>${escapeHTML(o.label)}</div>
+        <div class="pending-order-total">${N(o.total)}</div>
+      </div>
+      <div class="pending-order-items">${escapeHTML(itemsSummary.length>80?itemsSummary.slice(0,80)+'…':itemsSummary)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">
+        <div class="pending-order-meta"><i class="fas fa-clock" style="margin-right:3px"></i>${timeAgo} · ${o.cart.length} item${o.cart.length!==1?'s':''} · ${escapeHTML(o.savedBy)}</div>
+        <div class="pending-order-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-sm btn-primary" onclick="resumePendingOrder('${o.id}',${r})"><i class="fas fa-play"></i>Resume</button>
+          <button class="btn btn-sm btn-danger" onclick="deletePendingOrder('${o.id}',${r})"><i class="fas fa-trash"></i>Discard</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function resumePendingOrder(id, isRetail){
+  isRetail = !!isRetail;
+  const dbTarget = isRetail ? DB_R : DB;
+  const persistFn = isRetail ? (k=>persistR(k)) : (k=>persist(k));
+  if(!dbTarget.pendingOrders) return;
+  const order = dbTarget.pendingOrders.find(o=>o.id===id);
+  if(!order){ showToast('Order not found.', false); return; }
+
+  const activeCart = isRetail ? cartR : cart;
+  const activeCartLen = activeCart.length;
+
+  if(activeCartLen){
+    const choice = confirm(
+      `You have ${activeCartLen} item(s) in the current cart.\n\nOK → MERGE parked order into current cart.\nCancel → REPLACE current cart with parked order.`
+    );
+    if(choice){
+      // Merge
+      order.cart.forEach(parkedItem=>{
+        if(isRetail){
+          const existing = cartR.find(x=>x.id===parkedItem.id);
+          if(existing){ existing.qty += parkedItem.qty; }
+          else { cartR.push({...parkedItem}); }
+        } else {
+          const existing = cart.find(x=>x._cartKey===parkedItem._cartKey);
+          if(existing){ existing.qty += parkedItem.qty; }
+          else { cart.push({...parkedItem}); }
+        }
+      });
+      showToast(`"${order.label}" merged into current cart.`);
+    } else {
+      // Replace
+      if(isRetail){ cartR = JSON.parse(JSON.stringify(order.cart)); }
+      else {
+        cart = JSON.parse(JSON.stringify(order.cart));
+        if(order.discountInput){ const d=document.getElementById('discountInput'); if(d) d.value=order.discountInput; }
+      }
+      showToast(`"${order.label}" loaded into cart.`);
+    }
+  } else {
+    // Cart empty — load directly
+    if(isRetail){ cartR = JSON.parse(JSON.stringify(order.cart)); }
+    else {
+      cart = JSON.parse(JSON.stringify(order.cart));
+      if(order.discountInput){ const d=document.getElementById('discountInput'); if(d) d.value=order.discountInput; }
+      if(order.isWholesale !== isWholesale) setPriceMode(order.isWholesale);
+    }
+    showToast(`"${order.label}" resumed — add more items or checkout.`);
+  }
+
+  // Remove from pending list
+  dbTarget.pendingOrders = dbTarget.pendingOrders.filter(o=>o.id!==id);
+  persistFn('pendingOrders');
+  closePendingOrdersSheet();
+
+  if(isRetail){ renderCartR(); renderProductGridR(); }
+  else { renderCart(); renderProductGrid(DB.products); }
+
+  logActivity('POS', `${isRetail?'Retail ':''} Resumed parked order: "${order.label}" · by ${currentUserName||'Staff'}`);
+}
+
+function deletePendingOrder(id, isRetail){
+  isRetail = !!isRetail;
+  const dbTarget = isRetail ? DB_R : DB;
+  const persistFn = isRetail ? (k=>persistR(k)) : (k=>persist(k));
+  if(!dbTarget.pendingOrders) return;
+  const order = dbTarget.pendingOrders.find(o=>o.id===id);
+  if(!order) return;
+  if(!confirm(`Discard parked order "${order.label}"? This cannot be undone.`)) return;
+  dbTarget.pendingOrders = dbTarget.pendingOrders.filter(o=>o.id!==id);
+  persistFn('pendingOrders');
+  renderPendingOrdersList();
+  if(isRetail){ renderCartR(); } else { renderCart(); }
+  showToast(`"${order.label}" discarded.`);
+  logActivity('POS', `${isRetail?'Retail ':''} Discarded parked order: "${order.label}" · by ${currentUserName||'Staff'}`);
+  if(!dbTarget.pendingOrders.length) closePendingOrdersSheet();
+}
+
+function formatTimeAgo(isoStr){
+  const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000);
+  if(diff < 60) return diff+'s ago';
+  if(diff < 3600) return Math.floor(diff/60)+'m ago';
+  if(diff < 86400) return Math.floor(diff/3600)+'h ago';
+  return Math.floor(diff/86400)+'d ago';
+}
 
 function recalcCart(){
   const sub=cart.reduce((s,x)=>s+x.price*x.qty,0);
@@ -6166,7 +6431,10 @@ function renderR_POS(){
       <div class="card" style="display:flex;flex-direction:column;height:100%;gap:0">
         <div class="flex-between" style="padding:12px 14px;border-bottom:1px solid var(--border)">
           <h3 style="font-size:.95rem;font-weight:700">Cart <span id="rCartCount" style="font-size:.72rem;color:var(--text3);font-weight:400">0 items</span></h3>
-          <button class="btn btn-sm btn-ghost" onclick="cartR=[];renderCartR();renderProductGridR()">Clear</button>
+          <div style="display:flex;align-items:center;gap:6px">
+            <button class="btn btn-sm btn-amber" id="rOpenOrdersBtn" onclick="openPendingOrdersSheetR()" style="display:none"><i class="fas fa-layer-group"></i>Parked <span id="rPendingBadge" class="badge badge-gold" style="margin-left:2px;padding:2px 7px"></span></button>
+            <button class="btn btn-sm btn-ghost" onclick="cartR=[];renderCartR();renderProductGridR()">Clear</button>
+          </div>
         </div>
         <div id="rCartItems" style="flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px"></div>
         <div style="padding:12px 14px;border-top:1px solid var(--border)">
@@ -6174,7 +6442,10 @@ function renderR_POS(){
             <span style="color:var(--text2);font-size:.85rem">Total</span>
             <span id="rCartTotal" style="font-size:1.4rem;font-weight:800;color:var(--gold-light);font-family:var(--mono)">₦0</span>
           </div>
-          <button class="btn btn-primary" style="width:100%;padding:13px" onclick="showPaymentModalR()"><i class="fas fa-check-circle"></i>Charge Customer</button>
+          <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px">
+            <button class="btn btn-amber" onclick="parkOrderR()" title="Save order and serve next customer"><i class="fas fa-pause-circle"></i>Park</button>
+            <button class="btn btn-primary" style="padding:13px" onclick="showPaymentModalR()"><i class="fas fa-check-circle"></i>Charge Customer</button>
+          </div>
         </div>
       </div>
     </div>
@@ -6232,6 +6503,12 @@ function removeFromCartR(i){cartR.splice(i,1);renderCartR();renderProductGridR()
 function renderCartR(){
   const el=document.getElementById('rCartItems');if(!el)return;
   const cc=document.getElementById('rCartCount');
+  // Update retail pending orders badge
+  const rPendingCount=(DB_R.pendingOrders||[]).length;
+  const rOpenBtn=document.getElementById('rOpenOrdersBtn');
+  const rPendingBadge=document.getElementById('rPendingBadge');
+  if(rOpenBtn) rOpenBtn.style.display=rPendingCount>0?'flex':'none';
+  if(rPendingBadge) rPendingBadge.textContent=rPendingCount>0?rPendingCount:'';
   if(!cartR.length){
     el.innerHTML='<div class="empty-state" style="padding:24px 0"><i class="fas fa-shopping-cart"></i><p>Cart is empty</p></div>';
     if(cc)cc.textContent='0 items';
@@ -7181,7 +7458,49 @@ function onProductCategoryChange(catInputId, previewId, dataId){
     prev.textContent = getCategoryEmoji(cat);
   }
 }
-</script><!-- ══ POS UNIT SELECTOR BOTTOM SHEET ══ -->
+</script><!-- ══ PARK ORDER NAME MODAL ══ -->
+<div id="parkOrderModal" class="modal-overlay" onclick="if(event.target===this)closeModal('parkOrderModal')">
+  <div class="modal-box sm">
+    <div class="modal-head">
+      <h3><i class="fas fa-pause-circle" style="color:var(--gold)"></i> Park Order</h3>
+      <button class="modal-close" onclick="closeModal('parkOrderModal')">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:rgba(184,134,11,.08);border:1px solid rgba(184,134,11,.25);border-radius:var(--radius);padding:12px 14px;font-size:.82rem;color:var(--amber);display:flex;gap:10px;align-items:flex-start">
+        <i class="fas fa-info-circle" style="margin-top:2px;flex-shrink:0"></i>
+        <span>The current cart will be saved. You can serve another customer and resume this order any time before payment.</span>
+      </div>
+      <div>
+        <label>Customer Name / Order Label <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+        <input type="text" id="parkOrderLabel" placeholder="e.g. Table 3, Emeka, Walk-in…" maxlength="60" oninput="" autocomplete="off">
+      </div>
+      <div id="parkCartPreview" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;max-height:200px;overflow-y:auto"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('parkOrderModal')">Cancel</button>
+      <button class="btn btn-gold btn-lg" onclick="confirmParkOrder()"><i class="fas fa-pause-circle"></i>Park &amp; New Cart</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PENDING / OPEN ORDERS SHEET ══ -->
+<div id="pendingOrdersSheet" onclick="if(event.target===this)closePendingOrdersSheet()">
+  <div id="pendingOrdersSheetBox">
+    <div style="padding:18px 20px 0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
+      <div>
+        <div style="font-weight:800;font-size:1.05rem;display:flex;align-items:center;gap:8px"><i class="fas fa-layer-group" style="color:var(--gold)"></i>Open / Parked Orders</div>
+        <div style="font-size:.72rem;color:var(--text3);margin-top:2px">Tap an order to resume it into the cart</div>
+      </div>
+      <button onclick="closePendingOrdersSheet()" style="background:var(--surface2);border:none;cursor:pointer;width:32px;height:32px;border-radius:50%;font-size:1.2rem;color:var(--text3);display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div id="pendingOrdersList" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:10px"></div>
+    <div style="padding:14px 16px;border-top:1px solid var(--border);flex-shrink:0">
+      <button class="btn btn-ghost" style="width:100%" onclick="closePendingOrdersSheet()"><i class="fas fa-times"></i>Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ POS UNIT SELECTOR BOTTOM SHEET ══ -->
 <div id="posUnitSheet" onclick="if(event.target===this)closePosUnitSheet()">
   <div id="posUnitSheetBox">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
