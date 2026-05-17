@@ -5939,6 +5939,9 @@ function renderDashboard(){
       </div>
     </div>
 
+    <!-- Sales History — immediately visible -->
+    <div id="dashSalesSection"></div>
+
     <!-- Profit Breakdown -->
     <div class="card">
       <h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-calculator"></i>Profit Calculation</h3>
@@ -6018,9 +6021,6 @@ function renderDashboard(){
         </div>`;
       })()}
     </div>
-
-    <!-- Sales History -->
-    <div id="dashSalesSection"></div>
 
   </div>`;
   _renderMainSalesSection();
@@ -7534,9 +7534,9 @@ function renderR_Dashboard(){
         <i class="fas fa-store-alt" style="font-size:2.5rem;color:rgba(26,92,46,.2)"></i>
       </div>
     </div>
+    <div id="dashRSalesSection"></div>
     ${topProds.length?`<div class="card"><h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-star"></i>Top-Selling Products</h3>${topProds.map((p,i)=>`<div style="margin-bottom:12px"><div class="flex-between" style="margin-bottom:4px"><span style="font-weight:600">${i+1}. ${p.name}</span><span style="color:var(--gold-light);font-family:var(--mono)">${N(p.rev)}</span></div><div style="background:var(--border);border-radius:4px;height:5px"><div style="width:${Math.round(p.rev/maxRev*100)}%;background:linear-gradient(90deg,var(--green-dark),var(--gold));height:5px;border-radius:4px"></div></div><div style="font-size:.68rem;color:var(--text3);margin-top:2px">${p.qty} units sold</div></div>`).join('')}</div>`:''}
     ${outStock.length||lowStock.length?`<div class="card" style="border:1px solid rgba(184,134,11,.3)"><h3 class="section-title" style="margin-bottom:12px;color:var(--amber)"><i class="fas fa-triangle-exclamation"></i>Low Stock Alerts</h3>${[...outStock.map(p=>`<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><span class="badge" style="background:rgba(192,57,43,.15);color:var(--red)">OUT OF STOCK</span></div>`), ...lowStock.map(p=>`<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><span class="badge" style="background:rgba(184,134,11,.15);color:var(--amber)">${p.stock} left</span></div>`)].join('')}</div>`:''}
-    <div id="dashRSalesSection"></div>
   </div>`;
   _renderRetailSalesSection();
 }
