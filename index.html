@@ -268,7 +268,7 @@ tbody td{padding:12px 16px;color:var(--text2);vertical-align:middle}
 
 /* ── POS SPECIFIC ── */
 #pos-wrap{display:grid;grid-template-columns:1fr 400px;gap:16px;height:calc(100vh - 110px);height:calc(100dvh - 110px)}
-.products-panel{overflow-y:auto;display:flex;flex-direction:column;gap:14px;touch-action:pan-y pinch-zoom}
+.products-panel{overflow-y:auto;display:flex;flex-direction:column;gap:14px;touch-action:pan-x pan-y pinch-zoom}
 .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:10px}
 .product-card{
   background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);
@@ -341,6 +341,7 @@ tbody td{padding:12px 16px;color:var(--text2);vertical-align:middle}
 img{loading:lazy;}
 /* Smooth scrolling on iOS */
 #content,#sidebar,.cart-items,.modal-body{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+#content{overscroll-behavior-x:auto;}
 /* Prevent layout shift on font load */
 body{font-display:swap;}
 /* Reduce paint during scroll */
