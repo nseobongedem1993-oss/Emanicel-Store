@@ -83,7 +83,7 @@
   --shadow-sm:0 2px 12px rgba(0,0,0,.08);
   --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
 }
-html{scroll-behavior:smooth;height:100%;overflow-x:auto}
+html{scroll-behavior:smooth;height:100%;overflow-x:auto;min-width:360px}
 body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;overflow-x:auto;overflow-y:hidden;height:100vh;height:100dvh;min-width:360px}
 
 /* ── SCROLLBAR ── */
@@ -163,7 +163,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sidebar-footer{display:none}
 
 /* ── MAIN ── */
-#main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow-x:auto;overflow-y:auto;min-width:0}
+#main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow-x:auto;overflow-y:auto;min-width:640px}
 #topbar{
   height:62px;background:var(--surface);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
@@ -446,7 +446,7 @@ body{font-display:swap;}
     display:none; /* hidden — replaced by bottom nav */
   }
   #main{
-    width:100%;padding-bottom:calc(62px + env(safe-area-inset-bottom,0px));
+    width:100%;padding-bottom:calc(62px + env(safe-area-inset-bottom,0px));min-width:0;
   }
   #content{
     padding:14px 14px;
