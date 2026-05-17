@@ -1855,6 +1855,7 @@ async function onAuthSuccess(user){
   setupRealtime();
   applyBizColors();
   syncInventoryFromProducts();
+  await runBulkImportV1();
   checkLowStockNotifs();
   checkDailySummaryNotif();
   showToast('Welcome back, '+currentUserName+'!');
@@ -1916,6 +1917,147 @@ function applyRoleUI(){
     const mdb=document.getElementById('mob-dashboard');
     if(mdb) mdb.style.display='none';
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ONE-TIME BULK IMPORT v1 — runs once after login, adds new products to Supabase
+// Flag: DB.bizSettings.bulkImportV1Done — set true after first run, never repeats
+// ══════════════════════════════════════════════════════════════════════════════
+async function runBulkImportV1(){
+  if(!DB.bizSettings) DB.bizSettings={};
+  if(DB.bizSettings.bulkImportV1Done) return;
+
+  const _newProds=[
+    // ── SPIRITS ──────────────────────────────────────────────────────────────
+    {name:'Seaman\'s Premium',      cat:'Spirits',    unit:'bottle', retail:3500,  cost:3017},
+    {name:'Eagle',                  cat:'Spirits',    unit:'bottle', retail:3500,  cost:2975},
+    {name:'8pm Tin',                cat:'Spirits',    unit:'bottle', retail:8650,  cost:6059},
+    {name:'Kalahari',               cat:'Spirits',    unit:'bottle', retail:5500,  cost:4392},
+    {name:'Royal Standard',         cat:'Spirits',    unit:'bottle', retail:3500,  cost:2975},
+    {name:'Best Cream 75cl',        cat:'Spirits',    unit:'bottle', retail:7000,  cost:5892},
+    {name:'Best Cream 200ml',       cat:'Spirits',    unit:'bottle', retail:2500,  cost:1571},
+    {name:'Gordons 75cl',           cat:'Spirits',    unit:'bottle', retail:6650,  cost:4891},
+    {name:'Campari',                cat:'Spirits',    unit:'bottle', retail:26650, cost:21784},
+    {name:'Apperito',               cat:'Spirits',    unit:'bottle', retail:3000,  cost:2017},
+    {name:'Squadron Minis',         cat:'Spirits',    unit:'pack',   retail:2650,  cost:1836},
+    {name:'Big Ben 75cl',           cat:'Spirits',    unit:'bottle', retail:3000,  cost:2225},
+    {name:'Magic Moment',           cat:'Spirits',    unit:'bottle', retail:7000,  cost:6175},
+    {name:'Chelsea Minis',          cat:'Spirits',    unit:'pack',   retail:2650,  cost:1836},
+    {name:'33 Export',              cat:'Spirits',    unit:'crate',  retail:10500, cost:10000},
+    {name:'Big Legend',             cat:'Spirits',    unit:'crate',  retail:13000, cost:12600},
+    {name:'Smirnoff Ice',           cat:'Spirits',    unit:'crate',  retail:16000, cost:15000},
+    {name:'Captain Jack',           cat:'Spirits',    unit:'bottle', retail:3200,  cost:2642},
+    {name:'Biggo 75cl',             cat:'Spirits',    unit:'bottle', retail:3000,  cost:2392},
+    {name:'Jameson',                cat:'Spirits',    unit:'bottle', retail:25000, cost:22234},
+    {name:'Action Bitters 37.5cl',  cat:'Spirits',    unit:'bottle', retail:2050,  cost:1392},
+    {name:'Pure Heaven',            cat:'Spirits',    unit:'carton', retail:6000,  cost:4559},
+    {name:'Expression',             cat:'Spirits',    unit:'carton', retail:9500,  cost:7559},
+    {name:'8pm Fire & Honey',       cat:'Spirits',    unit:'bottle', retail:7000,  cost:5808},
+    // ── BEVERAGES ─────────────────────────────────────────────────────────────
+    {name:'Golden Morn 900g',           cat:'Beverages', unit:'tin',   retail:5000,  cost:4034},
+    {name:'My Boy',                     cat:'Beverages', unit:'carton',retail:8400,  cost:7392},
+    {name:'Lactogen',                   cat:'Beverages', unit:'tin',   retail:7800,  cost:6784},
+    {name:'Hot Chocolate',              cat:'Beverages', unit:'pack',  retail:3500,  cost:2934},
+    {name:'Milo 3 in 1',               cat:'Beverages', unit:'pack',  retail:3000,  cost:2550},
+    {name:'Peak Full Cream Evaporated', cat:'Beverages', unit:'tin',   retail:1200,  cost:1030},
+    {name:'Peak Filled Cream Evaporated',cat:'Beverages',unit:'tin',   retail:800,   cost:621},
+    {name:'Three Crown',                cat:'Beverages', unit:'tin',   retail:800,   cost:634},
+    {name:'Milo Tape',                  cat:'Beverages', unit:'tape',  retail:2600,  cost:1710},
+    {name:'Top Cafe',                   cat:'Beverages', unit:'pack',  retail:2050,  cost:1709},
+    {name:'Munro Glucose',              cat:'Beverages', unit:'pack',  retail:3000,  cost:2700},
+    {name:'Peak 400g Tin',              cat:'Beverages', unit:'tin',   retail:6500,  cost:5392},
+    {name:'Ovaltine Tape',              cat:'Beverages', unit:'tape',  retail:2500,  cost:1678},
+    {name:'Loya 380g Tin',              cat:'Beverages', unit:'tin',   retail:6200,  cost:5142},
+    {name:'Nan 1',                      cat:'Beverages', unit:'tin',   retail:11000, cost:9117},
+    {name:'Ovaltine 400g Refil',        cat:'Beverages', unit:'pack',  retail:5550,  cost:4892},
+    {name:'Miksi Tape',                 cat:'Beverages', unit:'tape',  retail:1550,  cost:1135},
+    {name:'Miksi 320g Refil',           cat:'Beverages', unit:'pack',  retail:3360,  cost:2767},
+    {name:'Vitamilk',                   cat:'Beverages', unit:'pack',  retail:1500,  cost:1280},
+    // ── SOAP ──────────────────────────────────────────────────────────────────
+    {name:'Eva Soap',                cat:'Soap', unit:'piece', retail:860,  cost:557},
+    {name:'Idole Soap Papaya',       cat:'Soap', unit:'piece', retail:1500, cost:1050},
+    {name:'Visita Soap B/S',         cat:'Soap', unit:'piece', retail:1000, cost:709},
+    {name:'Ivory Soap',              cat:'Soap', unit:'piece', retail:860,  cost:542},
+    {name:'Precious Perfect Lot S/S',cat:'Soap', unit:'piece', retail:2200, cost:1600},
+    {name:'Fressia Soap',            cat:'Soap', unit:'piece', retail:860,  cost:573},
+    {name:'Extract Soap',            cat:'Soap', unit:'piece', retail:2000, cost:1500},
+    {name:'Hawaii Soap Mix',         cat:'Soap', unit:'piece', retail:1500, cost:1000},
+    {name:'White Haven Soap Mix',    cat:'Soap', unit:'piece', retail:800,  cost:605},
+    {name:'Eva Soap Mix',            cat:'Soap', unit:'piece', retail:4500, cost:3500},
+    {name:'Siri Soap',               cat:'Soap', unit:'piece', retail:4500, cost:3500},
+    {name:'Fresh Glow Soap',         cat:'Soap', unit:'piece', retail:3000, cost:2500},
+    // ── COSMETICS ─────────────────────────────────────────────────────────────
+    {name:'Skin Magnet Lotion',          cat:'Cosmetics', unit:'piece', retail:2350, cost:1700},
+    {name:'Confetti Spray',              cat:'Cosmetics', unit:'piece', retail:4600, cost:2900},
+    {name:'Iman Perfume',                cat:'Cosmetics', unit:'piece', retail:2500, cost:1300},
+    {name:'Nivea Lotion RB Vit C',       cat:'Cosmetics', unit:'piece', retail:5800, cost:4792},
+    {name:'Nivea Lotion RB Avocado',     cat:'Cosmetics', unit:'piece', retail:5800, cost:4792},
+    {name:'Caro White Cup B/S',          cat:'Cosmetics', unit:'piece', retail:5000, cost:4050},
+    {name:'Tender White Lot',            cat:'Cosmetics', unit:'piece', retail:2500, cost:2000},
+    {name:'Looking Good B/S Cup',        cat:'Cosmetics', unit:'piece', retail:3000, cost:2500},
+    {name:'Visita Lotion Naked',         cat:'Cosmetics', unit:'piece', retail:2500, cost:1834},
+    {name:'Visita Lotion Packet',        cat:'Cosmetics', unit:'piece', retail:2500, cost:1834},
+    {name:'Epiderm Tube',                cat:'Cosmetics', unit:'piece', retail:960,  cost:650},
+    {name:'Wind Gel B/S',                cat:'Cosmetics', unit:'piece', retail:1700, cost:1167},
+    {name:'Wind Gel S/S',                cat:'Cosmetics', unit:'piece', retail:1700, cost:1167},
+    {name:'Cussons Lot Pink',            cat:'Cosmetics', unit:'piece', retail:1700, cost:1167},
+    {name:'Cussons Lot Blue',            cat:'Cosmetics', unit:'piece', retail:2600, cost:1667},
+    {name:'Cussons Oil Mix',             cat:'Cosmetics', unit:'piece', retail:2050, cost:1334},
+    {name:'Elope Spray',                 cat:'Cosmetics', unit:'piece', retail:3500, cost:2500},
+    {name:'Neso Spray',                  cat:'Cosmetics', unit:'piece', retail:5650, cost:4600},
+    {name:'Nivea Cocoa Lot B/S',         cat:'Cosmetics', unit:'piece', retail:3500, cost:2667},
+    {name:'Nivea Perfect & Radiant B/S', cat:'Cosmetics', unit:'piece', retail:5260, cost:4167},
+    {name:'Nivea Perfect & Radiant S/S', cat:'Cosmetics', unit:'piece', retail:1650, cost:690},
+    {name:'Supple Lot M/S',              cat:'Cosmetics', unit:'piece', retail:5200, cost:4167},
+    {name:'Nivea Lot Blue B/S',          cat:'Cosmetics', unit:'piece', retail:3500, cost:2667},
+    // ── TOILETRIES ────────────────────────────────────────────────────────────
+    {name:'Close Up B/S',          cat:'Toiletries', unit:'piece',  retail:1360, cost:1040},
+    {name:'Xtreme Toothpaste B/S', cat:'Toiletries', unit:'piece',  retail:1000, cost:860},
+    {name:'Ora-Care Toothpaste',   cat:'Toiletries', unit:'piece',  retail:1800, cost:1473},
+    {name:'Oral B Toothpaste B/S', cat:'Toiletries', unit:'piece',  retail:1700, cost:1125},
+    {name:'Tetmosol Liquid 500ml', cat:'Toiletries', unit:'bottle', retail:2500, cost:1792},
+    {name:'Tetmosol Liquid 250ml', cat:'Toiletries', unit:'bottle', retail:900,  cost:625},
+    {name:'Tetmosol Soap B/S',     cat:'Toiletries', unit:'piece',  retail:700,  cost:375},
+    {name:'Tetmosol Soap S/S',     cat:'Toiletries', unit:'piece',  retail:900,  cost:615},
+    // ── BABY ──────────────────────────────────────────────────────────────────
+    {name:'Soft Care Wipes x60', cat:'Baby', unit:'pack', retail:1200, cost:621},
+    {name:'Soft Care Wipes x80', cat:'Baby', unit:'pack', retail:1950, cost:1242},
+    // ── HOUSEHOLD ─────────────────────────────────────────────────────────────
+    {name:'Sunshine Airfreshner',   cat:'Household', unit:'piece',  retail:600,  cost:359},
+    {name:'Wind Airfreshner Block', cat:'Household', unit:'piece',  retail:1200, cost:900},
+    {name:'Dettol Liquid 75',       cat:'Household', unit:'bottle', retail:3500, cost:2900},
+    {name:'Dettol Liquid 65',       cat:'Household', unit:'bottle', retail:850,  cost:584},
+  ];
+
+  const ts=Date.now();
+  let added=0;
+  _newProds.forEach((p,i)=>{
+    // Skip if a product with same name already exists (case-insensitive)
+    const exists=DB.products.find(x=>x.name.toLowerCase().trim()===p.name.toLowerCase().trim());
+    if(exists) return;
+    const id=ts+i+1;
+    const prod={
+      id, name:p.name, category:p.cat, emoji:'', image:'',
+      retail:p.retail, wholesale:p.retail, costPrice:p.cost,
+      unit:p.unit, stock:0, lowStock:10,
+      sellingUnits:[{name:p.unit, qty:1, retail:p.retail, wholesale:p.retail}],
+      conversions:{}
+    };
+    DB.products.push(prod);
+    DB.inventory.push({...prod});
+    added++;
+  });
+
+  if(added>0){
+    persist('products');
+    persist('inventory');
+    logActivity('Product',`Bulk import v1: ${added} new products added to inventory`);
+    showToast(`${added} new products imported!`);
+  }
+
+  // Mark as done — will never run again
+  DB.bizSettings.bulkImportV1Done=true;
+  persist('bizSettings');
 }
 
 // Logout
