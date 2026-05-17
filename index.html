@@ -83,8 +83,8 @@
   --shadow-sm:0 2px 12px rgba(0,0,0,.08);
   --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
 }
-html{scroll-behavior:smooth;height:100%}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;overflow:auto;height:100vh;height:100dvh}
+html{scroll-behavior:smooth;height:100%;overflow-x:auto}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;display:flex;overflow-x:auto;overflow-y:hidden;height:100vh;height:100dvh;min-width:360px}
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar{width:5px;height:5px}
@@ -98,6 +98,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   height:100vh;height:100dvh;overflow-y:auto;overflow-x:visible;
   flex-shrink:0;z-index:100;
   box-shadow:2px 0 20px rgba(0,0,0,.06);
+  position:sticky;left:0;top:0;align-self:flex-start;height:100dvh;
 }
 .sidebar-logo{
   padding:16px 0 14px;border-bottom:1px solid var(--border);
@@ -162,7 +163,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sidebar-footer{display:none}
 
 /* ── MAIN ── */
-#main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:auto}
+#main{flex:1;display:flex;flex-direction:column;height:100vh;height:100dvh;overflow-x:auto;overflow-y:auto;min-width:0}
 #topbar{
   height:62px;background:var(--surface);border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between;
@@ -729,6 +730,62 @@ body{font-display:swap;}
 .su-row-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:1.05rem;padding:4px;border-radius:6px;line-height:1}
 .su-row-del:hover{background:rgba(192,57,43,.1)}
 @media(max-width:500px){.su-row{grid-template-columns:1fr 64px 84px 84px 30px;gap:4px}}
+
+/* ── CALCULATOR ── */
+#calcWrap{display:flex;justify-content:center;padding:20px 0}
+.calc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-xl);padding:24px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+.calc-display{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:18px;text-align:right;min-height:90px;display:flex;flex-direction:column;align-items:flex-end;justify-content:flex-end;gap:4px}
+.calc-expr{font-size:.78rem;color:var(--text3);font-family:var(--mono);min-height:18px;word-break:break-all}
+.calc-val{font-size:2.4rem;font-weight:800;font-family:var(--mono);color:var(--text);letter-spacing:-.02em;word-break:break-all;line-height:1.1}
+.calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.calc-btn{
+  background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 10px;font-size:1.05rem;font-weight:600;font-family:var(--font);
+  cursor:pointer;color:var(--text);transition:all .12s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  display:flex;align-items:center;justify-content:center;
+}
+.calc-btn:hover{background:var(--surface3);border-color:var(--border2)}
+.calc-btn:active{transform:scale(.93);opacity:.8}
+.calc-btn.op{background:rgba(26,92,46,.1);border-color:rgba(26,92,46,.25);color:var(--green-dark)}
+.calc-btn.op:hover{background:rgba(26,92,46,.18)}
+.calc-btn.eq{background:var(--green);color:#fff;border-color:var(--green);grid-column:span 1}
+.calc-btn.eq:hover{background:var(--green-light)}
+.calc-btn.clr{background:rgba(192,57,43,.1);border-color:rgba(192,57,43,.25);color:var(--red)}
+.calc-btn.clr:hover{background:rgba(192,57,43,.2)}
+.calc-btn.zero{grid-column:span 2}
+.calc-btn.gold{background:rgba(184,134,11,.12);border-color:rgba(184,134,11,.3);color:var(--gold-dim)}
+.calc-btn.gold:hover{background:rgba(184,134,11,.22)}
+.calc-history{margin-top:20px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;max-width:380px;width:100%;margin-left:auto;margin-right:auto}
+.calc-history-head{padding:12px 16px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.calc-history-head span{font-size:.75rem;font-weight:700;color:var(--text2);letter-spacing:.05em;text-transform:uppercase}
+.calc-history-list{max-height:220px;overflow-y:auto}
+.calc-history-item{padding:10px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;cursor:pointer;transition:background .12s}
+.calc-history-item:hover{background:var(--surface2)}
+.calc-history-item:last-child{border-bottom:none}
+.calc-history-expr{font-size:.75rem;color:var(--text3);font-family:var(--mono)}
+.calc-history-res{font-size:.9rem;font-weight:700;color:var(--green-dark);font-family:var(--mono)}
+.calc-empty-hist{padding:20px;text-align:center;font-size:.8rem;color:var(--text3)}
+
+/* ── SALES HISTORY ── */
+.sales-period-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.sales-period-bar input[type=date]{width:auto;padding:7px 12px;font-size:.78rem}
+.sale-row{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:13px 16px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:6px}
+.sale-row:hover{border-color:var(--green);box-shadow:0 4px 18px rgba(26,92,46,.12);background:var(--surface)}
+.sale-row-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sale-code{font-family:var(--mono);font-size:.72rem;font-weight:700;background:var(--green);color:#fff;padding:2px 8px;border-radius:12px}
+.sale-code-retail{background:var(--gold);}
+.sale-amount{font-family:var(--mono);font-size:1.1rem;font-weight:800;color:var(--gold)}
+.sale-meta{font-size:.72rem;color:var(--text3);display:flex;flex-wrap:wrap;gap:8px}
+.sale-meta span{display:flex;align-items:center;gap:4px}
+.sale-items-preview{font-size:.72rem;color:var(--text2);border-top:1px solid var(--border);padding-top:6px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sale-actions{display:flex;gap:7px;flex-wrap:wrap;border-top:1px solid var(--border);padding-top:8px;margin-top:2px}
+.pickup-banner{background:rgba(184,134,11,.1);border:1px solid rgba(184,134,11,.35);border-radius:var(--radius);padding:8px 12px;font-size:.76rem;color:var(--amber);display:flex;align-items:center;gap:8px}
+.pickup-cleared-banner{background:rgba(26,92,46,.08);border:1px solid rgba(26,92,46,.2);border-radius:var(--radius);padding:8px 12px;font-size:.76rem;color:var(--green-dark);display:flex;align-items:center;gap:8px}
+.sales-summary-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.sales-strip-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;text-align:center}
+.sales-strip-card .val{font-size:1.2rem;font-weight:800;font-family:var(--mono);color:var(--gold)}
+.sales-strip-card .lbl{font-size:.62rem;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-top:2px}
 </style>
 </head>
 <body>
@@ -882,6 +939,9 @@ body{font-display:swap;}
     <div data-tip="Records & Reports" class="nav-item nav-main-item" onclick="showModule('reports')" id="nav-reports">
       <i class="fas fa-file-chart-column"></i><span>Records & Reports</span>
     </div>
+    <div data-tip="Calculator" class="nav-item nav-main-item" onclick="showModule('calculator')" id="nav-calculator">
+      <i class="fas fa-calculator"></i><span>Calculator</span>
+    </div>
     <div data-tip="Activity Log" class="nav-item nav-admin-item nav-main-item" onclick="showModule('activitylog')" id="nav-activitylog" style="display:none">
       <i class="fas fa-shield-check"></i><span>Activity Log</span>
     </div>
@@ -914,6 +974,9 @@ body{font-display:swap;}
         </div>
         <div data-tip="Retail Accounting" class="nav-item" onclick="showModule('r_accounting')" id="nav-r_accounting">
           <i class="fas fa-coins"></i><span>Retail Accounting</span>
+        </div>
+        <div data-tip="Calculator" class="nav-item" onclick="showModule('calculator')" id="nav-calculator-r">
+          <i class="fas fa-calculator"></i><span>Calculator</span>
         </div>
       </div>
     </div>
@@ -3579,6 +3642,7 @@ const moduleTitles = {
   reports:'<i class="fas fa-file-chart-column"></i>Records & Reports',
   analytics:'<i class="fas fa-chart-pie"></i>Analytics',
   activitylog:'<i class="fas fa-shield-check"></i>Activity Log',
+  calculator:'<i class="fas fa-calculator"></i>Calculator',
   r_dashboard:'<i class="fas fa-store-alt"></i>Retail Dashboard',
   r_pos:'<i class="fas fa-cash-register"></i>Retail POS & Sales',
   r_purchase:'<i class="fas fa-truck-ramp-box"></i>Retail Purchase / Restock',
@@ -3621,7 +3685,7 @@ function showModuleInternal(m){
   if(m==='staff'&&!canAddStaff()){showToast('Access denied.',false);return;}
   // Retail staff can only access retail modules
   const retailMods=['r_dashboard','r_pos','r_purchase','r_debt','r_inventory','r_price','r_accounting'];
-  if(isRetailStaff()&&!retailMods.includes(m)){showToast('Access restricted to Retail Store.',false);return;}
+  if(isRetailStaff()&&!retailMods.includes(m)&&m!=='calculator'){showToast('Access restricted to Retail Store.',false);return;}
   currentModule=m;
   const contentEl = document.getElementById('content');
   if(contentEl) contentEl.scrollTop = 0;
@@ -3639,6 +3703,7 @@ function showModuleInternal(m){
     r_dashboard:renderR_Dashboard,r_pos:renderR_POS,r_purchase:renderR_Purchase,
     r_debt:renderR_Debt,r_inventory:renderR_Inventory,r_price:renderR_Price,
     r_accounting:renderR_Accounting,
+    calculator:renderCalculator,
   };
   if(renders[m])renders[m]();
 }
@@ -5954,7 +6019,11 @@ function renderDashboard(){
       })()}
     </div>
 
+    <!-- Sales History -->
+    <div id="dashSalesSection"></div>
+
   </div>`;
+  _renderMainSalesSection();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -7467,7 +7536,9 @@ function renderR_Dashboard(){
     </div>
     ${topProds.length?`<div class="card"><h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-star"></i>Top-Selling Products</h3>${topProds.map((p,i)=>`<div style="margin-bottom:12px"><div class="flex-between" style="margin-bottom:4px"><span style="font-weight:600">${i+1}. ${p.name}</span><span style="color:var(--gold-light);font-family:var(--mono)">${N(p.rev)}</span></div><div style="background:var(--border);border-radius:4px;height:5px"><div style="width:${Math.round(p.rev/maxRev*100)}%;background:linear-gradient(90deg,var(--green-dark),var(--gold));height:5px;border-radius:4px"></div></div><div style="font-size:.68rem;color:var(--text3);margin-top:2px">${p.qty} units sold</div></div>`).join('')}</div>`:''}
     ${outStock.length||lowStock.length?`<div class="card" style="border:1px solid rgba(184,134,11,.3)"><h3 class="section-title" style="margin-bottom:12px;color:var(--amber)"><i class="fas fa-triangle-exclamation"></i>Low Stock Alerts</h3>${[...outStock.map(p=>`<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><span class="badge" style="background:rgba(192,57,43,.15);color:var(--red)">OUT OF STOCK</span></div>`), ...lowStock.map(p=>`<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><span class="badge" style="background:rgba(184,134,11,.15);color:var(--amber)">${p.stock} left</span></div>`)].join('')}</div>`:''}
+    <div id="dashRSalesSection"></div>
   </div>`;
+  _renderRetailSalesSection();
 }
 
 // ── RETAIL PURCHASE ──
@@ -7980,6 +8051,7 @@ function renderRAccSales(){
     <div class="drawer-item" onclick="mobileNav('analytics');closeMoreDrawer()"><i class="fas fa-chart-pie"></i><span>Analytics</span></div>
     <div class="drawer-item" onclick="mobileNav('accounting');closeMoreDrawer()"><i class="fas fa-coins"></i><span>Accounting</span></div>
     <div class="drawer-item" onclick="mobileNav('reports');closeMoreDrawer()"><i class="fas fa-file-chart-column"></i><span>Reports</span></div>
+    <div class="drawer-item" onclick="mobileNav('calculator');closeMoreDrawer()"><i class="fas fa-calculator"></i><span>Calculator</span></div>
     <div class="drawer-item" onclick="mobileNav('staff');closeMoreDrawer()"><i class="fas fa-users-gear"></i><span>Staff</span></div>
     <div class="drawer-item" onclick="mobileNav('settings');closeMoreDrawer()"><i class="fas fa-sliders"></i><span>Settings</span></div>
     <div class="drawer-item" onclick="mobileNav('activitylog');closeMoreDrawer()"><i class="fas fa-shield-check"></i><span>Activity Log</span></div>
@@ -7996,6 +8068,7 @@ function renderRAccSales(){
       <div class="drawer-item" onclick="mobileNav('r_inventory');closeMoreDrawer()"><i class="fas fa-boxes-stacked"></i><span>Inventory</span></div>
       <div class="drawer-item" onclick="mobileNav('r_price');closeMoreDrawer()"><i class="fas fa-tags"></i><span>Prices</span></div>
       <div class="drawer-item" onclick="mobileNav('r_accounting');closeMoreDrawer()"><i class="fas fa-coins"></i><span>Accounting</span></div>
+      <div class="drawer-item" onclick="mobileNav('calculator');closeMoreDrawer()"><i class="fas fa-calculator"></i><span>Calculator</span></div>
     </div>
   </div>
 </div>
@@ -8216,6 +8289,475 @@ async function handleProductImageUpload(fileInputId, previewId, dataId, category
   reader.readAsDataURL(file);
 }
 
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SALES HISTORY — shared helpers for Main Store & Retail
+// ══════════════════════════════════════════════════════════════════════════════
+
+// period state: main store
+let _salesPeriod = 'today';
+let _salesCustomFrom = '';
+let _salesCustomTo   = '';
+
+// period state: retail store
+let _rSalesPeriod = 'today';
+let _rSalesCustomFrom = '';
+let _rSalesCustomTo   = '';
+
+// ── filter sales array by period ─────────────────────────────────────────────
+function _filterSalesByPeriod(salesArr, period, customFrom, customTo){
+  const now  = new Date();
+  const todS = new Date(); todS.setHours(0,0,0,0);
+  const todE = new Date(); todE.setHours(23,59,59,999);
+
+  if(period==='today'){
+    return salesArr.filter(s=>{ const d=new Date(s.date); return d>=todS&&d<=todE; });
+  }
+  if(period==='week'){
+    const ws=new Date(now); ws.setDate(now.getDate()-now.getDay()); ws.setHours(0,0,0,0);
+    return salesArr.filter(s=>new Date(s.date)>=ws);
+  }
+  if(period==='month'){
+    const ms=new Date(now.getFullYear(),now.getMonth(),1);
+    return salesArr.filter(s=>new Date(s.date)>=ms);
+  }
+  if(period==='year'){
+    const ys=new Date(now.getFullYear(),0,1);
+    return salesArr.filter(s=>new Date(s.date)>=ys);
+  }
+  if(period==='custom' && customFrom && customTo){
+    const f=new Date(customFrom); f.setHours(0,0,0,0);
+    const t=new Date(customTo);   t.setHours(23,59,59,999);
+    return salesArr.filter(s=>{ const d=new Date(s.date); return d>=f&&d<=t; });
+  }
+  return salesArr;
+}
+
+// ── build the period bar HTML ─────────────────────────────────────────────────
+function _salesPeriodBarHTML(prefix, current, cFrom, cTo){
+  const opts=[
+    {k:'today',label:'Today'},
+    {k:'week',label:'This Week'},
+    {k:'month',label:'This Month'},
+    {k:'year',label:'This Year'},
+    {k:'custom',label:'Custom'},
+  ];
+  return `<div class="sales-period-bar">
+    ${opts.map(o=>`<button class="btn btn-sm ${current===o.k?'btn-primary':'btn-ghost'}" onclick="_setSalesPeriod('${prefix}','${o.k}')">${o.label}</button>`).join('')}
+    ${current==='custom'?`
+      <input type="date" id="${prefix}SalesFrom" value="${cFrom}" onchange="_setSalesCustomDate('${prefix}')" style="width:140px">
+      <span style="font-size:.8rem;color:var(--text3)">to</span>
+      <input type="date" id="${prefix}SalesTo" value="${cTo}" onchange="_setSalesCustomDate('${prefix}')" style="width:140px">
+    `:''}
+  </div>`;
+}
+
+function _setSalesPeriod(prefix, period){
+  if(prefix==='main'){ _salesPeriod=period; if(period!=='custom'){ _salesCustomFrom='';_salesCustomTo=''; } }
+  else               { _rSalesPeriod=period; if(period!=='custom'){ _rSalesCustomFrom='';_rSalesCustomTo=''; } }
+  // re-render just the sales section
+  if(prefix==='main') _renderMainSalesSection();
+  else                _renderRetailSalesSection();
+}
+
+function _setSalesCustomDate(prefix){
+  if(prefix==='main'){
+    _salesCustomFrom=document.getElementById('mainSalesFrom')?.value||'';
+    _salesCustomTo  =document.getElementById('mainSalesTo')?.value||'';
+  } else {
+    _rSalesCustomFrom=document.getElementById('rSalesFrom')?.value||'';
+    _rSalesCustomTo  =document.getElementById('rSalesTo')?.value||'';
+  }
+  if(prefix==='main') _renderMainSalesSection();
+  else                _renderRetailSalesSection();
+}
+
+// ── regenerate receipt from a saved sale record ───────────────────────────────
+function regenReceiptFromSale(saleId, isRetail){
+  const salesArr = isRetail ? DB_R.sales : DB.sales;
+  const sale = salesArr.find(s=>s.id===saleId);
+  if(!sale){ showToast('Sale record not found.',false); return; }
+
+  // Reconstruct the receipt object in the shape generateReceipt / generateReceiptR expects
+  const r = {
+    code:       sale.code,
+    items:      sale.items||[],
+    total:      sale.total,
+    collected:  sale.collected,
+    depositAmt: sale.depositAmt||0,
+    balance:    Math.max(0,(sale.total+(sale.depositAmt||0))-(sale.collected||0)),
+    payType:    sale.payType||'cash',
+    custName:   sale.custName||'',
+    soldBy:     sale.soldBy||'Staff',
+    date:       new Date(sale.date),
+    transferRef:sale.transferRef||'',
+    paystackRef:sale.paystackRef||'',
+  };
+
+  if(isRetail){
+    lastReceiptR = r;
+    generateReceiptR(r);
+  } else {
+    lastReceipt = r;
+    generateReceipt(r);
+  }
+  openModal('receiptModal');
+}
+
+// ── pick-up-later logic ───────────────────────────────────────────────────────
+let _pickupSaleId   = null;
+let _pickupIsRetail = false;
+
+function openPickupModal(saleId, isRetail){
+  _pickupSaleId   = saleId;
+  _pickupIsRetail = isRetail;
+  const salesArr  = isRetail ? DB_R.sales : DB.sales;
+  const sale      = salesArr.find(s=>s.id===saleId);
+  if(!sale) return;
+
+  document.getElementById('pickupModalSaleCode').textContent = sale.code;
+  document.getElementById('pickupNote').value = sale.pickupNote||'';
+
+  // Show existing pickup status
+  const statusEl = document.getElementById('pickupCurrentStatus');
+  if(sale.pickupStatus==='pending'){
+    statusEl.innerHTML=`<div class="pickup-banner"><i class="fas fa-clock"></i> Awaiting pickup — <em>${escapeHTML(sale.pickupNote||'no note')}</em></div>`;
+    document.getElementById('pickupClearBtn').style.display='inline-flex';
+  } else if(sale.pickupStatus==='cleared'){
+    statusEl.innerHTML=`<div class="pickup-cleared-banner"><i class="fas fa-check-circle"></i> Picked up on ${dateStr(sale.pickupClearedAt)} by ${escapeHTML(sale.pickupClearedBy||'staff')}</div>`;
+    document.getElementById('pickupClearBtn').style.display='none';
+  } else {
+    statusEl.innerHTML='';
+    document.getElementById('pickupClearBtn').style.display='none';
+  }
+  openModal('pickupModal');
+}
+
+function confirmPickup(){
+  const note = document.getElementById('pickupNote').value.trim();
+  const salesArr = _pickupIsRetail ? DB_R.sales : DB.sales;
+  const sale = salesArr.find(s=>s.id===_pickupSaleId);
+  if(!sale){ closeModal('pickupModal'); return; }
+
+  sale.pickupStatus = 'pending';
+  sale.pickupNote   = note || '(no note)';
+  sale.pickupSetAt  = new Date().toISOString();
+  sale.pickupSetBy  = currentUserName||'Staff';
+
+  if(_pickupIsRetail) persistR('sales'); else persist('sales');
+  showToast(`Sale ${sale.code} marked for pickup!`);
+  closeModal('pickupModal');
+  // Refresh the sales section in the active dashboard
+  if(_pickupIsRetail) _renderRetailSalesSection();
+  else                _renderMainSalesSection();
+}
+
+function clearPickup(saleId, isRetail){
+  const salesArr = isRetail ? DB_R.sales : DB.sales;
+  const sale = salesArr.find(s=>s.id===saleId);
+  if(!sale) return;
+  if(!confirm(`Mark sale ${sale.code} as picked up / cleared?`)) return;
+  sale.pickupStatus    = 'cleared';
+  sale.pickupClearedAt = new Date().toISOString();
+  sale.pickupClearedBy = currentUserName||'Staff';
+  if(isRetail) persistR('sales'); else persist('sales');
+  showToast(`Sale ${sale.code} marked as picked up.`);
+  if(isRetail) _renderRetailSalesSection();
+  else         _renderMainSalesSection();
+}
+
+// ── render a single sale card ─────────────────────────────────────────────────
+function _saleCardHTML(sale, isRetail){
+  const itemsPreview = (sale.items||[]).map(i=>`${i.name} ×${i.qty}`).join(', ');
+  const payBadge = sale.payType==='cash'?'badge-green':sale.payType==='transfer'?'badge-blue':sale.payType==='credit'?'badge-red':'badge-amber';
+  const pickupBannerHTML = sale.pickupStatus==='pending'
+    ? `<div class="pickup-banner"><i class="fas fa-clock"></i> Awaiting pickup — ${escapeHTML(sale.pickupNote||'')}
+        <button class="btn btn-sm btn-primary" style="margin-left:auto;font-size:.68rem;padding:4px 10px" onclick="event.stopPropagation();clearPickup('${sale.id}',${isRetail})"><i class="fas fa-check"></i> Picked Up</button>
+       </div>`
+    : sale.pickupStatus==='cleared'
+    ? `<div class="pickup-cleared-banner"><i class="fas fa-check-circle"></i> Picked up on ${dateStr(sale.pickupClearedAt)} by ${escapeHTML(sale.pickupClearedBy||'staff')}</div>`
+    : '';
+
+  return `<div class="sale-row" id="saleRow_${sale.id}">
+    <div class="sale-row-head">
+      <span class="sale-code ${isRetail?'sale-code-retail':''}">${sale.code}</span>
+      <span class="sale-amount">${N(sale.total)}</span>
+      <span class="badge ${payBadge}">${(sale.payType||'cash').toUpperCase()}</span>
+      ${sale.custName&&sale.custName!=='Walk-in'?`<span class="badge badge-blue"><i class="fas fa-user" style="font-size:.6rem"></i> ${escapeHTML(sale.custName)}</span>`:''}
+    </div>
+    <div class="sale-meta">
+      <span><i class="fas fa-calendar"></i>${dateStr(sale.date)}</span>
+      <span><i class="fas fa-user-tie"></i>${escapeHTML(sale.soldBy||'Staff')}</span>
+      <span><i class="fas fa-bag-shopping"></i>${(sale.items||[]).length} item(s)</span>
+    </div>
+    <div class="sale-items-preview">${escapeHTML(itemsPreview)||'—'}</div>
+    ${pickupBannerHTML}
+    <div class="sale-actions">
+      <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();regenReceiptFromSale('${sale.id}',${isRetail})"><i class="fas fa-receipt"></i> Receipt</button>
+      <button class="btn btn-sm btn-amber" onclick="event.stopPropagation();openPickupModal('${sale.id}',${isRetail})"><i class="fas fa-clock"></i> Pick Up Later</button>
+    </div>
+  </div>`;
+}
+
+// ── MAIN STORE: render the sales section into #dashSalesSection ───────────────
+function _renderMainSalesSection(){
+  const el=document.getElementById('dashSalesSection');
+  if(!el) return;
+  const filtered = _filterSalesByPeriod(DB.sales, _salesPeriod, _salesCustomFrom, _salesCustomTo);
+  const totalRev = filtered.reduce((s,x)=>s+x.total,0);
+  const txCount  = filtered.length;
+  const avgTx    = txCount>0 ? totalRev/txCount : 0;
+  const pickupCount = filtered.filter(s=>s.pickupStatus==='pending').length;
+
+  el.innerHTML = `
+  <div class="card">
+    <h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-bag-shopping"></i>Sales — Main Store</h3>
+    ${_salesPeriodBarHTML('main', _salesPeriod, _salesCustomFrom, _salesCustomTo)}
+    <div class="sales-summary-strip">
+      <div class="sales-strip-card"><div class="val">${N(totalRev)}</div><div class="lbl">Revenue</div></div>
+      <div class="sales-strip-card"><div class="val">${txCount}</div><div class="lbl">Transactions</div></div>
+      <div class="sales-strip-card"><div class="val">${N(avgTx)}</div><div class="lbl">Avg. Sale</div></div>
+      ${pickupCount>0?`<div class="sales-strip-card" style="border-color:rgba(184,134,11,.4)"><div class="val" style="color:var(--amber)">${pickupCount}</div><div class="lbl">Awaiting Pickup</div></div>`:''}
+    </div>
+    ${filtered.length===0
+      ? '<div class="empty-state" style="padding:30px"><i class="fas fa-bag-shopping"></i><p>No sales in this period</p></div>'
+      : `<div style="display:flex;flex-direction:column;gap:10px">${filtered.map(s=>_saleCardHTML(s,false)).join('')}</div>`
+    }
+  </div>`;
+}
+
+// ── RETAIL: render the sales section into #dashRSalesSection ─────────────────
+function _renderRetailSalesSection(){
+  const el=document.getElementById('dashRSalesSection');
+  if(!el) return;
+  const filtered = _filterSalesByPeriod(DB_R.sales, _rSalesPeriod, _rSalesCustomFrom, _rSalesCustomTo);
+  const totalRev = filtered.reduce((s,x)=>s+x.total,0);
+  const txCount  = filtered.length;
+  const avgTx    = txCount>0 ? totalRev/txCount : 0;
+  const pickupCount = filtered.filter(s=>s.pickupStatus==='pending').length;
+
+  el.innerHTML = `
+  <div class="card">
+    <h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-bag-shopping" style="color:var(--gold)"></i>Sales — Retail Store</h3>
+    ${_salesPeriodBarHTML('r', _rSalesPeriod, _rSalesCustomFrom, _rSalesCustomTo)}
+    <div class="sales-summary-strip">
+      <div class="sales-strip-card"><div class="val">${N(totalRev)}</div><div class="lbl">Revenue</div></div>
+      <div class="sales-strip-card"><div class="val">${txCount}</div><div class="lbl">Transactions</div></div>
+      <div class="sales-strip-card"><div class="val">${N(avgTx)}</div><div class="lbl">Avg. Sale</div></div>
+      ${pickupCount>0?`<div class="sales-strip-card" style="border-color:rgba(184,134,11,.4)"><div class="val" style="color:var(--amber)">${pickupCount}</div><div class="lbl">Awaiting Pickup</div></div>`:''}
+    </div>
+    ${filtered.length===0
+      ? '<div class="empty-state" style="padding:30px"><i class="fas fa-bag-shopping"></i><p>No retail sales in this period</p></div>'
+      : `<div style="display:flex;flex-direction:column;gap:10px">${filtered.map(s=>_saleCardHTML(s,true)).join('')}</div>`
+    }
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CALCULATOR MODULE — visible to ALL staff (main + retail)
+// ══════════════════════════════════════════════════════════════════════════════
+let _calcExpr = '';
+let _calcVal  = '0';
+let _calcJustEvaled = false;
+let _calcHistory = [];
+
+function renderCalculator(){
+  document.getElementById('content').innerHTML = `
+  <div id="calcWrap">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;width:100%">
+      <div class="calc-card">
+        <div class="calc-display">
+          <div class="calc-expr" id="calcExpr"></div>
+          <div class="calc-val" id="calcVal">0</div>
+        </div>
+        <div class="calc-grid">
+          <button class="calc-btn clr" onclick="calcAC()">AC</button>
+          <button class="calc-btn gold" onclick="calcToggleSign()">+/−</button>
+          <button class="calc-btn gold" onclick="calcPercent()">%</button>
+          <button class="calc-btn op" onclick="calcOp('÷')">÷</button>
+          <button class="calc-btn" onclick="calcDigit('7')">7</button>
+          <button class="calc-btn" onclick="calcDigit('8')">8</button>
+          <button class="calc-btn" onclick="calcDigit('9')">9</button>
+          <button class="calc-btn op" onclick="calcOp('×')">×</button>
+          <button class="calc-btn" onclick="calcDigit('4')">4</button>
+          <button class="calc-btn" onclick="calcDigit('5')">5</button>
+          <button class="calc-btn" onclick="calcDigit('6')">6</button>
+          <button class="calc-btn op" onclick="calcOp('−')">−</button>
+          <button class="calc-btn" onclick="calcDigit('1')">1</button>
+          <button class="calc-btn" onclick="calcDigit('2')">2</button>
+          <button class="calc-btn" onclick="calcDigit('3')">3</button>
+          <button class="calc-btn op" onclick="calcOp('+')">+</button>
+          <button class="calc-btn zero" onclick="calcDigit('0')">0</button>
+          <button class="calc-btn" onclick="calcDot()">.</button>
+          <button class="calc-btn eq" onclick="calcEval()">=</button>
+        </div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button class="calc-btn gold" style="font-size:.85rem" onclick="calcBackspace()"><i class="fas fa-delete-left"></i> Del</button>
+          <button class="calc-btn gold" style="font-size:.85rem" onclick="calcCopyResult()"><i class="fas fa-copy"></i> Copy</button>
+        </div>
+      </div>
+      <div class="calc-history" id="calcHistoryBox">
+        <div class="calc-history-head">
+          <span><i class="fas fa-clock-rotate-left" style="margin-right:5px;color:var(--gold)"></i>History</span>
+          <button class="btn btn-sm btn-ghost" onclick="calcClearHistory()" style="font-size:.68rem;padding:4px 10px">Clear</button>
+        </div>
+        <div class="calc-history-list" id="calcHistoryList">
+          <div class="calc-empty-hist"><i class="fas fa-calculator" style="display:block;font-size:1.4rem;margin-bottom:6px;opacity:.4"></i>No calculations yet</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  _calcUpdateDisplay();
+  _calcRenderHistory();
+}
+
+function _calcUpdateDisplay(){
+  const valEl = document.getElementById('calcVal');
+  const exprEl = document.getElementById('calcExpr');
+  if(valEl) valEl.textContent = _calcVal;
+  if(exprEl) exprEl.textContent = _calcExpr;
+}
+
+function calcDigit(d){
+  if(_calcJustEvaled){ _calcVal=''; _calcExpr=''; _calcJustEvaled=false; }
+  if(_calcVal==='0' && d!=='.') _calcVal='';
+  if(_calcVal.length >= 15) return;
+  _calcVal += d;
+  _calcUpdateDisplay();
+}
+
+function calcDot(){
+  if(_calcJustEvaled){ _calcVal='0'; _calcExpr=''; _calcJustEvaled=false; }
+  if(_calcVal.includes('.')) return;
+  if(!_calcVal) _calcVal='0';
+  _calcVal += '.';
+  _calcUpdateDisplay();
+}
+
+function calcOp(op){
+  _calcJustEvaled=false;
+  const v = parseFloat(_calcVal)||0;
+  if(_calcExpr && _calcVal){
+    const parts = _calcExpr.trim().split(' ');
+    if(parts.length===2){
+      const prev = parseFloat(parts[0])||0;
+      const pOp  = parts[1];
+      const res  = _calcDoMath(prev, v, pOp);
+      _calcVal   = _fmtNum(res);
+    }
+  }
+  _calcExpr = _calcVal + ' ' + op;
+  _calcVal  = '';
+  _calcUpdateDisplay();
+}
+
+function calcEval(){
+  if(!_calcExpr || _calcJustEvaled) return;
+  const parts = _calcExpr.trim().split(' ');
+  if(parts.length < 2) return;
+  const a   = parseFloat(parts[0])||0;
+  const op  = parts[1];
+  const b   = parseFloat(_calcVal)||0;
+  const res = _calcDoMath(a, b, op);
+  const expr = _calcExpr + _calcVal + ' =';
+  _calcHistory.unshift({expr: _calcExpr + _calcVal, result: _fmtNum(res)});
+  if(_calcHistory.length > 50) _calcHistory.pop();
+  _calcVal  = _fmtNum(res);
+  _calcExpr = expr;
+  _calcJustEvaled = true;
+  _calcUpdateDisplay();
+  _calcRenderHistory();
+}
+
+function _calcDoMath(a, b, op){
+  switch(op){
+    case '+': return a + b;
+    case '−': return a - b;
+    case '×': return a * b;
+    case '÷': return b !== 0 ? a / b : NaN;
+    default:  return b;
+  }
+}
+
+function _fmtNum(n){
+  if(isNaN(n) || !isFinite(n)) return 'Error';
+  return parseFloat(n.toPrecision(12)).toString();
+}
+
+function calcAC(){
+  _calcVal='0'; _calcExpr=''; _calcJustEvaled=false;
+  _calcUpdateDisplay();
+}
+
+function calcBackspace(){
+  if(_calcJustEvaled){ calcAC(); return; }
+  if(_calcVal.length > 1) _calcVal = _calcVal.slice(0,-1);
+  else _calcVal='0';
+  _calcUpdateDisplay();
+}
+
+function calcToggleSign(){
+  if(!_calcVal || _calcVal==='0') return;
+  _calcVal = _calcVal.startsWith('-') ? _calcVal.slice(1) : '-'+_calcVal;
+  _calcUpdateDisplay();
+}
+
+function calcPercent(){
+  const v = parseFloat(_calcVal)||0;
+  _calcVal = _fmtNum(v/100);
+  _calcUpdateDisplay();
+}
+
+function calcCopyResult(){
+  const v = document.getElementById('calcVal');
+  if(!v) return;
+  navigator.clipboard.writeText(v.textContent).then(()=>showToast('Result copied!'));
+}
+
+function calcClearHistory(){
+  _calcHistory=[];
+  _calcRenderHistory();
+}
+
+function _calcRenderHistory(){
+  const el = document.getElementById('calcHistoryList');
+  if(!el) return;
+  if(!_calcHistory.length){
+    el.innerHTML='<div class="calc-empty-hist"><i class="fas fa-calculator" style="display:block;font-size:1.4rem;margin-bottom:6px;opacity:.4"></i>No calculations yet</div>';
+    return;
+  }
+  el.innerHTML = _calcHistory.map((h,i)=>`
+    <div class="calc-history-item" onclick="calcUseHistory(${i})" title="Tap to reuse result">
+      <div class="calc-history-expr">${escapeHTML(h.expr)}</div>
+      <div class="calc-history-res">${escapeHTML(h.result)}</div>
+    </div>`).join('');
+}
+
+function calcUseHistory(i){
+  if(!_calcHistory[i]) return;
+  _calcVal = _calcHistory[i].result;
+  _calcExpr = '';
+  _calcJustEvaled = false;
+  _calcUpdateDisplay();
+}
+
+document.addEventListener('keydown', function(e){
+  if(currentModule !== 'calculator') return;
+  const k = e.key;
+  if(k>='0'&&k<='9') calcDigit(k);
+  else if(k==='.') calcDot();
+  else if(k==='+') calcOp('+');
+  else if(k==='-') calcOp('−');
+  else if(k==='*') calcOp('×');
+  else if(k==='/'){e.preventDefault();calcOp('÷');}
+  else if(k==='Enter'||k==='=') calcEval();
+  else if(k==='Backspace') calcBackspace();
+  else if(k==='Escape') calcAC();
+  else if(k==='%') calcPercent();
+});
+
+
 async function clearProductImage(previewId, dataId, categoryInputId){
   // Delete from bucket if a bucket URL is stored
   const oldUrl = document.getElementById(dataId).value;
@@ -8309,6 +8851,33 @@ function onProductCategoryChange(catInputId, previewId, dataId){
       </div>
     </div>
     <button class="btn btn-primary btn-lg" style="width:100%;margin-top:12px" onclick="confirmPosUnitAdd()"><i class="fas fa-cart-plus"></i>Add to Cart</button>
+  </div>
+</div>
+
+
+<!-- ══ PICK UP LATER MODAL ══ -->
+<div id="pickupModal" class="modal-overlay" onclick="if(event.target===this)closeModal('pickupModal')">
+  <div class="modal-box sm">
+    <div class="modal-head">
+      <h3><i class="fas fa-clock" style="color:var(--gold)"></i> Pick Up Later</h3>
+      <button class="modal-close" onclick="closeModal('pickupModal')">×</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div style="background:rgba(184,134,11,.08);border:1px solid rgba(184,134,11,.25);border-radius:var(--radius);padding:12px 14px;font-size:.82rem;color:var(--amber);display:flex;gap:10px;align-items:flex-start">
+        <i class="fas fa-info-circle" style="margin-top:2px;flex-shrink:0"></i>
+        <span>Sale <strong id="pickupModalSaleCode"></strong> will be duplicated to a "Pick Up" section so any staff can track it and mark it cleared once the owner collects.</span>
+      </div>
+      <div id="pickupCurrentStatus"></div>
+      <div>
+        <label>Customer / Pickup Note <span style="color:var(--text3);font-weight:400">(optional)</span></label>
+        <input type="text" id="pickupNote" placeholder="e.g. Emeka will collect at 5pm, Table 4…" maxlength="100" autocomplete="off">
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('pickupModal')">Cancel</button>
+      <button class="btn btn-ghost btn-sm" id="pickupClearBtn" style="display:none;color:var(--green-dark);border-color:rgba(26,92,46,.4)" onclick="clearPickup(_pickupSaleId,_pickupIsRetail);closeModal('pickupModal')"><i class="fas fa-check-circle"></i> Mark Picked Up</button>
+      <button class="btn btn-gold btn-lg" onclick="confirmPickup()"><i class="fas fa-clock"></i> Mark for Pickup</button>
+    </div>
   </div>
 </div>
 
