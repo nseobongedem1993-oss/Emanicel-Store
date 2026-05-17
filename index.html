@@ -916,6 +916,9 @@ body{font-display:swap;}
     <div data-tip="Inventory" class="nav-item nav-main-item" onclick="showModule('inventory')" id="nav-inventory">
       <i class="fas fa-boxes-stacked"></i><span>Inventory</span>
     </div>
+    <div data-tip="Sales History" class="nav-item nav-main-item" onclick="showModule('sales')" id="nav-sales">
+      <i class="fas fa-bag-shopping"></i><span>Sales History</span>
+    </div>
     <div data-tip="Price Config" class="nav-item nav-main-item" onclick="showModule('price')" id="nav-price">
       <i class="fas fa-tags"></i><span>Price Config</span>
     </div>
@@ -959,6 +962,9 @@ body{font-display:swap;}
         </div>
         <div data-tip="Retail POS" class="nav-item" onclick="showModule('r_pos')" id="nav-r_pos">
           <i class="fas fa-cash-register"></i><span>Retail POS</span>
+        </div>
+        <div data-tip="Retail Sales History" class="nav-item" onclick="showModule('r_sales')" id="nav-r_sales">
+          <i class="fas fa-bag-shopping"></i><span>Retail Sales</span>
         </div>
         <div data-tip="Retail Purchase" class="nav-item" onclick="showModule('r_purchase')" id="nav-r_purchase">
           <i class="fas fa-truck-ramp-box"></i><span>Retail Purchase</span>
@@ -3643,6 +3649,8 @@ const moduleTitles = {
   analytics:'<i class="fas fa-chart-pie"></i>Analytics',
   activitylog:'<i class="fas fa-shield-check"></i>Activity Log',
   calculator:'<i class="fas fa-calculator"></i>Calculator',
+  sales:'<i class="fas fa-bag-shopping"></i>Sales History — Main Store',
+  r_sales:'<i class="fas fa-bag-shopping"></i>Sales History — Retail Store',
   r_dashboard:'<i class="fas fa-store-alt"></i>Retail Dashboard',
   r_pos:'<i class="fas fa-cash-register"></i>Retail POS & Sales',
   r_purchase:'<i class="fas fa-truck-ramp-box"></i>Retail Purchase / Restock',
@@ -3684,7 +3692,7 @@ function showModuleInternal(m){
   if(m==='settings'&&!canSeeSettings()){showToast('Access denied — Super Admin only.',false);return;}
   if(m==='staff'&&!canAddStaff()){showToast('Access denied.',false);return;}
   // Retail staff can only access retail modules
-  const retailMods=['r_dashboard','r_pos','r_purchase','r_debt','r_inventory','r_price','r_accounting'];
+  const retailMods=['r_dashboard','r_pos','r_purchase','r_debt','r_inventory','r_price','r_accounting','r_sales'];
   if(isRetailStaff()&&!retailMods.includes(m)&&m!=='calculator'){showToast('Access restricted to Retail Store.',false);return;}
   currentModule=m;
   const contentEl = document.getElementById('content');
@@ -3700,9 +3708,10 @@ function showModuleInternal(m){
     price:renderPrice,staff:renderStaffModule,settings:renderSettings,
     dashboard:renderDashboard,accounting:renderAccounting,reports:renderReports,
     analytics:renderAnalytics,activitylog:renderActivityLog,
+    sales:renderSales,
     r_dashboard:renderR_Dashboard,r_pos:renderR_POS,r_purchase:renderR_Purchase,
     r_debt:renderR_Debt,r_inventory:renderR_Inventory,r_price:renderR_Price,
-    r_accounting:renderR_Accounting,
+    r_accounting:renderR_Accounting,r_sales:renderR_Sales,
     calculator:renderCalculator,
   };
   if(renders[m])renders[m]();
@@ -5939,9 +5948,6 @@ function renderDashboard(){
       </div>
     </div>
 
-    <!-- Sales History — immediately visible -->
-    <div id="dashSalesSection"></div>
-
     <!-- Profit Breakdown -->
     <div class="card">
       <h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-calculator"></i>Profit Calculation</h3>
@@ -6023,7 +6029,6 @@ function renderDashboard(){
     </div>
 
   </div>`;
-  _renderMainSalesSection();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -7534,11 +7539,10 @@ function renderR_Dashboard(){
         <i class="fas fa-store-alt" style="font-size:2.5rem;color:rgba(26,92,46,.2)"></i>
       </div>
     </div>
-    <div id="dashRSalesSection"></div>
+    <div id="dashRSalesSection" style="display:none"></div>
     ${topProds.length?`<div class="card"><h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-star"></i>Top-Selling Products</h3>${topProds.map((p,i)=>`<div style="margin-bottom:12px"><div class="flex-between" style="margin-bottom:4px"><span style="font-weight:600">${i+1}. ${p.name}</span><span style="color:var(--gold-light);font-family:var(--mono)">${N(p.rev)}</span></div><div style="background:var(--border);border-radius:4px;height:5px"><div style="width:${Math.round(p.rev/maxRev*100)}%;background:linear-gradient(90deg,var(--green-dark),var(--gold));height:5px;border-radius:4px"></div></div><div style="font-size:.68rem;color:var(--text3);margin-top:2px">${p.qty} units sold</div></div>`).join('')}</div>`:''}
     ${outStock.length||lowStock.length?`<div class="card" style="border:1px solid rgba(184,134,11,.3)"><h3 class="section-title" style="margin-bottom:12px;color:var(--amber)"><i class="fas fa-triangle-exclamation"></i>Low Stock Alerts</h3>${[...outStock.map(p=>`<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><span class="badge" style="background:rgba(192,57,43,.15);color:var(--red)">OUT OF STOCK</span></div>`), ...lowStock.map(p=>`<div class="flex-between" style="padding:8px 0;border-bottom:1px solid var(--border)"><span>${p.name}</span><span class="badge" style="background:rgba(184,134,11,.15);color:var(--amber)">${p.stock} left</span></div>`)].join('')}</div>`:''}
   </div>`;
-  _renderRetailSalesSection();
 }
 
 // ── RETAIL PURCHASE ──
@@ -8046,6 +8050,7 @@ function renderRAccSales(){
   <!-- Main modules -->
   <h5>Modules</h5>
   <div class="drawer-grid">
+    <div class="drawer-item" onclick="mobileNav('sales');closeMoreDrawer()"><i class="fas fa-bag-shopping"></i><span>Sales</span></div>
     <div class="drawer-item" onclick="mobileNav('inventory');closeMoreDrawer()"><i class="fas fa-boxes-stacked"></i><span>Inventory</span></div>
     <div class="drawer-item" onclick="mobileNav('price');closeMoreDrawer()"><i class="fas fa-tags"></i><span>Prices</span></div>
     <div class="drawer-item" onclick="mobileNav('analytics');closeMoreDrawer()"><i class="fas fa-chart-pie"></i><span>Analytics</span></div>
@@ -8062,6 +8067,7 @@ function renderRAccSales(){
     <h5 style="display:flex;align-items:center;gap:6px"><i class="fas fa-store-alt" style="color:var(--gold)"></i>Retail Store</h5>
     <div class="drawer-grid">
       <div class="drawer-item" onclick="mobileNav('r_dashboard');closeMoreDrawer()"><i class="fas fa-chart-line"></i><span>Dashboard</span></div>
+      <div class="drawer-item" onclick="mobileNav('r_sales');closeMoreDrawer()"><i class="fas fa-bag-shopping"></i><span>Sales</span></div>
       <div class="drawer-item" onclick="mobileNav('r_pos');closeMoreDrawer()"><i class="fas fa-cash-register"></i><span>Retail POS</span></div>
       <div class="drawer-item" onclick="mobileNav('r_purchase');closeMoreDrawer()"><i class="fas fa-truck-ramp-box"></i><span>Purchase</span></div>
       <div class="drawer-item" onclick="mobileNav('r_debt');closeMoreDrawer()"><i class="fas fa-file-invoice-dollar"></i><span>Debt</span></div>
@@ -8096,7 +8102,7 @@ function renderRAccSales(){
 
 <script>
 const _retailMods=['r_dashboard','r_pos','r_purchase','r_debt','r_inventory','r_price','r_accounting'];
-const _mainMods=['pos','purchase','debt','dashboard'];
+const _mainMods=['pos','purchase','debt','dashboard','sales'];
 function mobileNav(mod){
   showModule(mod);
   document.querySelectorAll('.mob-tab[data-mod]').forEach(t=>{
@@ -8292,6 +8298,174 @@ async function handleProductImageUpload(fileInputId, previewId, dataId, category
 
 
 // ══════════════════════════════════════════════════════════════════════════════
+// MODULE — SALES HISTORY (Main Store & Retail) — Sidebar Modules
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _salesTab = 'all';       // 'all' | 'pickup'
+let _rSalesTab = 'all';      // 'all' | 'pickup'
+let _salesSearch = '';
+let _rSalesSearch = '';
+
+function renderSales(){
+  document.getElementById('content').innerHTML = _salesModuleHTML(false);
+  _renderSalesModuleContent(false);
+}
+function renderR_Sales(){
+  document.getElementById('content').innerHTML = _salesModuleHTML(true);
+  _renderSalesModuleContent(true);
+}
+
+function _salesModuleHTML(isRetail){
+  const prefix = isRetail ? 'r' : 'main';
+  const tab    = isRetail ? _rSalesTab : _salesTab;
+  const period = isRetail ? _rSalesPeriod : _salesPeriod;
+  const cFrom  = isRetail ? _rSalesCustomFrom : _salesCustomFrom;
+  const cTo    = isRetail ? _rSalesCustomTo : _salesCustomTo;
+  const search = isRetail ? _rSalesSearch : _salesSearch;
+  const label  = isRetail ? 'Retail Store' : 'Main Store';
+  const icon   = isRetail ? 'style="color:var(--gold)"' : '';
+  return `
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="card" style="padding:16px 20px">
+      <div class="flex-between" style="flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <h2 class="section-title"><i class="fas fa-bag-shopping" ${icon}></i>Sales History — ${label}</h2>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-sm ${tab==='all'?'btn-primary':'btn-ghost'}" onclick="_setSalesModuleTab('${prefix}','all')"><i class="fas fa-list"></i> All Sales</button>
+        <button class="btn btn-sm ${tab==='pickup'?'btn-gold':'btn-ghost'}" onclick="_setSalesModuleTab('${prefix}','pickup')"><i class="fas fa-clock"></i> Awaiting Pickup</button>
+      </div>
+      <!-- Period bar -->
+      ${_salesPeriodBarHTML(prefix, period, cFrom, cTo)}
+      <!-- Search -->
+      <div style="margin-top:10px">
+        <input type="text" id="${prefix}SalesSearch" placeholder="Search by code, customer, product, staff…" value="${escapeHTML(search)}" oninput="_onSalesSearch('${prefix}')" style="max-width:400px">
+      </div>
+    </div>
+    <!-- Summary strip + list -->
+    <div id="${prefix}SalesModuleBody"></div>
+  </div>`;
+}
+
+function _onSalesSearch(prefix){
+  const val = (document.getElementById(prefix+'SalesSearch')?.value||'').toLowerCase();
+  if(prefix==='main') _salesSearch = val;
+  else _rSalesSearch = val;
+  _renderSalesModuleContent(prefix==='r');
+}
+
+function _setSalesModuleTab(prefix, tab){
+  if(prefix==='main') _salesTab = tab;
+  else _rSalesTab = tab;
+  _renderSalesModuleContent(prefix==='r');
+}
+
+function _renderSalesModuleContent(isRetail){
+  const prefix  = isRetail ? 'r' : 'main';
+  const tab     = isRetail ? _rSalesTab : _salesTab;
+  const period  = isRetail ? _rSalesPeriod : _salesPeriod;
+  const cFrom   = isRetail ? _rSalesCustomFrom : _salesCustomFrom;
+  const cTo     = isRetail ? _rSalesCustomTo : _salesCustomTo;
+  const rawSearch = isRetail ? _rSalesSearch : _salesSearch;
+  const salesArr = isRetail ? DB_R.sales : DB.sales;
+
+  const el = document.getElementById(prefix+'SalesModuleBody');
+  if(!el) return;
+
+  // Filter by period
+  let filtered = _filterSalesByPeriod(salesArr, period, cFrom, cTo);
+
+  // Filter by tab
+  if(tab === 'pickup'){
+    filtered = filtered.filter(s=>s.pickupStatus==='pending');
+  }
+
+  // Filter by search
+  if(rawSearch){
+    const q = rawSearch.toLowerCase();
+    filtered = filtered.filter(s=>{
+      if((s.code||'').toLowerCase().includes(q)) return true;
+      if((s.custName||'').toLowerCase().includes(q)) return true;
+      if((s.soldBy||'').toLowerCase().includes(q)) return true;
+      if((s.payType||'').toLowerCase().includes(q)) return true;
+      if((s.items||[]).some(i=>(i.name||'').toLowerCase().includes(q))) return true;
+      return false;
+    });
+  }
+
+  const totalRev   = filtered.reduce((s,x)=>s+x.total,0);
+  const txCount    = filtered.length;
+  const avgTx      = txCount>0 ? totalRev/txCount : 0;
+  const pendingPU  = (isRetail?DB_R.sales:DB.sales).filter(s=>s.pickupStatus==='pending').length;
+
+  let summaryExtra = '';
+  if(tab==='all'){
+    summaryExtra = pendingPU>0
+      ? `<div class="sales-strip-card" style="border-color:rgba(184,134,11,.5);cursor:pointer" onclick="_setSalesModuleTab('${prefix}','pickup')">
+           <div class="val" style="color:var(--amber)">${pendingPU}</div>
+           <div class="lbl">Awaiting Pickup</div>
+         </div>`
+      : '';
+  }
+
+  const pickupHeaderNote = tab==='pickup'
+    ? `<div style="background:rgba(184,134,11,.1);border:1px solid rgba(184,134,11,.35);border-radius:var(--radius);padding:10px 14px;font-size:.8rem;color:var(--amber);display:flex;align-items:center;gap:8px;margin-bottom:10px">
+         <i class="fas fa-clock"></i>
+         <span>Showing only sales awaiting customer pickup. Click <strong>Picked Up</strong> once collected.</span>
+       </div>`
+    : '';
+
+  el.innerHTML = `
+  <div class="card">
+    ${pickupHeaderNote}
+    <div class="sales-summary-strip" style="margin-bottom:14px">
+      <div class="sales-strip-card"><div class="val">${N(totalRev)}</div><div class="lbl">Revenue</div></div>
+      <div class="sales-strip-card"><div class="val">${txCount}</div><div class="lbl">Transactions</div></div>
+      <div class="sales-strip-card"><div class="val">${N(avgTx)}</div><div class="lbl">Avg. Sale</div></div>
+      ${summaryExtra}
+    </div>
+    ${filtered.length===0
+      ? `<div class="empty-state" style="padding:36px">
+           <i class="fas fa-${tab==='pickup'?'clock':'bag-shopping'}"></i>
+           <p>${tab==='pickup'?'No sales currently awaiting pickup':'No sales in this period'}</p>
+         </div>`
+      : `<div style="display:flex;flex-direction:column;gap:10px">${filtered.map(s=>_saleCardHTML(s,isRetail)).join('')}</div>`
+    }
+  </div>`;
+}
+
+// Override _setSalesPeriod to also re-render sales module if it's currently active
+const _origSetSalesPeriod = _setSalesPeriod;
+// patch: after period is set, if we're in the sales module, re-render module content
+function _setSalesPeriod(prefix, period){
+  if(prefix==='main'){ _salesPeriod=period; if(period!=='custom'){ _salesCustomFrom='';_salesCustomTo=''; } }
+  else               { _rSalesPeriod=period; if(period!=='custom'){ _rSalesCustomFrom='';_rSalesCustomTo=''; } }
+  if(prefix==='main'){
+    if(currentModule==='sales') _renderSalesModuleContent(false);
+    else _renderMainSalesSection();
+  } else {
+    if(currentModule==='r_sales') _renderSalesModuleContent(true);
+    else _renderRetailSalesSection();
+  }
+}
+function _setSalesCustomDate(prefix){
+  if(prefix==='main'){
+    _salesCustomFrom=document.getElementById('mainSalesFrom')?.value||'';
+    _salesCustomTo  =document.getElementById('mainSalesTo')?.value||'';
+  } else {
+    _rSalesCustomFrom=document.getElementById('rSalesFrom')?.value||'';
+    _rSalesCustomTo  =document.getElementById('rSalesTo')?.value||'';
+  }
+  if(prefix==='main'){
+    if(currentModule==='sales') _renderSalesModuleContent(false);
+    else _renderMainSalesSection();
+  } else {
+    if(currentModule==='r_sales') _renderSalesModuleContent(true);
+    else _renderRetailSalesSection();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // SALES HISTORY — shared helpers for Main Store & Retail
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -8354,23 +8528,11 @@ function _salesPeriodBarHTML(prefix, current, cFrom, cTo){
 }
 
 function _setSalesPeriod(prefix, period){
-  if(prefix==='main'){ _salesPeriod=period; if(period!=='custom'){ _salesCustomFrom='';_salesCustomTo=''; } }
-  else               { _rSalesPeriod=period; if(period!=='custom'){ _rSalesCustomFrom='';_rSalesCustomTo=''; } }
-  // re-render just the sales section
-  if(prefix==='main') _renderMainSalesSection();
-  else                _renderRetailSalesSection();
+  // handled by module-aware version above — kept as no-op stub to avoid errors
 }
 
 function _setSalesCustomDate(prefix){
-  if(prefix==='main'){
-    _salesCustomFrom=document.getElementById('mainSalesFrom')?.value||'';
-    _salesCustomTo  =document.getElementById('mainSalesTo')?.value||'';
-  } else {
-    _rSalesCustomFrom=document.getElementById('rSalesFrom')?.value||'';
-    _rSalesCustomTo  =document.getElementById('rSalesTo')?.value||'';
-  }
-  if(prefix==='main') _renderMainSalesSection();
-  else                _renderRetailSalesSection();
+  // handled by module-aware version above — kept as no-op stub to avoid errors
 }
 
 // ── regenerate receipt from a saved sale record ───────────────────────────────
@@ -8448,9 +8610,14 @@ function confirmPickup(){
   if(_pickupIsRetail) persistR('sales'); else persist('sales');
   showToast(`Sale ${sale.code} marked for pickup!`);
   closeModal('pickupModal');
-  // Refresh the sales section in the active dashboard
-  if(_pickupIsRetail) _renderRetailSalesSection();
-  else                _renderMainSalesSection();
+  // Refresh whichever view is currently active
+  if(_pickupIsRetail){
+    if(currentModule==='r_sales') _renderSalesModuleContent(true);
+    else _renderRetailSalesSection();
+  } else {
+    if(currentModule==='sales') _renderSalesModuleContent(false);
+    else _renderMainSalesSection();
+  }
 }
 
 function clearPickup(saleId, isRetail){
@@ -8463,8 +8630,13 @@ function clearPickup(saleId, isRetail){
   sale.pickupClearedBy = currentUserName||'Staff';
   if(isRetail) persistR('sales'); else persist('sales');
   showToast(`Sale ${sale.code} marked as picked up.`);
-  if(isRetail) _renderRetailSalesSection();
-  else         _renderMainSalesSection();
+  if(isRetail){
+    if(currentModule==='r_sales') _renderSalesModuleContent(true);
+    else _renderRetailSalesSection();
+  } else {
+    if(currentModule==='sales') _renderSalesModuleContent(false);
+    else _renderMainSalesSection();
+  }
 }
 
 // ── render a single sale card ─────────────────────────────────────────────────
