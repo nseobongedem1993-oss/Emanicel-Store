@@ -510,8 +510,6 @@ body{font-display:swap;}
 }
 @media(min-width:601px){
   #mobileNav,#moreDrawer,#drawerOverlay{display:none!important}
-  /* Allow vertical scrolling on desktop when browser is zoomed in */
-  body{overflow-y:auto}
 }
 
 /* ── LOGIN PAGE ── */
@@ -732,20 +730,7 @@ body{font-display:swap;}
 .su-row input:focus{outline:none;border-color:var(--green-light)}
 .su-row-del{background:none;border:none;color:var(--red);cursor:pointer;font-size:1.05rem;padding:4px;border-radius:6px;line-height:1}
 .su-row-del:hover{background:rgba(192,57,43,.1)}
-@media(max-width:600px){
-  .su-row{
-    grid-template-columns:1fr 1fr;
-    gap:6px;
-  }
-  .su-row .su-name{
-    grid-column:1 / -1;
-    font-size:.85rem;
-  }
-  .su-row-del{
-    align-self:center;
-    width:30px;height:30px;
-  }
-}
+@media(max-width:500px){.su-row{grid-template-columns:1fr 64px 84px 84px 30px;gap:4px}}
 
 /* ── CALCULATOR ── */
 #calcWrap{display:flex;justify-content:center;padding:20px 0}
@@ -8486,12 +8471,12 @@ function _setSalesCustomDate(prefix){
 // ══════════════════════════════════════════════════════════════════════════════
 
 // period state: main store
-let _salesPeriod = 'today';
+let _salesPeriod = 'all';
 let _salesCustomFrom = '';
 let _salesCustomTo   = '';
 
 // period state: retail store
-let _rSalesPeriod = 'today';
+let _rSalesPeriod = 'all';
 let _rSalesCustomFrom = '';
 let _rSalesCustomTo   = '';
 
@@ -8501,20 +8486,23 @@ function _filterSalesByPeriod(salesArr, period, customFrom, customTo){
   const todS = new Date(); todS.setHours(0,0,0,0);
   const todE = new Date(); todE.setHours(23,59,59,999);
 
+  if(period==='all'){
+    return salesArr; // show everything
+  }
   if(period==='today'){
     return salesArr.filter(s=>{ const d=new Date(s.date); return d>=todS&&d<=todE; });
   }
   if(period==='week'){
     const ws=new Date(now); ws.setDate(now.getDate()-now.getDay()); ws.setHours(0,0,0,0);
-    return salesArr.filter(s=>new Date(s.date)>=ws);
+    return salesArr.filter(s=>{ const d=new Date(s.date); return d>=ws&&d<=todE; });
   }
   if(period==='month'){
     const ms=new Date(now.getFullYear(),now.getMonth(),1);
-    return salesArr.filter(s=>new Date(s.date)>=ms);
+    return salesArr.filter(s=>{ const d=new Date(s.date); return d>=ms&&d<=todE; });
   }
   if(period==='year'){
     const ys=new Date(now.getFullYear(),0,1);
-    return salesArr.filter(s=>new Date(s.date)>=ys);
+    return salesArr.filter(s=>{ const d=new Date(s.date); return d>=ys&&d<=todE; });
   }
   if(period==='custom' && customFrom && customTo){
     const f=new Date(customFrom); f.setHours(0,0,0,0);
@@ -8527,6 +8515,7 @@ function _filterSalesByPeriod(salesArr, period, customFrom, customTo){
 // ── build the period bar HTML ─────────────────────────────────────────────────
 function _salesPeriodBarHTML(prefix, current, cFrom, cTo){
   const opts=[
+    {k:'all',  label:'All Time'},
     {k:'today',label:'Today'},
     {k:'week',label:'This Week'},
     {k:'month',label:'This Month'},
@@ -8543,13 +8532,7 @@ function _salesPeriodBarHTML(prefix, current, cFrom, cTo){
   </div>`;
 }
 
-function _setSalesPeriod(prefix, period){
-  // handled by module-aware version above — kept as no-op stub to avoid errors
-}
-
-function _setSalesCustomDate(prefix){
-  // handled by module-aware version above — kept as no-op stub to avoid errors
-}
+// _setSalesPeriod and _setSalesCustomDate are defined above near line 8441
 
 // ── regenerate receipt from a saved sale record ───────────────────────────────
 function regenReceiptFromSale(saleId, isRetail){
