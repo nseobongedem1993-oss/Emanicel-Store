@@ -3272,6 +3272,7 @@ const KEYS = {
   notifications: 'env_notifications',
   bizSettings: 'env_biz_settings',
   pendingOrders: 'env_pending_orders',
+  deletedProductIds: 'env_deleted_product_ids',
 };
 
 function seedProducts() {
@@ -3293,22 +3294,49 @@ const _cache = {};
 const _offlineQueue = []; // [{key, data}]
 let _flushingQueue = false;
 
+// Tracks which keys failed to load this session so callers can avoid acting on bad data
+const _loadFailed = {};
 async function sbLoad(key, seed){
   try{
     const {data,error}=await _sb.from('app_data').select('value').eq('key',key).maybeSingle();
-    if(error||!data){
-      // Network call failed — return warm cache if available, else seed
+    if(error){
+      // Genuine fetch error (network/RLS/etc) — NEVER treat as "no data".
+      // Fall back to warm cache if we have one; otherwise flag failure so
+      // calling code knows not to trust/persist this key as empty.
+      console.warn('sbLoad error for', key, error.message);
+      _loadFailed[key]=true;
       return Object.prototype.hasOwnProperty.call(_cache,key) ? _cache[key] : seed();
     }
+    if(!data){
+      // No error AND no row — this is a genuine first-time/empty case.
+      _loadFailed[key]=false;
+      _cache[key]=seed();
+      return _cache[key];
+    }
+    _loadFailed[key]=false;
     _cache[key]=data.value; // always warm cache on successful fetch
     return data.value;
-  }catch{
+  }catch(e){
+    console.warn('sbLoad exception for', key, e);
+    _loadFailed[key]=true;
     return Object.prototype.hasOwnProperty.call(_cache,key) ? _cache[key] : seed();
   }
 }
 
 function sbSave(key,data){
   if(!currentUser) return;
+  // SAFETY NET: block an accidental mass-wipe of products/inventory.
+  // Deleting one product at a time is normal; suddenly persisting an empty
+  // array when we previously had several items is the signature of the
+  // "failed load → sync wipe" bug, not a deliberate user action.
+  if((key===KEYS.products || key===KEYS.inventory) && Array.isArray(data) && data.length===0){
+    const prev=_cache[key];
+    if(Array.isArray(prev) && prev.length>=3){
+      console.warn('sbSave blocked: refusing to overwrite',key,'(had',prev.length,'items) with an empty array. This looks like a sync error, not an intentional bulk delete.');
+      showToast('Sync safety check: prevented an unexpected data wipe. Please refresh and try again.', false);
+      return;
+    }
+  }
   _cache[key]=data; // update in-memory immediately — UI never stalls
   if(!navigator.onLine){
     // Replace any existing queued write for same key (last write wins)
@@ -3392,6 +3420,7 @@ let DB = {
     bankAccounts:[],
   })),
   pendingOrders: load(KEYS.pendingOrders, ()=>[]),
+  deletedProductIds: load(KEYS.deletedProductIds, ()=>[]),
 };
 
 function persist(key){save(KEYS[key],DB[key]);}
@@ -3439,6 +3468,7 @@ const _DB_SEEDS = {
     paystackKey:'',colorGreen:'#1a5c2e',colorGold:'#b8860b',bankAccounts:[],
   }),
   pendingOrders: ()=>[],
+  deletedProductIds: ()=>[],
 };
 
 // Load ALL business data from Supabase after auth
@@ -3452,6 +3482,28 @@ async function loadAllData(){
     ]);
     dbKeys.forEach((k,i)=>{ DB[k]=dbVals[i]; _cache[KEYS[k]]=dbVals[i]; });
     rKeys.forEach((k,i)=>{ DB_R[k]=rVals[i]; _cache[KEYS_R[k]]=rVals[i]; });
+
+    // ── SAFETY: if products or inventory failed to fetch (network/RLS hiccup),
+    // do NOT let downstream sync code treat the resulting empty/seed array as
+    // real data — that previously caused syncInventoryFromProducts() to wipe
+    // out all inventory (stock, images, prices) and persist the wipe to Supabase.
+    if(_loadFailed[KEYS.products] || _loadFailed[KEYS.inventory]){
+      console.warn('Products/Inventory failed to load — retrying once before continuing');
+      showToast('Connection hiccup while syncing — retrying…', false);
+      const [retryProducts, retryInventory] = await Promise.all([
+        sbLoad(KEYS.products, _DB_SEEDS.products),
+        sbLoad(KEYS.inventory, _DB_SEEDS.inventory),
+      ]);
+      DB.products=retryProducts; _cache[KEYS.products]=retryProducts;
+      DB.inventory=retryInventory; _cache[KEYS.inventory]=retryInventory;
+      if(_loadFailed[KEYS.products] || _loadFailed[KEYS.inventory]){
+        // Still failing — bail out WITHOUT running any sync/persist step below.
+        // Better to show stale/cached data than to risk wiping real data.
+        showToast('Could not sync products/inventory — showing last known data. Please check your connection and reload.', false);
+        return;
+      }
+    }
+
     // ── Defensive image restore: ensure inventory always mirrors product images ──
     // This guards against any path where inventory was saved without the image field.
     let inventoryDirty=false;
@@ -3587,6 +3639,14 @@ window.addEventListener('offline', updateOnlineStatus);
 
 // Sync inventory stock from products
 function syncInventoryFromProducts(){
+  // SAFETY GUARD: if products came back empty but we already have inventory
+  // items on record, this is almost certainly a failed/partial data load —
+  // not a real "all products deleted" situation. Refuse to wipe inventory.
+  if(DB.products.length===0 && DB.inventory.length>0){
+    console.warn('syncInventoryFromProducts: products empty but inventory has data — skipping wipe (likely a failed load)');
+    showToast('Product sync looked incomplete — kept existing inventory data to be safe.', false);
+    return;
+  }
   DB.products.forEach(p=>{
     const inv=DB.inventory.find(i=>i.id===p.id);
     if(!inv){DB.inventory.push({...p});}
@@ -3600,8 +3660,14 @@ function syncInventoryFromProducts(){
       inv.lowStock=p.lowStock||inv.lowStock||10;
     }
   });
-  // Remove inventory items whose products no longer exist
-  DB.inventory=DB.inventory.filter(inv=>DB.products.find(p=>p.id===inv.id));
+  // Remove inventory items ONLY when their product was explicitly deleted
+  // (tracked in DB.deletedProductIds by deleteProduct()). Previously this
+  // inferred "deleted" from "missing from DB.products", which also fires
+  // when products loads partially/incompletely — silently wiping real
+  // inventory items whose products simply hadn't synced yet.
+  if(DB.inventory.some(inv=>DB.deletedProductIds.includes(inv.id))){
+    DB.inventory=DB.inventory.filter(inv=>!DB.deletedProductIds.includes(inv.id));
+  }
   persist('inventory');
 }
 
@@ -7190,6 +7256,7 @@ function deleteProduct(id, from){
   if(!p){
     // Ghost: clean orphaned inventory entry only
     DB.inventory = DB.inventory.filter(x => x.id !== id);
+    if(!DB.deletedProductIds.includes(id)){ DB.deletedProductIds.push(id); persist('deletedProductIds'); }
     persist('inventory');
     showToast('Orphaned inventory entry removed.', true);
     if(from === 'price') renderPrice(); else renderInventory();
@@ -7207,6 +7274,11 @@ function deleteProduct(id, from){
   DB.products  = DB.products.filter(x => x.id !== id);
   DB.inventory = DB.inventory.filter(x => x.id !== id);
 
+  // 2b. Tombstone: record this ID as deliberately deleted so a future sync
+  // never re-infers "deleted" just because a product is missing from a
+  // partial/failed load — only an explicit deleteProduct() call adds here.
+  if(!DB.deletedProductIds.includes(id)) DB.deletedProductIds.push(id);
+
   // 3. Remove operational/catalogue history only
   DB.stockHistory = DB.stockHistory.filter(x => x.productId !== id);
   DB.priceHistory = DB.priceHistory.filter(x => x.productId !== id);
@@ -7217,6 +7289,7 @@ function deleteProduct(id, from){
   persist('inventory');
   persist('stockHistory');
   persist('priceHistory');
+  persist('deletedProductIds');
 
   logActivity('Product', `Product deleted: ${p.name} — by ${currentUserName||'Admin'}`);
   showToast(`"${p.name}" deleted. Sales and purchase records preserved.`);
