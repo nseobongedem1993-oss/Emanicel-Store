@@ -3257,6 +3257,37 @@ async function checkSession(){
 }
 
 
+// ── STOCK HELPERS ───────────────────────────────────────────────────────────
+// Single source of truth for "is this product out of stock?". Treats anything
+// that isn't a real, finite number (null, undefined, NaN, a string, etc.) as
+// UNKNOWN stock, not zero stock. A bug elsewhere that corrupts the stock field
+// should never silently present as "everything sold out" — that is itself a
+// sign of broken data, and the UI should be able to tell the two apart.
+function stockOf(p){
+  // p may be an inventory row, a product row, or undefined/null entirely.
+  const v = p ? p.stock : undefined;
+  return (typeof v === 'number' && Number.isFinite(v)) ? v : null; // null = unknown
+}
+function isOutOfStock(p){
+  const v = stockOf(p);
+  return v !== null && v <= 0; // unknown stock is NOT treated as out of stock
+}
+function isUnknownStock(p){
+  return stockOf(p) === null;
+}
+// Safely add a delta (positive or negative) to a product/inventory row's stock.
+// Mutates p.stock in place and returns the new value. If p.stock is currently
+// not a clean number (the exact condition that silently produced NaN/null
+// stock via bare `p.stock += delta` in the past), this treats it as 0 instead
+// of letting the corruption propagate — so a single bad row self-heals on its
+// next stock movement instead of staying broken forever.
+function adjustStock(p, delta){
+  const current = stockOf(p) ?? 0;
+  const d = (typeof delta === 'number' && Number.isFinite(delta)) ? delta : 0;
+  p.stock = current + d;
+  return p.stock;
+}
+
 const KEYS = {
   products: 'env_products',
   debt: 'env_debt',
@@ -3600,8 +3631,8 @@ document.addEventListener('click',e=>{
 
 // ── CHECK LOW STOCK & PUSH NOTIFS ──
 function checkLowStockNotifs(){
-  const low=DB.inventory.filter(p=>p.stock<=0);
-  const warn=DB.inventory.filter(p=>p.stock>0&&p.stock<=(p.lowStock||0));
+  const low=DB.inventory.filter(p=>isOutOfStock(p));
+  const warn=DB.inventory.filter(p=>!isUnknownStock(p)&&p.stock>0&&p.stock<=(p.lowStock||0));
   if(low.length>0) pushNotif('low_stock',`${low.length} product(s) are OUT OF STOCK!`,'fa-triangle-exclamation');
   else if(warn.length>0) pushNotif('low_stock',`${warn.length} product(s) running low on stock`,'fa-triangle-exclamation');
 }
@@ -3864,17 +3895,21 @@ function renderProductGrid(list){
   if(!list.length){g.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><p>No products found</p></div>';return;}
   g.innerHTML = list.map(p=>{
     const inv = DB.inventory.find(i=>i.id===p.id);
-    const stock = inv?inv.stock:p.stock;
+    const invOrP = inv || p;
+    const stock = stockOf(invOrP);
     // Determine display price from first selling unit, or fallback
     const sellingUnits = p.sellingUnits || [];
     const displayUnit = sellingUnits.find(u=>u.qty===1) || sellingUnits[0];
     const price = displayUnit ? (isWholesale?(displayUnit.wholesale||displayUnit.retail):displayUnit.retail) : (isWholesale?p.wholesale:p.retail);
-    const isOut = stock<=0;
+    const isOut = isOutOfStock(invOrP);
+    const isUnknown = isUnknownStock(invOrP);
     const cartQty = cart.filter(x=>x.id===p.id).reduce((s,x)=>s+x.qty,0);
-    const cardStyle = isOut ? 'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed' : '';
+    const cardStyle = isOut ? 'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed' : isUnknown ? 'border-color:var(--amber);background:rgba(184,134,11,.08)' : '';
     const unitsStr = sellingUnits.length > 1 ? sellingUnits.map(u=>u.name).join(' · ') : (displayUnit?.name || p.unit);
     const stockLabel = isOut
       ? `<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`
+      : isUnknown
+      ? `<span style="color:var(--amber);font-weight:700;font-size:.7rem" title="Stock data missing — not the same as zero. Open this product and re-save its stock.">STOCK UNKNOWN</span>`
       : `<div class="product-ws">${stock} ${p.unit} left${cartQty>0?` · ${cartQty} in cart`:''}</div>`;
     return `<div class="product-card" style="${cardStyle}" onclick="${isOut?'showToast(\"Out of stock!\",false)':'openPosUnitSheet('+p.id+')'}">
       ${productThumb(p)}
@@ -3924,8 +3959,9 @@ let _posSheetSelectedUnit = null;
 function openPosUnitSheet(id){
   const p = DB.products.find(x=>x.id===id); if(!p) return;
   const inv = DB.inventory.find(i=>i.id===id);
-  const stock = inv!==undefined ? inv.stock : p.stock;
-  if(stock <= 0){ showToast(`"${p.name}" is out of stock!`, false); return; }
+  const invOrP = inv!==undefined ? inv : p;
+  if(isOutOfStock(invOrP)){ showToast(`"${p.name}" is out of stock!`, false); return; }
+  const stock = stockOf(invOrP) ?? 0; // unknown stock: don't let a bad number drive "max you can buy"
 
   _posSheetProduct = p;
   _posSheetSelectedUnit = null;
@@ -5473,8 +5509,8 @@ function savePurchase(){
 
     // Update inventory stock
     const inv=DB.inventory.find(i=>i.id===productId);
-    if(inv){inv.stock+=qty;}
-    p.stock=(p.stock||0)+qty;
+    if(inv){adjustStock(inv,qty);}
+    adjustStock(p,qty);
     persist('products'); persist('inventory');
 
     // Record stock history
@@ -5622,15 +5658,16 @@ function renderInvTable(search){
   el.innerHTML=`<table>
     <thead><tr><th>Product</th><th>Base Unit</th><th>Selling Units</th><th>Stock (Base)</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
     <tbody>${list.map(p=>{
-      const low=p.stock<=0;const warn=p.stock<=(p.lowStock||0);
+      const unknown=isUnknownStock(p);
+      const low=isOutOfStock(p);const warn=!unknown&&p.stock<=(p.lowStock||0);
       const su=(p.sellingUnits||[]);
       const unitsStr=su.length?su.map(u=>`${u.name}`).join(' · '):'—';
-      return `<tr class="${low?'out-stock-row':warn?'low-stock-row':''}">
+      return `<tr class="${low?'out-stock-row':warn?'low-stock-row':unknown?'low-stock-row':''}">
         <td class="td-name">${p.name}<div style="font-size:.68rem;color:var(--text3)">${p.category}</div></td>
         <td style="color:var(--text3);font-size:.78rem">${p.unit}</td>
         <td style="font-size:.72rem;color:var(--text2);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${unitsStr}</td>
-        <td class="mono" style="color:${low?'var(--red)':warn?'var(--amber)':'var(--text)'}">${p.stock} ${p.unit}</td>
-        <td><span class="badge ${low?'badge-red':warn?'badge-amber':'badge-green'}">${low?'Out of Stock':warn?'Low Stock':'In Stock'}</span></td>
+        <td class="mono" style="color:${low?'var(--red)':warn?'var(--amber)':unknown?'var(--amber)':'var(--text)'}">${unknown?'—':p.stock} ${p.unit}</td>
+        <td><span class="badge ${low?'badge-red':warn?'badge-amber':unknown?'badge-amber':'badge-green'}">${low?'Out of Stock':warn?'Low Stock':unknown?'Stock Unknown':'In Stock'}</span></td>
         <td style="text-align:right" onclick="event.stopPropagation()">
           <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
             <button class="btn btn-sm btn-ghost" onclick="openEditProductModal(${p.id},'inventory')" title="Edit product"><i class="fas fa-pen"></i>Edit</button>
@@ -5759,11 +5796,12 @@ function confirmStockAction(){
     const unitName=unitSel?.value||p.unit;
     delta=qty*factor;reason=`Added ${qty} ${unitName} (= ${delta} ${p.unit})`;
   } else {
-    if(qty>p.stock){alert('Quantity exceeds current stock.');return;}
+    const currentStock=stockOf(p) ?? 0;
+    if(qty>currentStock){alert('Quantity exceeds current stock.');return;}
     delta=-qty;
     reason=stockModalMode==='damage'?(document.getElementById('stockReason').value||'Damaged goods'):'Manual deduction';
   }
-  p.stock+=delta;
+  adjustStock(p,delta);
   // Sync to products
   const prod=DB.products.find(x=>x.id===p.id);if(prod)prod.stock=p.stock;
   persist('inventory');persist('products');
@@ -5788,10 +5826,11 @@ function openRemoveStockModal(id){
 function updateRemoveStockPreview(){
   const p=removeStockProduct;if(!p)return;
   const qty=parseInt(document.getElementById('removeStockQty').value)||0;
-  const newStock=Math.max(0,p.stock-qty);
+  const currentStock=stockOf(p) ?? 0;
+  const newStock=Math.max(0,currentStock-qty);
   const box=document.getElementById('removeStockPreview');
   box.className=`balance-box ${newStock<=0?'balance-owe':newStock<=(p.lowStock||0)?'balance-owe':'balance-change'}`;
-  box.innerHTML=`Stock after removal: <strong>${newStock}</strong> ${p.unit}${qty>p.stock?` <span style="color:var(--red);font-size:.75rem">(exceeds current stock!)</span>`:''}`;
+  box.innerHTML=`Stock after removal: <strong>${newStock}</strong> ${p.unit}${qty>currentStock?` <span style="color:var(--red);font-size:.75rem">(exceeds current stock!)</span>`:''}`;
 }
 
 function confirmRemoveStock(){
@@ -5799,9 +5838,10 @@ function confirmRemoveStock(){
   const p=removeStockProduct;if(!p)return;
   const qty=parseInt(document.getElementById('removeStockQty').value)||0;
   if(qty<=0){alert('Enter a valid quantity to remove.');return;}
-  if(qty>p.stock){alert(`Cannot remove ${qty} — only ${p.stock} ${p.unit} in stock.`);return;}
+  const currentStock=stockOf(p) ?? 0;
+  if(qty>currentStock){alert(`Cannot remove ${qty} — only ${currentStock} ${p.unit} in stock.`);return;}
   // Silently subtract from stock — NO activity log, NO stockHistory entry
-  p.stock-=qty;
+  adjustStock(p,-qty);
   const prod=DB.products.find(x=>x.id===p.id);if(prod)prod.stock=p.stock;
   persist('inventory');persist('products');
   closeModal('removeStockModal');
@@ -6014,7 +6054,7 @@ function renderDashboard(){
   }));
   const topProds=Object.values(prodMap).sort((a,b)=>b.revenue-a.revenue).slice(0,5);
   // Low stock
-  const lowStockItems=DB.inventory.filter(p=>p.stock<=(p.lowStock||0)).slice(0,5);
+  const lowStockItems=DB.inventory.filter(p=>!isUnknownStock(p)&&p.stock<=(p.lowStock||0)).slice(0,5);
 
   document.getElementById('content').innerHTML=`
   <div style="display:flex;flex-direction:column;gap:16px">
@@ -6092,11 +6132,11 @@ function renderDashboard(){
       <div class="card">
         <h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-triangle-exclamation" style="color:var(--amber)"></i>Low Stock Alerts</h3>
         ${lowStockItems.length?`<div style="display:flex;flex-direction:column;gap:8px">
-          ${lowStockItems.map(p=>`<div class="flex-between card-sm" style="border-color:${p.stock<=0?'var(--red)':'var(--amber)'}">
+          ${lowStockItems.map(p=>`<div class="flex-between card-sm" style="border-color:${isOutOfStock(p)?'var(--red)':'var(--amber)'}">
             <div><div style="font-size:.82rem;font-weight:600">${p.name}</div><div style="font-size:.65rem;color:var(--text3)">${p.unit}</div></div>
-            <span class="badge ${p.stock<=0?'badge-red':'badge-amber'}">${p.stock<=0?'Out':''+p.stock+' left'}</span>
+            <span class="badge ${isOutOfStock(p)?'badge-red':'badge-amber'}">${isOutOfStock(p)?'Out':''+p.stock+' left'}</span>
           </div>`).join('')}
-          ${DB.inventory.filter(p=>p.stock<=(p.lowStock||0)).length>5?`<div style="font-size:.75rem;color:var(--text3);text-align:center">+${DB.inventory.filter(p=>p.stock<=(p.lowStock||0)).length-5} more — <button class="btn btn-sm btn-ghost" onclick="showModule('inventory')">View All</button></div>`:''}
+          ${DB.inventory.filter(p=>!isUnknownStock(p)&&p.stock<=(p.lowStock||0)).length>5?`<div style="font-size:.75rem;color:var(--text3);text-align:center">+${DB.inventory.filter(p=>!isUnknownStock(p)&&p.stock<=(p.lowStock||0)).length-5} more — <button class="btn btn-sm btn-ghost" onclick="showModule('inventory')">View All</button></div>`:''}
         </div>`:`<div class="empty-state" style="padding:24px"><i class="fas fa-check-circle" style="color:var(--green-light)"></i><p style="color:var(--green-light)">All products well stocked!</p></div>`}
       </div>
     </div>
@@ -6501,9 +6541,9 @@ function deleteSale(saleId){
     const baseUnitsPerUnit = item._baseQtyPerUnit || 1;
     const baseUnitsToRestore = item.qty * baseUnitsPerUnit;
     const inv=DB.inventory.find(i=>i.id===item.id);
-    if(inv){inv.stock+=baseUnitsToRestore;}
+    if(inv){adjustStock(inv,baseUnitsToRestore);}
     const prod=DB.products.find(p=>p.id===item.id);
-    if(prod){prod.stock+=baseUnitsToRestore;}
+    if(prod){adjustStock(prod,baseUnitsToRestore);}
     DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,timestamp:new Date().toISOString(),action:'sale_deleted',delta:+baseUnitsToRestore,newStock:(inv?inv.stock:0),unit:item.unit||'',reason:'Sale deleted: '+s.code+' by '+currentUserName});
   });
   persist('inventory');persist('products');persist('stockHistory');
@@ -6543,9 +6583,9 @@ function deleteDebtRecord(id){
     const baseUnitsPerUnit=item._baseQtyPerUnit||1;
     const baseUnitsToRestore=item.qty*baseUnitsPerUnit;
     const inv=DB.inventory.find(i=>i.id===item.id);
-    if(inv)inv.stock+=baseUnitsToRestore;
+    if(inv)adjustStock(inv,baseUnitsToRestore);
     const prod=DB.products.find(p=>p.id===item.id);
-    if(prod)prod.stock+=baseUnitsToRestore;
+    if(prod)adjustStock(prod,baseUnitsToRestore);
     DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,
       timestamp:new Date().toISOString(),action:'debt_deleted',
       delta:+baseUnitsToRestore,newStock:(inv?inv.stock:0),
@@ -7105,17 +7145,34 @@ function addSellingUnitRow(containerId, baseUnitSelId, name='', qty='', retail='
 
 /**
  * Read all selling-unit rows from a container and return an array.
- * Only rows with a name AND qty ≥ 1 AND retail > 0 are included.
+ * Only rows with a name AND qty ≥ 1 AND retail > 0 are included — but unlike
+ * before, a row that fails this check is no longer dropped silently. This was
+ * the root cause of multi-unit products quietly reverting to a single unit on
+ * every save: a row could fail validation for any small reason (stray empty
+ * field, browser autofill, etc.) and just vanish from the array with no
+ * warning, and the save would proceed as if that unit never existed.
+ * Now: if ANY row gets dropped, the user sees exactly which one and why,
+ * before the save silently shrinks their product's unit list.
  */
 function getSellingUnitsFromContainer(containerId){
   const cont = document.getElementById(containerId);
   if(!cont) return [];
-  return Array.from(cont.querySelectorAll('.su-row')).map(row=>({
+  const rawRows = Array.from(cont.querySelectorAll('.su-row')).map(row=>({
     name:      (row.querySelector('.su-name')?.value      || '').trim(),
     qty:       parseFloat(row.querySelector('.su-qty')?.value)       || 0,
     retail:    parseFloat(row.querySelector('.su-retail')?.value)    || 0,
     wholesale: parseFloat(row.querySelector('.su-wholesale')?.value) || 0,
-  })).filter(u => u.name && u.qty >= 1 && u.retail > 0);
+  }));
+  const valid = rawRows.filter(u => u.name && u.qty >= 1 && u.retail > 0);
+  if(valid.length < rawRows.length){
+    const dropped = rawRows.filter(u => !(u.name && u.qty >= 1 && u.retail > 0));
+    const reasons = dropped.map(u=>{
+      const why = !u.name ? 'missing a name' : u.qty<1 ? 'quantity must be ≥ 1' : 'retail price must be > 0';
+      return `"${u.name||'(unnamed row)'}" — ${why}`;
+    });
+    alert(`${dropped.length} selling unit row(s) will be REMOVED because they're incomplete:\n\n${reasons.join('\n')}\n\nFix these rows before saving, or they will be silently dropped from this product.`);
+  }
+  return valid;
 }
 
 function openAddProductModal(from){
@@ -7429,11 +7486,12 @@ function renderProductGridR(){
   if(!list.length){g.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><p>No products found. Add products via Retail Inventory.</p></div>';return;}
   g.innerHTML=list.map(p=>{
     const inv=DB_R.inventory.find(i=>i.id===p.id);
-    const stock=inv!==undefined?inv.stock:(p.stock||0);
+    const invOrP=inv!==undefined?inv:p;
+    const stock=stockOf(invOrP);
     const ci=cartR.find(x=>x.id===p.id);const cq=ci?ci.qty:0;
-    const isOut=stock<=0;const isMaxed=!isOut&&cq>=stock;
-    const cs=isOut?'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed':isMaxed?'border-color:var(--red);background:rgba(192,57,43,.06)':'';
-    const sl=isOut?`<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`:isMaxed?`<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`:`<div class="product-ws">Retail · ${stock} left${cq>0?` (${cq} in cart)`:''}</div>`;
+    const isOut=isOutOfStock(invOrP);const isUnknown=isUnknownStock(invOrP);const isMaxed=!isOut&&!isUnknown&&cq>=stock;
+    const cs=isOut?'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed':isMaxed?'border-color:var(--red);background:rgba(192,57,43,.06)':isUnknown?'border-color:var(--amber);background:rgba(184,134,11,.08)':'';
+    const sl=isOut?`<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`:isMaxed?`<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`:isUnknown?`<span style="color:var(--amber);font-weight:700;font-size:.7rem">STOCK UNKNOWN</span>`:`<div class="product-ws">Retail · ${stock} left${cq>0?` (${cq} in cart)`:''}</div>`;
     return `<div class="product-card" style="${cs}" onclick="${isOut?`showToast('Out of stock!',false)`:`addToCartR(${p.id})`}">
       ${productThumb(p)}
       <div class="product-name">${p.name}</div>
@@ -7448,8 +7506,9 @@ function renderProductGridR(){
 function addToCartR(id){
   const p=DB_R.products.find(x=>x.id===id);if(!p)return;
   const inv=DB_R.inventory.find(i=>i.id===id);
-  const stock=inv!==undefined?inv.stock:(p.stock||0);
-  if(stock<=0){showToast(`"${p.name}" is out of stock!`,false);return;}
+  const invOrP=inv!==undefined?inv:p;
+  if(isOutOfStock(invOrP)){showToast(`"${p.name}" is out of stock!`,false);return;}
+  const stock=stockOf(invOrP) ?? 0;
   const ex=cartR.find(x=>x.id===id);
   if(ex){if(ex.qty>=stock){showToast(`Only ${stock} available`,false);return;}ex.qty++;}
   else{cartR.push({...p,qty:1,price:p.retail||0});}
@@ -7623,8 +7682,8 @@ function renderR_Dashboard(){
   const moCogs=moSales.reduce((s,sale)=>s+(sale.cogs||0),0);
   const totalExp=DB_R.expenses.filter(e=>new Date(e.date)>=mo).reduce((s,e)=>s+e.amount,0);
   const moProfit=moRev-moCogs-totalExp;
-  const lowStock=DB_R.inventory.filter(p=>p.stock>0&&p.stock<=(p.lowStock||5));
-  const outStock=DB_R.inventory.filter(p=>p.stock<=0);
+  const lowStock=DB_R.inventory.filter(p=>!isUnknownStock(p)&&p.stock>0&&p.stock<=(p.lowStock||5));
+  const outStock=DB_R.inventory.filter(p=>isOutOfStock(p));
   const productSales={};
   moSales.forEach(s=>(s.items||[]).forEach(i=>{if(!productSales[i.name])productSales[i.name]={name:i.name,qty:0,rev:0};productSales[i.name].qty+=i.qty;productSales[i.name].rev+=i.price*i.qty;}));
   const topProds=Object.values(productSales).sort((a,b)=>b.rev-a.rev).slice(0,5);
@@ -7823,11 +7882,12 @@ function renderRInvProducts(){
   if(!DB_R.inventory.length){el.innerHTML=`<div class="card"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products in retail inventory</p><button class="btn btn-primary" style="margin-top:12px" onclick="openRAddProductModal()"><i class="fas fa-plus"></i>Add First Product</button></div></div>`;return;}
   el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Product</th><th>Category</th><th>Unit</th><th>Stock</th><th>Low Alert</th><th>Retail Price</th><th>Cost Price</th><th>Actions</th></tr></thead><tbody>
   ${DB_R.inventory.map(p=>{
-    const isLow=p.stock>0&&p.stock<=(p.lowStock||5);const isOut=p.stock<=0;
-    return `<tr style="${isOut?'background:rgba(192,57,43,.04)':isLow?'background:rgba(184,134,11,.03)':''}">
+    const isUnknown=isUnknownStock(p);
+    const isLow=!isUnknown&&p.stock>0&&p.stock<=(p.lowStock||5);const isOut=isOutOfStock(p);
+    return `<tr style="${isOut?'background:rgba(192,57,43,.04)':isLow?'background:rgba(184,134,11,.03)':isUnknown?'background:rgba(184,134,11,.03)':''}">
       <td><strong>${p.name}</strong></td>
       <td>${p.category||'—'}</td><td>${p.unit||'—'}</td>
-      <td><span style="font-weight:700;color:${isOut?'var(--red)':isLow?'var(--amber)':'var(--green-light)'}">${p.stock||0}</span>${isOut?' <span style="font-size:.65rem;color:var(--red)">(OUT)</span>':isLow?' <span style="font-size:.65rem;color:var(--amber)">(LOW)</span>':''}</td>
+      <td><span style="font-weight:700;color:${isOut?'var(--red)':isLow?'var(--amber)':isUnknown?'var(--amber)':'var(--green-light)'}">${isUnknown?'—':p.stock}</span>${isOut?' <span style="font-size:.65rem;color:var(--red)">(OUT)</span>':isLow?' <span style="font-size:.65rem;color:var(--amber)">(LOW)</span>':isUnknown?' <span style="font-size:.65rem;color:var(--amber)">(UNKNOWN — re-save stock)</span>':''}</td>
       <td>${p.lowStock||5}</td>
       <td style="font-family:var(--mono)">${N(p.retail||0)}</td>
       <td style="font-family:var(--mono)">${N(p.costPrice||0)}</td>
@@ -7931,11 +7991,12 @@ function productThumb(p){
 
 function openRAdjustStock(id){
   const p=DB_R.inventory.find(x=>x.id===id);if(!p)return;
-  const input=prompt(`Adjust stock for "${p.name}"\nCurrent: ${p.stock||0}\n\nEnter amount (+add / -remove):`);
+  const input=prompt(`Adjust stock for "${p.name}"\nCurrent: ${stockOf(p) ?? 'unknown'}\n\nEnter amount (+add / -remove):`);
   if(input===null||input.trim()==='')return;
   const delta=parseInt(input);
   if(isNaN(delta)||delta===0){alert('Enter a non-zero number.');return;}
-  p.stock=Math.max(0,(p.stock||0)+delta);
+  adjustStock(p,delta);
+  p.stock=Math.max(0,p.stock);
   const prod=DB_R.products.find(x=>x.id===id);if(prod)prod.stock=p.stock;
   DB_R.stockHistory.unshift({id:uid(),productId:id,productName:p.name,timestamp:new Date().toISOString(),action:'adjustment',delta,newStock:p.stock,unit:p.unit,reason:'Manual adjustment'});
   persistR('inventory');persistR('products');persistR('stockHistory');
