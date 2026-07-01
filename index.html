@@ -1925,9 +1925,6 @@ async function onAuthSuccess(user){
   setupRealtime();
   applyBizColors();
   syncInventoryFromProducts();
-  await runBulkImportV1();
-  await runBulkImportV2();
-  await runBulkImportV3();
   checkLowStockNotifs();
   checkDailySummaryNotif();
   showToast('Welcome back, '+currentUserName+'!');
@@ -1989,790 +1986,6 @@ function applyRoleUI(){
     const mdb=document.getElementById('mob-dashboard');
     if(mdb) mdb.style.display='none';
   }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ONE-TIME BULK IMPORT v1 — runs once after login, adds new products to Supabase
-// Flag: DB.bizSettings.bulkImportV1Done — set true after first run, never repeats
-// ══════════════════════════════════════════════════════════════════════════════
-async function runBulkImportV1(){
-  if(!DB.bizSettings) DB.bizSettings={};
-  if(DB.bizSettings.bulkImportV1Done) return;
-
-  const _newProds=[
-    // ── SPIRITS ──────────────────────────────────────────────────────────────
-    {name:'Seaman\'s Premium',      cat:'Spirits',    unit:'bottle', retail:3500,  cost:3017},
-    {name:'Eagle',                  cat:'Spirits',    unit:'bottle', retail:3500,  cost:2975},
-    {name:'8pm Tin',                cat:'Spirits',    unit:'bottle', retail:8650,  cost:6059},
-    {name:'Kalahari',               cat:'Spirits',    unit:'bottle', retail:5500,  cost:4392},
-    {name:'Royal Standard',         cat:'Spirits',    unit:'bottle', retail:3500,  cost:2975},
-    {name:'Best Cream 75cl',        cat:'Spirits',    unit:'bottle', retail:7000,  cost:5892},
-    {name:'Best Cream 200ml',       cat:'Spirits',    unit:'bottle', retail:2500,  cost:1571},
-    {name:'Gordons 75cl',           cat:'Spirits',    unit:'bottle', retail:6650,  cost:4891},
-    {name:'Campari',                cat:'Spirits',    unit:'bottle', retail:26650, cost:21784},
-    {name:'Apperito',               cat:'Spirits',    unit:'bottle', retail:3000,  cost:2017},
-    {name:'Squadron Minis',         cat:'Spirits',    unit:'pack',   retail:2650,  cost:1836},
-    {name:'Big Ben 75cl',           cat:'Spirits',    unit:'bottle', retail:3000,  cost:2225},
-    {name:'Magic Moment',           cat:'Spirits',    unit:'bottle', retail:7000,  cost:6175},
-    {name:'Chelsea Minis',          cat:'Spirits',    unit:'pack',   retail:2650,  cost:1836},
-    {name:'33 Export',              cat:'Spirits',    unit:'crate',  retail:10500, cost:10000},
-    {name:'Big Legend',             cat:'Spirits',    unit:'crate',  retail:13000, cost:12600},
-    {name:'Smirnoff Ice',           cat:'Spirits',    unit:'crate',  retail:16000, cost:15000},
-    {name:'Captain Jack',           cat:'Spirits',    unit:'bottle', retail:3200,  cost:2642},
-    {name:'Biggo 75cl',             cat:'Spirits',    unit:'bottle', retail:3000,  cost:2392},
-    {name:'Jameson',                cat:'Spirits',    unit:'bottle', retail:25000, cost:22234},
-    {name:'Action Bitters 37.5cl',  cat:'Spirits',    unit:'bottle', retail:2050,  cost:1392},
-    {name:'Pure Heaven',            cat:'Spirits',    unit:'carton', retail:6000,  cost:4559},
-    {name:'Expression',             cat:'Spirits',    unit:'carton', retail:9500,  cost:7559},
-    {name:'8pm Fire & Honey',       cat:'Spirits',    unit:'bottle', retail:7000,  cost:5808},
-    // ── BEVERAGES ─────────────────────────────────────────────────────────────
-    {name:'Golden Morn 900g',           cat:'Beverages', unit:'tin',   retail:5000,  cost:4034},
-    {name:'My Boy',                     cat:'Beverages', unit:'carton',retail:8400,  cost:7392},
-    {name:'Lactogen',                   cat:'Beverages', unit:'tin',   retail:7800,  cost:6784},
-    {name:'Hot Chocolate',              cat:'Beverages', unit:'pack',  retail:3500,  cost:2934},
-    {name:'Milo 3 in 1',               cat:'Beverages', unit:'pack',  retail:3000,  cost:2550},
-    {name:'Peak Full Cream Evaporated', cat:'Beverages', unit:'tin',   retail:1200,  cost:1030},
-    {name:'Peak Filled Cream Evaporated',cat:'Beverages',unit:'tin',   retail:800,   cost:621},
-    {name:'Three Crown',                cat:'Beverages', unit:'tin',   retail:800,   cost:634},
-    {name:'Milo Tape',                  cat:'Beverages', unit:'tape',  retail:2600,  cost:1710},
-    {name:'Top Cafe',                   cat:'Beverages', unit:'pack',  retail:2050,  cost:1709},
-    {name:'Munro Glucose',              cat:'Beverages', unit:'pack',  retail:3000,  cost:2700},
-    {name:'Peak 400g Tin',              cat:'Beverages', unit:'tin',   retail:6500,  cost:5392},
-    {name:'Ovaltine Tape',              cat:'Beverages', unit:'tape',  retail:2500,  cost:1678},
-    {name:'Loya 380g Tin',              cat:'Beverages', unit:'tin',   retail:6200,  cost:5142},
-    {name:'Nan 1',                      cat:'Beverages', unit:'tin',   retail:11000, cost:9117},
-    {name:'Ovaltine 400g Refil',        cat:'Beverages', unit:'pack',  retail:5550,  cost:4892},
-    {name:'Miksi Tape',                 cat:'Beverages', unit:'tape',  retail:1550,  cost:1135},
-    {name:'Miksi 320g Refil',           cat:'Beverages', unit:'pack',  retail:3360,  cost:2767},
-    {name:'Vitamilk',                   cat:'Beverages', unit:'pack',  retail:1500,  cost:1280},
-    // ── SOAP ──────────────────────────────────────────────────────────────────
-    {name:'Eva Soap',                cat:'Soap', unit:'piece', retail:860,  cost:557},
-    {name:'Idole Soap Papaya',       cat:'Soap', unit:'piece', retail:1500, cost:1050},
-    {name:'Visita Soap B/S',         cat:'Soap', unit:'piece', retail:1000, cost:709},
-    {name:'Ivory Soap',              cat:'Soap', unit:'piece', retail:860,  cost:542},
-    {name:'Precious Perfect Lot S/S',cat:'Soap', unit:'piece', retail:2200, cost:1600},
-    {name:'Fressia Soap',            cat:'Soap', unit:'piece', retail:860,  cost:573},
-    {name:'Extract Soap',            cat:'Soap', unit:'piece', retail:2000, cost:1500},
-    {name:'Hawaii Soap Mix',         cat:'Soap', unit:'piece', retail:1500, cost:1000},
-    {name:'White Haven Soap Mix',    cat:'Soap', unit:'piece', retail:800,  cost:605},
-    {name:'Eva Soap Mix',            cat:'Soap', unit:'piece', retail:4500, cost:3500},
-    {name:'Siri Soap',               cat:'Soap', unit:'piece', retail:4500, cost:3500},
-    {name:'Fresh Glow Soap',         cat:'Soap', unit:'piece', retail:3000, cost:2500},
-    // ── COSMETICS ─────────────────────────────────────────────────────────────
-    {name:'Skin Magnet Lotion',          cat:'Cosmetics', unit:'piece', retail:2350, cost:1700},
-    {name:'Confetti Spray',              cat:'Cosmetics', unit:'piece', retail:4600, cost:2900},
-    {name:'Iman Perfume',                cat:'Cosmetics', unit:'piece', retail:2500, cost:1300},
-    {name:'Nivea Lotion RB Vit C',       cat:'Cosmetics', unit:'piece', retail:5800, cost:4792},
-    {name:'Nivea Lotion RB Avocado',     cat:'Cosmetics', unit:'piece', retail:5800, cost:4792},
-    {name:'Caro White Cup B/S',          cat:'Cosmetics', unit:'piece', retail:5000, cost:4050},
-    {name:'Tender White Lot',            cat:'Cosmetics', unit:'piece', retail:2500, cost:2000},
-    {name:'Looking Good B/S Cup',        cat:'Cosmetics', unit:'piece', retail:3000, cost:2500},
-    {name:'Visita Lotion Naked',         cat:'Cosmetics', unit:'piece', retail:2500, cost:1834},
-    {name:'Visita Lotion Packet',        cat:'Cosmetics', unit:'piece', retail:2500, cost:1834},
-    {name:'Epiderm Tube',                cat:'Cosmetics', unit:'piece', retail:960,  cost:650},
-    {name:'Wind Gel B/S',                cat:'Cosmetics', unit:'piece', retail:1700, cost:1167},
-    {name:'Wind Gel S/S',                cat:'Cosmetics', unit:'piece', retail:1700, cost:1167},
-    {name:'Cussons Lot Pink',            cat:'Cosmetics', unit:'piece', retail:1700, cost:1167},
-    {name:'Cussons Lot Blue',            cat:'Cosmetics', unit:'piece', retail:2600, cost:1667},
-    {name:'Cussons Oil Mix',             cat:'Cosmetics', unit:'piece', retail:2050, cost:1334},
-    {name:'Elope Spray',                 cat:'Cosmetics', unit:'piece', retail:3500, cost:2500},
-    {name:'Neso Spray',                  cat:'Cosmetics', unit:'piece', retail:5650, cost:4600},
-    {name:'Nivea Cocoa Lot B/S',         cat:'Cosmetics', unit:'piece', retail:3500, cost:2667},
-    {name:'Nivea Perfect & Radiant B/S', cat:'Cosmetics', unit:'piece', retail:5260, cost:4167},
-    {name:'Nivea Perfect & Radiant S/S', cat:'Cosmetics', unit:'piece', retail:1650, cost:690},
-    {name:'Supple Lot M/S',              cat:'Cosmetics', unit:'piece', retail:5200, cost:4167},
-    {name:'Nivea Lot Blue B/S',          cat:'Cosmetics', unit:'piece', retail:3500, cost:2667},
-    // ── TOILETRIES ────────────────────────────────────────────────────────────
-    {name:'Close Up B/S',          cat:'Toiletries', unit:'piece',  retail:1360, cost:1040},
-    {name:'Xtreme Toothpaste B/S', cat:'Toiletries', unit:'piece',  retail:1000, cost:860},
-    {name:'Ora-Care Toothpaste',   cat:'Toiletries', unit:'piece',  retail:1800, cost:1473},
-    {name:'Oral B Toothpaste B/S', cat:'Toiletries', unit:'piece',  retail:1700, cost:1125},
-    {name:'Tetmosol Liquid 500ml', cat:'Toiletries', unit:'bottle', retail:2500, cost:1792},
-    {name:'Tetmosol Liquid 250ml', cat:'Toiletries', unit:'bottle', retail:900,  cost:625},
-    {name:'Tetmosol Soap B/S',     cat:'Toiletries', unit:'piece',  retail:700,  cost:375},
-    {name:'Tetmosol Soap S/S',     cat:'Toiletries', unit:'piece',  retail:900,  cost:615},
-    // ── BABY ──────────────────────────────────────────────────────────────────
-    {name:'Soft Care Wipes x60', cat:'Baby', unit:'pack', retail:1200, cost:621},
-    {name:'Soft Care Wipes x80', cat:'Baby', unit:'pack', retail:1950, cost:1242},
-    // ── HOUSEHOLD ─────────────────────────────────────────────────────────────
-    {name:'Sunshine Airfreshner',   cat:'Household', unit:'piece',  retail:600,  cost:359},
-    {name:'Wind Airfreshner Block', cat:'Household', unit:'piece',  retail:1200, cost:900},
-    {name:'Dettol Liquid 75',       cat:'Household', unit:'bottle', retail:3500, cost:2900},
-    {name:'Dettol Liquid 65',       cat:'Household', unit:'bottle', retail:850,  cost:584},
-  ];
-
-  const ts=Date.now();
-  let added=0;
-  _newProds.forEach((p,i)=>{
-    // Skip if a product with same name already exists (case-insensitive)
-    const exists=DB.products.find(x=>x.name.toLowerCase().trim()===p.name.toLowerCase().trim());
-    if(exists) return;
-    const id=ts+i+1;
-    const prod={
-      id, name:p.name, category:p.cat, emoji:'', image:'',
-      retail:p.retail, wholesale:p.retail, costPrice:p.cost,
-      unit:p.unit, stock:0, lowStock:10,
-      sellingUnits:[{name:p.unit, qty:1, retail:p.retail, wholesale:p.retail}],
-      conversions:{}
-    };
-    DB.products.push(prod);
-    DB.inventory.push({...prod});
-    added++;
-  });
-
-  if(added>0){
-    persist('products');
-    persist('inventory');
-    logActivity('Product',`Bulk import v1: ${added} new products added to inventory`);
-    showToast(`${added} new products imported!`);
-  }
-
-  // Mark as done — will never run again
-  DB.bizSettings.bulkImportV1Done=true;
-  persist('bizSettings');
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ONE-TIME BULK IMPORT v2 — adds all products from March 2026 ledger images
-// Flag: DB.bizSettings.bulkImportV2Done — set true after first run, never repeats
-// ══════════════════════════════════════════════════════════════════════════════
-async function runBulkImportV2(){
-  if(!DB.bizSettings) DB.bizSettings={};
-  if(DB.bizSettings.bulkImportV2Done) return;
-
-  const _newProds=[
-    // ── SPIRITS (Image 7 — March 2026, items 1-30) ──────────────────────────
-    {name:"Lord's Dry Gin 3CTS",        cat:'Spirits',    unit:'carton', retail:3550,  cost:2917},
-    {name:"Best Cream 75cl CTN",        cat:'Spirits',    unit:'carton', retail:7650,  cost:5834},
-    {name:"Gordon's Gin 75cl",          cat:'Spirits',    unit:'bottle', retail:6050,  cost:4834},
-    {name:"Regal Gin",                  cat:'Spirits',    unit:'bottle', retail:3550,  cost:2917},
-    {name:"Isiagu 75cl",                cat:'Spirits',    unit:'bottle', retail:3550,  cost:2917},
-    {name:"Chelsea 75cl",               cat:'Spirits',    unit:'bottle', retail:4550,  cost:2917},
-    {name:"Fisher 888",                 cat:'Spirits',    unit:'bottle', retail:5050,  cost:3917},
-    {name:"8pm Honey",                  cat:'Spirits',    unit:'bottle', retail:7650,  cost:5809},
-    {name:"Royal Standard 75cl",        cat:'Spirits',    unit:'bottle', retail:3550,  cost:2892},
-    {name:"Big Ben 75cl CTN",           cat:'Spirits',    unit:'carton', retail:5550,  cost:4392},
-    {name:"Kalahari 75cl",              cat:'Spirits',    unit:'bottle', retail:3550,  cost:3017},
-    {name:"Seaman's Premium CTN",       cat:'Spirits',    unit:'carton', retail:3550,  cost:2975},
-    {name:"Smirnoff XI",                cat:'Spirits',    unit:'bottle', retail:1050,  cost:842},
-    {name:"Chelsea 200ml",              cat:'Spirits',    unit:'bottle', retail:6050,  cost:4892},
-    {name:"Chandor Wine",               cat:'Spirits',    unit:'bottle', retail:4050,  cost:2809},
-    {name:"Veleta Wine",                cat:'Spirits',    unit:'bottle', retail:25050, cost:22234},
-    {name:"Tombo Vodka Chocolate 75cl", cat:'Spirits',    unit:'bottle', retail:3550,  cost:2975},
-    {name:"Eagle Schnapps",             cat:'Spirits',    unit:'bottle', retail:3550,  cost:3016},
-    {name:"Black Bullet",               cat:'Spirits',    unit:'piece',  retail:15350, cost:14300},
-    {name:"Maltor Guinness",            cat:'Spirits',    unit:'piece',  retail:20400, cost:19400},
-    {name:"Small Guinness Stout",       cat:'Spirits',    unit:'piece',  retail:18500, cost:17600},
-    {name:"Medium Double Black",        cat:'Spirits',    unit:'piece',  retail:18500, cost:17600},
-    // ── SPIRITS (Image 6 — items 31-60) ─────────────────────────────────────
-    {name:"Big Heineken",               cat:'Spirits',    unit:'piece',  retail:15350, cost:14600},
-    {name:"Big Legend",                 cat:'Spirits',    unit:'piece',  retail:12100, cost:11660},
-    {name:"Budweiser",                  cat:'Spirits',    unit:'piece',  retail:11600, cost:11160},
-    {name:"Can Amstel Malt",            cat:'Beverages',  unit:'piece',  retail:14550, cost:13550},
-    {name:"Can Malta Guinness",         cat:'Beverages',  unit:'piece',  retail:14350, cost:13368},
-    {name:"Can Hi-Malt",                cat:'Beverages',  unit:'piece',  retail:12150, cost:11150},
-    {name:"Can Dubic",                  cat:'Beverages',  unit:'piece',  retail:15400, cost:14400},
-    {name:"Zollo Bitters",              cat:'Spirits',    unit:'piece',  retail:15400, cost:17500},
-    {name:"8pm Fine",                   cat:'Spirits',    unit:'bottle', retail:7050,  cost:5834},
-    {name:"Orijin Bitters Small",       cat:'Spirits',    unit:'piece',  retail:2050,  cost:855},
-    {name:"Carton Seal Tape",           cat:'Household',  unit:'roll',   retail:1550,  cost:1083},
-    {name:"Wooden Toothpick",           cat:'Toiletries', unit:'pack',   retail:150,   cost:84},
-    {name:"Dental Floss Toothpick",     cat:'Toiletries', unit:'pack',   retail:500,   cost:375},
-    {name:"Paper Tape",                 cat:'Household',  unit:'pack',   retail:700,   cost:583},
-    {name:"Big Pen",                    cat:'Household',  unit:'pack',   retail:700,   cost:583},
-    {name:"Correction Pen",             cat:'Household',  unit:'pack',   retail:200,   cost:140},
-    {name:"POS Paper",                  cat:'Household',  unit:'carton', retail:500,   cost:250},
-    {name:"Isiagu 200ml",               cat:'Spirits',    unit:'bottle', retail:2350,  cost:1680},
-    {name:"Baccus Red Wine",            cat:'Spirits',    unit:'carton', retail:3050,  cost:2508},
-    {name:"Lord's Dry Gin 75cl",        cat:'Spirits',    unit:'bottle', retail:3550,  cost:2667},
-    {name:"Best Inferno",               cat:'Spirits',    unit:'carton', retail:3550,  cost:2917},
-    {name:"Yaahu 75cl",                 cat:'Spirits',    unit:'carton', retail:2050,  cost:1334},
-    // ── BEVERAGES (Image 4 — items 61-91) ────────────────────────────────────
-    {name:"Gin MG",                     cat:'Spirits',    unit:'carton', retail:3050,  cost:2250},
-    {name:"Big Ben",                    cat:'Spirits',    unit:'carton', retail:8650,  cost:6666},
-    {name:"LA Villas Red Wine",         cat:'Spirits',    unit:'carton', retail:7550,  cost:6560},
-    {name:"Best Cream",                 cat:'Spirits',    unit:'carton', retail:7550,  cost:6167},
-    {name:"Best VIP 75cl",              cat:'Spirits',    unit:'carton', retail:3550,  cost:2167},
-    {name:"Best Nkong 75cl",            cat:'Spirits',    unit:'carton', retail:5050,  cost:3834},
-    {name:"Best Gin 75cl",              cat:'Spirits',    unit:'carton', retail:5050,  cost:2500},
-    {name:"Regal 75cl",                 cat:'Spirits',    unit:'carton', retail:9050,  cost:7250},
-    {name:"Royal Challenge",            cat:'Spirits',    unit:'carton', retail:9050,  cost:7083},
-    {name:"Royal Circle",               cat:'Spirits',    unit:'piece',  retail:8600,  cost:8569},
-    {name:"Champion",                   cat:'Beverages',  unit:'piece',  retail:9550,  cost:9546},
-    {name:"Champ Malta",                cat:'Beverages',  unit:'piece',  retail:3200,  cost:3163},
-    {name:"350 RGB Coca Cola",          cat:'Beverages',  unit:'piece',  retail:4550,  cost:4326},
-    {name:"500 PET Coca Cola",          cat:'Beverages',  unit:'piece',  retail:4900,  cost:4652},
-    {name:"400 PET Predator Gold",      cat:'Beverages',  unit:'piece',  retail:4550,  cost:4187},
-    {name:"300 PET Flatline Pulpy",     cat:'Beverages',  unit:'piece',  retail:2950,  cost:2698},
-    {name:"350 PET Coca Cola",          cat:'Beverages',  unit:'piece',  retail:3450,  cost:3163},
-    {name:"350 RGB Coca Cola & Sprite", cat:'Beverages',  unit:'piece',  retail:21050, cost:19535},
-    {name:"400 CAN Monster Energy",     cat:'Beverages',  unit:'piece',  retail:4550,  cost:4326},
-    {name:"500 PET Sprite & Fanta",     cat:'Beverages',  unit:'piece',  retail:5850,  cost:5582},
-    {name:"500 RGB Coca Cola",          cat:'Beverages',  unit:'piece',  retail:3050,  cost:2800},
-    {name:"600 PET Coca Cola Sprite FF",cat:'Beverages',  unit:'piece',  retail:2450,  cost:2250},
-    {name:"750 PET Eva Water",          cat:'Beverages',  unit:'piece',  retail:7350,  cost:6977},
-    {name:"1.0 PET Coca Cola",          cat:'Beverages',  unit:'piece',  retail:3650,  cost:3400},
-    {name:"1.5 PET Eva Water",          cat:'Beverages',  unit:'piece',  retail:4550,  cost:4326},
-    {name:"400 PET Schwepps",           cat:'Beverages',  unit:'piece',  retail:6050,  cost:5535},
-    {name:"780 PET Five Alive Cocopine",cat:'Beverages',  unit:'piece',  retail:6050,  cost:5535},
-    // ── COSMETICS (Image 3 — items 126-155) ──────────────────────────────────
-    {name:"CT Plus Lot",                cat:'Cosmetics',  unit:'piece',  retail:8500,  cost:2900},
-    {name:"Carotone BSC",               cat:'Cosmetics',  unit:'piece',  retail:1550,  cost:950},
-    {name:"Colgate Charcoal",           cat:'Toiletries', unit:'piece',  retail:1860,  cost:1560},
-    {name:"Ora-Care Toothpaste S/S",    cat:'Toiletries', unit:'piece',  retail:550,   cost:330},
-    {name:"Neoskin Lot",                cat:'Cosmetics',  unit:'piece',  retail:2500,  cost:1834},
-    {name:"Nature Secret Lot Carrot",   cat:'Cosmetics',  unit:'piece',  retail:6050,  cost:5000},
-    {name:"D.E.S. Lot",                 cat:'Cosmetics',  unit:'piece',  retail:4550,  cost:3050},
-    {name:"Damatol Hair Cream B/S",     cat:'Cosmetics',  unit:'piece',  retail:1550,  cost:1600},
-    {name:"Damatol Hair Cream S/S",     cat:'Cosmetics',  unit:'piece',  retail:2550,  cost:1959},
-    {name:"Vaseline Lotion",            cat:'Cosmetics',  unit:'piece',  retail:1860,  cost:1195},
-    {name:"Dove Lotion",                cat:'Cosmetics',  unit:'piece',  retail:2750,  cost:2200},
-    {name:"Cocoa Butter Lotion",        cat:'Cosmetics',  unit:'piece',  retail:1860,  cost:1200},
-    {name:"Blue Seal Vaseline S/S",     cat:'Cosmetics',  unit:'piece',  retail:860,   cost:584},
-    {name:"Beauty Fair Cup B/S White",  cat:'Cosmetics',  unit:'piece',  retail:2500,  cost:2000},
-    {name:"Carotone Cup S/S",           cat:'Cosmetics',  unit:'piece',  retail:1550,  cost:1125},
-    {name:"Beauty Fair Cup B/S Pink",   cat:'Cosmetics',  unit:'piece',  retail:3500,  cost:2916},
-    {name:"Carotone Lot M/S",           cat:'Cosmetics',  unit:'piece',  retail:3800,  cost:2500},
-    {name:"Carotone Lot S/S",           cat:'Cosmetics',  unit:'piece',  retail:2350,  cost:1667},
-    {name:"Nivea Roll-on Mix",          cat:'Cosmetics',  unit:'piece',  retail:2350,  cost:1667},
-    {name:"Surati Perfume Roll-on",     cat:'Cosmetics',  unit:'piece',  retail:2250,  cost:1400},
-    {name:"Precious Perfect Lot M/S",   cat:'Cosmetics',  unit:'piece',  retail:4050,  cost:3000},
-    {name:"Johnson Lotion",             cat:'Cosmetics',  unit:'piece',  retail:4050,  cost:3000},
-    {name:"Johnson Soap",               cat:'Soap',       unit:'piece',  retail:4050,  cost:3000},
-    {name:"Challenge Perfume",          cat:'Cosmetics',  unit:'piece',  retail:1550,  cost:1050},
-    {name:"Tura Soap B/S",              cat:'Soap',       unit:'piece',  retail:5550,  cost:4000},
-    {name:"Delta Soap S/S",             cat:'Soap',       unit:'piece',  retail:1050,  cost:750},
-    {name:"K-Brothers Soap Carrot & Papaya",cat:'Soap',  unit:'piece',  retail:600,   cost:367},
-    {name:"K-Brothers Soap Ordinary",   cat:'Soap',       unit:'piece',  retail:2050,  cost:1300},
-    {name:"Arabian Oud Perfume",        cat:'Cosmetics',  unit:'piece',  retail:2050,  cost:1250},
-    {name:"Sivoderm Cream",             cat:'Cosmetics',  unit:'piece',  retail:3250,  cost:2667},
-    // ── COSMETICS (Image 1 — items 156-185) ──────────────────────────────────
-    {name:"Donmi Lot & Cream",          cat:'Cosmetics',  unit:'piece',  retail:5050,  cost:4000},
-    {name:"G-Derm Tube Cream",          cat:'Cosmetics',  unit:'piece',  retail:1550,  cost:667},
-    {name:"Skineal Tube Cream",         cat:'Cosmetics',  unit:'piece',  retail:1350,  cost:1100},
-    {name:"Unik Soap (Ad)",             cat:'Soap',       unit:'piece',  retail:1050,  cost:834},
-    {name:"Dove Soap",                  cat:'Soap',       unit:'piece',  retail:2350,  cost:1667},
-    {name:"Carowhite Lotion S/S",       cat:'Cosmetics',  unit:'piece',  retail:1650,  cost:860},
-    {name:"Dudu Osun Soap",             cat:'Soap',       unit:'piece',  retail:1650,  cost:860},
-    {name:"Fair Child Lot Mix",         cat:'Cosmetics',  unit:'piece',  retail:3550,  cost:2875},
-    {name:"Carotone Cup B/S",           cat:'Cosmetics',  unit:'piece',  retail:4550,  cost:2750},
-    {name:"Cool Breeze Perfume",        cat:'Cosmetics',  unit:'piece',  retail:1550,  cost:950},
-    {name:"Family Care Lot",            cat:'Cosmetics',  unit:'piece',  retail:1550,  cost:950},
-    {name:"Baby X-Me Powder Mix",       cat:'Baby',       unit:'piece',  retail:1450,  cost:1084},
-    {name:"2 Black Hair Cream M/S",     cat:'Cosmetics',  unit:'piece',  retail:900,   cost:700},
-    {name:"2 Black Hair Cream S/S",     cat:'Cosmetics',  unit:'piece',  retail:9550,  cost:8000},
-    {name:"Incidence Perfume",          cat:'Cosmetics',  unit:'piece',  retail:6550,  cost:5500},
-    {name:"Faidra Perfume Black",       cat:'Cosmetics',  unit:'piece',  retail:1860,  cost:1250},
-    {name:"Cruset Hair Dye B/S",        cat:'Cosmetics',  unit:'piece',  retail:1860,  cost:1250},
-    {name:"Black & Nature Dye B/S",     cat:'Cosmetics',  unit:'piece',  retail:5350,  cost:4250},
-    {name:"Nivea Lot Deep B/S",         cat:'Cosmetics',  unit:'piece',  retail:3800,  cost:2550},
-    {name:"Caro White Lot M/S",         cat:'Cosmetics',  unit:'piece',  retail:4550,  cost:3667},
-    {name:"Caro White Lot B/S",         cat:'Cosmetics',  unit:'piece',  retail:2350,  cost:1750},
-    {name:"BB Clear BSC",               cat:'Cosmetics',  unit:'piece',  retail:3650,  cost:2500},
-    {name:"Morning Fresh B/S",          cat:'Cosmetics',  unit:'piece',  retail:1860,  cost:1194},
-    {name:"Morning Fresh M/S",          cat:'Cosmetics',  unit:'piece',  retail:4850,  cost:3800},
-    {name:"Lemon Fresh Lot",            cat:'Cosmetics',  unit:'piece',  retail:1750,  cost:1084},
-    {name:"GBC Airfreshner",            cat:'Household',  unit:'piece',  retail:1050,  cost:592},
-    {name:"Swiss Liquid Airfreshner",   cat:'Household',  unit:'piece',  retail:1050,  cost:650},
-    {name:"Visita Tube",                cat:'Cosmetics',  unit:'piece',  retail:1050,  cost:750},
-    {name:"Red Cross Olive Oil",        cat:'Cosmetics',  unit:'piece',  retail:2850,  cost:2250},
-    {name:"Gold Skin Lot Blue",         cat:'Cosmetics',  unit:'piece',  retail:2850,  cost:2250},
-    // ── COSMETICS (Image 5 — items 186-193) ──────────────────────────────────
-    {name:"Gold Skin Cup Blue",         cat:'Cosmetics',  unit:'piece',  retail:1860,  cost:1300},
-    {name:"White Secret Lot S/S",       cat:'Cosmetics',  unit:'piece',  retail:2350,  cost:1750},
-    {name:"White Secret Lot M/S",       cat:'Cosmetics',  unit:'piece',  retail:2950,  cost:2334},
-    {name:"White Secret Cup S/S",       cat:'Cosmetics',  unit:'piece',  retail:1550,  cost:1167},
-    {name:"Skin Doctor Lot",            cat:'Cosmetics',  unit:'piece',  retail:7550,  cost:5800},
-    {name:"Bronzetone Lot B/S",         cat:'Cosmetics',  unit:'piece',  retail:5550,  cost:4560},
-    {name:"Dettol Soap B/S",            cat:'Soap',       unit:'piece',  retail:1450,  cost:1042},
-    {name:"Dettol Soap S/S",            cat:'Soap',       unit:'piece',  retail:850,   cost:550},
-    // ── NIVEA LOT BLUE S/S (from Image 2, item 125) ──────────────────────────
-    {name:"Nivea Lot Blue S/S",         cat:'Cosmetics',  unit:'piece',  retail:3550,  cost:2667},
-  ];
-
-  const ts=Date.now();
-  let added=0;
-  _newProds.forEach((p,i)=>{
-    // Skip if a product with same name already exists (case-insensitive)
-    const exists=DB.products.find(x=>x.name.toLowerCase().trim()===p.name.toLowerCase().trim());
-    if(exists) return;
-    const id=ts+i+1000000; // offset to avoid collision with V1 IDs
-    const retail=p.retail||0;
-    const cost=p.cost||(Math.round(retail*0.85));
-    const prod={
-      id, name:p.name, category:p.cat, emoji:'', image:'',
-      retail, wholesale:retail, costPrice:cost,
-      unit:p.unit, stock:0, lowStock:10,
-      sellingUnits:[{name:p.unit, qty:1, retail, wholesale:retail}],
-      conversions:{}
-    };
-    DB.products.push(prod);
-    DB.inventory.push({...prod});
-    added++;
-  });
-
-  if(added>0){
-    persist('products');
-    persist('inventory');
-    logActivity('Product',`Bulk import v2: ${added} new products added to inventory`);
-    showToast(`✅ ${added} new products imported (Ledger batch)!`);
-  }
-
-  // Mark as done — will never run again
-  DB.bizSettings.bulkImportV2Done=true;
-  persist('bizSettings');
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// ONE-TIME BULK IMPORT v3 — new ledger batch (Images 1-10, May 2026)
-// All products here have only a selling price listed — cost = 85% of retail.
-// Products with both unit cost & unit sold price are corrected from Image 10.
-// Flag: DB.bizSettings.bulkImportV3Done — set true after first run, never repeats
-// ══════════════════════════════════════════════════════════════════════════════
-async function runBulkImportV3(){
-  if(!DB.bizSettings) DB.bizSettings={};
-  if(DB.bizSettings.bulkImportV3Done) return;
-
-  // Helper: cost = 85% of retail (rounded), used for price-only entries
-  const c85=(r)=>Math.round(r*0.85);
-
-  const _newProds=[
-    // ── IMAGE 1 — Perfumes & Body Sprays (price only → 85% rule) ────────────
-    {name:'Karta Body Spray',         cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'OAK Perfume',              cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'Blue Torch Perfume',       cat:'Cosmetics',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Small Oil Perfume',        cat:'Cosmetics',  unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Sugar Baby Oil Perfume',   cat:'Cosmetics',  unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Boo Hai',                  cat:'Cosmetics',  unit:'piece', retail:4500,  cost:c85(4500)},
-    {name:'Masuiy Perfume',           cat:'Cosmetics',  unit:'piece', retail:5800,  cost:c85(5800)},
-    {name:'Club De Nuit',             cat:'Cosmetics',  unit:'piece', retail:10000, cost:c85(10000)},
-    {name:'Bushran Perfume',          cat:'Cosmetics',  unit:'piece', retail:5000,  cost:c85(5000)},
-    {name:'Happiness Perfume',        cat:'Cosmetics',  unit:'piece', retail:8500,  cost:c85(8500)},
-    {name:'Ace Body Spray',           cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Beal Perfume',             cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'Meio Musk Perfume',        cat:'Cosmetics',  unit:'piece', retail:13000, cost:c85(13000)},
-    {name:'Oud Torch',                cat:'Cosmetics',  unit:'piece', retail:3000,  cost:c85(3000)},
-    {name:'Smart Collection Perfume', cat:'Cosmetics',  unit:'piece', retail:7500,  cost:c85(7500)},
-    {name:'Now Rave Perfume',         cat:'Cosmetics',  unit:'piece', retail:7500,  cost:c85(7500)},
-    {name:'9pm Perfume',              cat:'Cosmetics',  unit:'piece', retail:8000,  cost:c85(8000)},
-    {name:'Matelot Perfume',          cat:'Cosmetics',  unit:'piece', retail:7500,  cost:c85(7500)},
-    {name:'Qaed Al Fursan',           cat:'Cosmetics',  unit:'piece', retail:5500,  cost:c85(5500)},
-    {name:'Ramz Lattafa',             cat:'Cosmetics',  unit:'piece', retail:7500,  cost:c85(7500)},
-    // ── IMAGE 2 LEFT — Lotions, Wines, Spirits (SN 311-341, price only) ─────
-    {name:'Storm Elixir Perfume',     cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Materite Perfume',         cat:'Cosmetics',  unit:'piece', retail:8000,  cost:c85(8000)},
-    {name:'Ferment White Small',      cat:'Cosmetics',  unit:'piece', retail:2100,  cost:c85(2100)},
-    {name:'Paw Paw Cap Small',        cat:'Cosmetics',  unit:'piece', retail:2050,  cost:c85(2050)},
-    {name:'Paw Paw Lotion Small',     cat:'Cosmetics',  unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Precious Lot Big',         cat:'Cosmetics',  unit:'piece', retail:3600,  cost:c85(3600)},
-    {name:'Paper Glow Lot Big',       cat:'Cosmetics',  unit:'piece', retail:3600,  cost:c85(3600)},
-    {name:'Viva White Lotion',        cat:'Cosmetics',  unit:'piece', retail:2600,  cost:c85(2600)},
-    {name:'White Secret Lot Small',   cat:'Cosmetics',  unit:'piece', retail:2300,  cost:c85(2300)},
-    {name:'White Secret Lot Big',     cat:'Cosmetics',  unit:'piece', retail:2900,  cost:c85(2900)},
-    {name:'White White Lot',          cat:'Cosmetics',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Paw Paw Lot Big',          cat:'Cosmetics',  unit:'piece', retail:5000,  cost:c85(5000)},
-    {name:'Paw Paw Lot Medium',       cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Alicasa Wine',             cat:'Spirits',    unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'Faccel Wine',              cat:'Spirits',    unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'Angelous Wine',            cat:'Spirits',    unit:'bottle',retail:3000,  cost:c85(3000)},
-    {name:'Marvelous Wine',           cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Calate Wine',              cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Ree Desire Wine',          cat:'Spirits',    unit:'bottle',retail:4500,  cost:c85(4500)},
-    {name:'No 1 Golden',              cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'De Rosce Wine',            cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Bacco Brandy',             cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Dutch Black Red Wine',     cat:'Spirits',    unit:'bottle',retail:2800,  cost:c85(2800)},
-    {name:'St Francis Red Wine',      cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Calypso Liqueur',          cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Codex Train Whisky',       cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    // ── IMAGE 2 RIGHT — Spirits (SN 342-372, price only) ────────────────────
-    {name:'Thermal Paper',            cat:'Household',  unit:'roll',  retail:800,   cost:c85(800)},
-    {name:"Seaman's Schnapps",        cat:'Spirits',    unit:'bottle',retail:3800,  cost:c85(3800)},
-    {name:'Action Bitters 75ml',      cat:'Spirits',    unit:'bottle',retail:3800,  cost:c85(3800)},
-    {name:'NM Cindrex 75cl',          cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Royal Standard 75ml',      cat:'Spirits',    unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'X1 75cl',                  cat:'Spirits',    unit:'bottle',retail:2500,  cost:c85(2500)},
-    {name:'Chelsea 375ml',            cat:'Spirits',    unit:'bottle',retail:2500,  cost:c85(2500)},
-    {name:'Big Ben 380ml',            cat:'Spirits',    unit:'bottle',retail:1250,  cost:c85(1250)},
-    {name:'Action Bitters 375ml',     cat:'Spirits',    unit:'bottle',retail:2000,  cost:c85(2000)},
-    {name:'Squadron 375ml',           cat:'Spirits',    unit:'bottle',retail:2350,  cost:c85(2350)},
-    {name:"Gordon's 350ml",           cat:'Spirits',    unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'Hennessey VSOP',           cat:'Spirits',    unit:'bottle',retail:60000, cost:c85(60000)},
-    {name:'St Remy VSOP',             cat:'Spirits',    unit:'bottle',retail:18000, cost:c85(18000)},
-    {name:'Esplendido 70cl',          cat:'Spirits',    unit:'bottle',retail:12000, cost:c85(12000)},
-    {name:'Regal Dry Gin',            cat:'Spirits',    unit:'bottle',retail:3000,  cost:c85(3000)},
-    {name:'Best Whisky',              cat:'Spirits',    unit:'bottle',retail:6000,  cost:c85(6000)},
-    {name:'Ribena Blackcurrant',      cat:'Beverages',  unit:'bottle',retail:4600,  cost:c85(4600)},
-    {name:'Caius 750ml',              cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Kensington Gin',           cat:'Spirits',    unit:'bottle',retail:8000,  cost:c85(8000)},
-    {name:'Romy Whisky',              cat:'Spirits',    unit:'bottle',retail:5300,  cost:c85(5300)},
-    {name:'Diamond Whisky',           cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Night Cruise 75ml',        cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Beehive VSOP',             cat:'Spirits',    unit:'bottle',retail:18000, cost:c85(18000)},
-    {name:'Eva Wine',                 cat:'Spirits',    unit:'bottle',retail:6000,  cost:c85(6000)},
-    {name:'GL Wine',                  cat:'Spirits',    unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'Avis Wine',                cat:'Spirits',    unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'Classic Heaven',           cat:'Spirits',    unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'Baron Dakinus',            cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Tama Tama Wine',           cat:'Spirits',    unit:'bottle',retail:5500,  cost:c85(5500)},
-    // ── IMAGE 3 LEFT — Creams, Lotions, Powders (SN 249-279, price only) ────
-    {name:'Tempovate Gel',            cat:'Cosmetics',  unit:'piece', retail:1600,  cost:c85(1600)},
-    {name:'Gold Skin Cup Cream',      cat:'Cosmetics',  unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'White Secret Cup',         cat:'Cosmetics',  unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Venus Cup Cream',          cat:'Cosmetics',  unit:'piece', retail:1200,  cost:c85(1200)},
-    {name:'Famalon Cup Cream',        cat:'Cosmetics',  unit:'piece', retail:1650,  cost:c85(1650)},
-    {name:'Skin Light Small Cup',     cat:'Cosmetics',  unit:'piece', retail:1000,  cost:c85(1000)},
-    {name:'Cocoderm Cup Cream',       cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Pawpaw Cup Big',           cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Carotone Cup Big',         cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Dr. Rashel Face Serum',    cat:'Cosmetics',  unit:'piece', retail:2600,  cost:c85(2600)},
-    {name:'Body Treat Cup Big',       cat:'Cosmetics',  unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Cocoderm Big Cup',         cat:'Cosmetics',  unit:'piece', retail:3800,  cost:c85(3800)},
-    {name:'Cool White Big Lot',       cat:'Cosmetics',  unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Parmes Lotion Big',        cat:'Cosmetics',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Mixed Liquid Soap',        cat:'Soap',       unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Dettol Liquid Small',      cat:'Household',  unit:'bottle',retail:1000,  cost:c85(1000)},
-    {name:'Oud Wood Body Spray',      cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Sporganis Powder',         cat:'Baby',       unit:'piece', retail:2800,  cost:c85(2800)},
-    {name:'Kodomo Powder',            cat:'Baby',       unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Koremi Powder',            cat:'Baby',       unit:'piece', retail:1900,  cost:c85(1900)},
-    {name:'Skins Lotion',             cat:'Cosmetics',  unit:'piece', retail:4800,  cost:c85(4800)},
-    {name:'Johnsons Baby Oil',        cat:'Baby',       unit:'bottle',retail:1500,  cost:c85(1500)},
-    {name:'Fair Child Lotion',        cat:'Cosmetics',  unit:'piece', retail:2850,  cost:c85(2850)},
-    {name:'Perfect Clinic Lot',       cat:'Cosmetics',  unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Cocoderm Lotion',          cat:'Cosmetics',  unit:'piece', retail:2200,  cost:c85(2200)},
-    {name:'Cussons Baby Lotion',      cat:'Baby',       unit:'piece', retail:2200,  cost:c85(2200)},
-    {name:'Pears Baby Lotion',        cat:'Baby',       unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Cussons Baby Oil',         cat:'Baby',       unit:'bottle',retail:1200,  cost:c85(1200)},
-    // ── IMAGE 3 RIGHT — Creams, Sprays, Baby (SN 280-310, price only) ───────
-    {name:'Bodoskin Gold',            cat:'Cosmetics',  unit:'piece', retail:2800,  cost:c85(2800)},
-    {name:'Bio Carotize Lotion',      cat:'Cosmetics',  unit:'piece', retail:3800,  cost:c85(3800)},
-    {name:'Glycerine Oil',            cat:'Cosmetics',  unit:'bottle',retail:900,   cost:c85(900)},
-    {name:'Derma Extract Lot',        cat:'Cosmetics',  unit:'piece', retail:2800,  cost:c85(2800)},
-    {name:'101 Body Spray',           cat:'Cosmetics',  unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Mariza Body Spray',        cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Emergency Body Spray',     cat:'Cosmetics',  unit:'piece', retail:3800,  cost:c85(3800)},
-    {name:'24K Body Spray',           cat:'Cosmetics',  unit:'piece', retail:1200,  cost:c85(1200)},
-    {name:'Vicko Sine Batin',         cat:'Cosmetics',  unit:'piece', retail:2800,  cost:c85(2800)},
-    {name:'Dermatol Big Cup',         cat:'Cosmetics',  unit:'piece', retail:1850,  cost:c85(1850)},
-    {name:'Dermatol Small Cup',       cat:'Cosmetics',  unit:'piece', retail:1000,  cost:c85(1000)},
-    {name:'2 Black Cream S/S',        cat:'Cosmetics',  unit:'piece', retail:2800,  cost:c85(2800)},
-    {name:'Flalagia Perfume',         cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Elements Perfume',         cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Tetmosol Liquid Big',      cat:'Household',  unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'Blueseal Big Cup',         cat:'Cosmetics',  unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Blueseal Small Cup',       cat:'Cosmetics',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Blueseal Medium Cup',      cat:'Cosmetics',  unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Goya Plastic Oil',         cat:'Cosmetics',  unit:'bottle',retail:2800,  cost:c85(2800)},
-    {name:'Goya Bottle Oil',          cat:'Cosmetics',  unit:'bottle',retail:1800,  cost:c85(1800)},
-    {name:'Baby Fine Powder',         cat:'Baby',       unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Family Care Powder',       cat:'Baby',       unit:'piece', retail:1600,  cost:c85(1600)},
-    {name:'Jewish Baby Powder',       cat:'Baby',       unit:'piece', retail:1600,  cost:c85(1600)},
-    {name:'Arctic Baby Powder Sachet',cat:'Baby',       unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Mega Growth Relaxer',      cat:'Cosmetics',  unit:'piece', retail:1700,  cost:c85(1700)},
-    {name:'Olive Oil Sachet Relaxer', cat:'Cosmetics',  unit:'piece', retail:1400,  cost:c85(1400)},
-    {name:'Pink Olive Relaxer',       cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Explore Body Spray',       cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Fresh Storm Body Spray',   cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    // ── IMAGE 4 LEFT — Premium Spirits (SN 373-391, price only) ─────────────
-    {name:'Expression Wine',          cat:'Spirits',    unit:'bottle',retail:8000,  cost:c85(8000)},
-    {name:'Campari 1.5',              cat:'Spirits',    unit:'bottle',retail:26000, cost:c85(26000)},
-    {name:'501 1.5 Brandy',           cat:'Spirits',    unit:'bottle',retail:15000, cost:c85(15000)},
-    {name:'Glenmorangie 10',          cat:'Spirits',    unit:'bottle',retail:40000, cost:c85(40000)},
-    {name:'Glenmorangie 14',          cat:'Spirits',    unit:'bottle',retail:45000, cost:c85(45000)},
-    {name:'Macallan 12',              cat:'Spirits',    unit:'bottle',retail:60000, cost:c85(60000)},
-    {name:'Best Dry Gin',             cat:'Spirits',    unit:'bottle',retail:45000, cost:c85(45000)},
-    {name:'Sir Edwards',              cat:'Spirits',    unit:'bottle',retail:7000,  cost:c85(7000)},
-    {name:'De Priest 75cl',           cat:'Spirits',    unit:'bottle',retail:7000,  cost:c85(7000)},
-    {name:'De Courts 75cl',           cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'Merrido Brandy',           cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'G20 Whisky',               cat:'Spirits',    unit:'bottle',retail:5000,  cost:c85(5000)},
-    {name:'De Courts Small',          cat:'Spirits',    unit:'bottle',retail:3500,  cost:c85(3500)},
-    {name:'Chelsea Dry Gin',          cat:'Spirits',    unit:'bottle',retail:4000,  cost:c85(4000)},
-    {name:'No1 Golden Brandy',        cat:'Spirits',    unit:'bottle',retail:6000,  cost:c85(6000)},
-    {name:'X1 750ml',                 cat:'Spirits',    unit:'bottle',retail:300,   cost:c85(300)},
-    {name:'40 Leaves',                cat:'Spirits',    unit:'bottle',retail:300,   cost:c85(300)},
-    // ── IMAGE 4 RIGHT — Canned/Bottled Beverages (price only) ───────────────
-    {name:'Champion Beer',            cat:'Beverages',  unit:'bottle',retail:9500,  cost:c85(9500)},
-    {name:'Champ Malt',               cat:'Beverages',  unit:'bottle',retail:10000, cost:c85(10000)},
-    {name:'Champion Ginger',          cat:'Beverages',  unit:'bottle',retail:10000, cost:c85(10000)},
-    {name:'Hero Beer',                cat:'Beverages',  unit:'bottle',retail:10000, cost:c85(10000)},
-    {name:'Gulder',                   cat:'Beverages',  unit:'bottle',retail:19000, cost:c85(19000)},
-    {name:'Tiger Beer',               cat:'Beverages',  unit:'bottle',retail:20750, cost:c85(20750)},
-    {name:'Desperados',               cat:'Beverages',  unit:'bottle',retail:15800, cost:c85(15800)},
-    {name:'Small Stout',              cat:'Beverages',  unit:'bottle',retail:13000, cost:c85(13000)},
-    {name:'Maltina',                  cat:'Beverages',  unit:'can',   retail:15500, cost:c85(15500)},
-    {name:'Can Amstel',               cat:'Beverages',  unit:'can',   retail:12500, cost:c85(12500)},
-    {name:'Can Maltina',              cat:'Beverages',  unit:'can',   retail:15500, cost:c85(15500)},
-    // ── IMAGE 5 LEFT — Perfumes & BSC (SN 125-155, price only) ──────────────
-    {name:'Bouquet Powder Small',     cat:'Baby',       unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Bokarat Oil Perfume',      cat:'Cosmetics',  unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Black Oud Oil Perfume',    cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'Chairman Perfume',         cat:'Cosmetics',  unit:'piece', retail:11500, cost:c85(11500)},
-    {name:'Dancer Perfume',           cat:'Cosmetics',  unit:'piece', retail:8600,  cost:c85(8600)},
-    {name:'White Secret BSC',         cat:'Cosmetics',  unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Deal Perfume',             cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'Doleen Perfume',           cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'Arabian Oud Oil Perfume',  cat:'Cosmetics',  unit:'piece', retail:8000,  cost:c85(8000)},
-    {name:'White Faidra',             cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'Riggs Body Spray',         cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Oud Mood Perfume',         cat:'Cosmetics',  unit:'piece', retail:10000, cost:c85(10000)},
-    {name:'Kaly Perfume',             cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'24K Perfume',              cat:'Cosmetics',  unit:'piece', retail:5500,  cost:c85(5500)},
-    {name:'Flosuiy Perfume',          cat:'Cosmetics',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Pigment BSC',              cat:'Cosmetics',  unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Olivera BSC',              cat:'Cosmetics',  unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Venus Gold Body Spray',    cat:'Cosmetics',  unit:'piece', retail:5000,  cost:c85(5000)},
-    {name:'Hayaaity Perfume',         cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'Sauvage Perfume',          cat:'Cosmetics',  unit:'piece', retail:10000, cost:c85(10000)},
-    {name:'Sugar Perfume',            cat:'Cosmetics',  unit:'piece', retail:8000,  cost:c85(8000)},
-    {name:'Imperio Lotion',           cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Monogetas Perfume',        cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Ackmen Perfume',           cat:'Cosmetics',  unit:'piece', retail:4500,  cost:c85(4500)},
-    {name:"Hanna's Secret",           cat:'Cosmetics',  unit:'piece', retail:5000,  cost:c85(5000)},
-    {name:'Geniefond Perfume',        cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Betres Body Spray',        cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Riggs Perfume',            cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    // ── IMAGE 5 RIGHT — More Perfumes & Beverage Sachets (price only) ────────
-    {name:'Kracalino Perfume',        cat:'Cosmetics',  unit:'piece', retail:6200,  cost:c85(6200)},
-    {name:'Paradise Perfume',         cat:'Cosmetics',  unit:'piece', retail:5000,  cost:c85(5000)},
-    {name:'Sahib Perfume',            cat:'Cosmetics',  unit:'piece', retail:5800,  cost:c85(5800)},
-    {name:'Colour Me Perfume',        cat:'Cosmetics',  unit:'piece', retail:4050,  cost:c85(4050)},
-    {name:'Coolbreeze Body Spray',    cat:'Cosmetics',  unit:'piece', retail:3000,  cost:c85(3000)},
-    {name:'Miracle Body Spray',       cat:'Cosmetics',  unit:'piece', retail:1200,  cost:c85(1200)},
-    {name:'Smart Perfume',            cat:'Cosmetics',  unit:'piece', retail:7500,  cost:c85(7500)},
-    {name:'Innocarr Perfume',         cat:'Cosmetics',  unit:'piece', retail:4200,  cost:c85(4200)},
-    {name:'Being Together Perfume',   cat:'Cosmetics',  unit:'piece', retail:6200,  cost:c85(6200)},
-    {name:'Elements Body Spray',      cat:'Cosmetics',  unit:'piece', retail:3800,  cost:c85(3800)},
-    {name:'Big Attitude Perfume',     cat:'Cosmetics',  unit:'piece', retail:6200,  cost:c85(6200)},
-    {name:'Hug Perfume',              cat:'Cosmetics',  unit:'piece', retail:4000,  cost:c85(4000)},
-    {name:'Hug Bodyspray',            cat:'Cosmetics',  unit:'piece', retail:3000,  cost:c85(3000)},
-    {name:'Veet Hair Removal',        cat:'Cosmetics',  unit:'piece', retail:5000,  cost:c85(5000)},
-    {name:'Fressia Jelly',            cat:'Cosmetics',  unit:'piece', retail:1200,  cost:c85(1200)},
-    {name:'Happiness Body Spray Small',cat:'Cosmetics', unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Sachet Alucoe B',          cat:'Beverages',  unit:'sachet',retail:200,   cost:c85(200)},
-    {name:'Milo Sachet 800g',         cat:'Beverages',  unit:'sachet',retail:750,   cost:c85(750)},
-    {name:'Milo Sachet 30g',          cat:'Beverages',  unit:'sachet',retail:300,   cost:c85(300)},
-    {name:'Milo Sachet 320g',         cat:'Beverages',  unit:'sachet',retail:4000,  cost:c85(4000)},
-    {name:'Cowbell Sachet',           cat:'Beverages',  unit:'sachet',retail:3300,  cost:c85(3300)},
-    {name:'Loya Milk 320g',           cat:'Beverages',  unit:'pack',  retail:5000,  cost:c85(5000)},
-    {name:'Ovaltine Sachet',          cat:'Beverages',  unit:'sachet',retail:200,   cost:c85(200)},
-    {name:'Miksi Sachet 320g',        cat:'Beverages',  unit:'sachet',retail:3300,  cost:c85(3300)},
-    {name:'Loya Milk Sachet 149g',    cat:'Beverages',  unit:'sachet',retail:2000,  cost:c85(2000)},
-    {name:'Peak Sachet 800g',         cat:'Beverages',  unit:'sachet',retail:300,   cost:c85(300)},
-    {name:'Miksi Sachet 17g',         cat:'Beverages',  unit:'sachet',retail:200,   cost:c85(200)},
-    {name:'Milo Sachet 20g',          cat:'Beverages',  unit:'sachet',retail:750,   cost:c85(750)},
-    {name:'Ovaltine Sachet 100g',     cat:'Beverages',  unit:'sachet',retail:4000,  cost:c85(4000)},
-    // ── IMAGE 6 LEFT — Lotions & Diapers (SN 187-217, price only) ───────────
-    {name:'Peak 850g',                cat:'Beverages',  unit:'tin',   retail:15000, cost:c85(15000)},
-    {name:'Teak 800g',                cat:'Beverages',  unit:'tin',   retail:12000, cost:c85(12000)},
-    {name:'Nivea Bar Soap',           cat:'Soap',       unit:'piece', retail:7000,  cost:c85(7000)},
-    {name:'Classy Bar Soap Small',    cat:'Soap',       unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Baby Me Bar Soap',         cat:'Soap',       unit:'piece', retail:650,   cost:c85(650)},
-    {name:'Sportin Corvette',         cat:'Cosmetics',  unit:'piece', retail:1200,  cost:c85(1200)},
-    {name:'So Fine Big',              cat:'Cosmetics',  unit:'piece', retail:1000,  cost:c85(1000)},
-    {name:'Apple Cream',              cat:'Cosmetics',  unit:'piece', retail:11000, cost:c85(11000)},
-    {name:'Soul Mate Big',            cat:'Cosmetics',  unit:'piece', retail:1200,  cost:c85(1200)},
-    {name:'Soul Mate Small',          cat:'Cosmetics',  unit:'piece', retail:600,   cost:c85(600)},
-    {name:'Remium SP Small',          cat:'Cosmetics',  unit:'piece', retail:300,   cost:c85(300)},
-    {name:'Kissed Diaper',            cat:'Baby',       unit:'pack',  retail:1380,  cost:c85(1380)},
-    {name:'Sopi Care Diaper',         cat:'Baby',       unit:'pack',  retail:1350,  cost:c85(1350)},
-    {name:'Legit White Lotion',       cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Dermal JSS White Lot',     cat:'Cosmetics',  unit:'piece', retail:2600,  cost:c85(2600)},
-    {name:'Fair Clinic Lotion',       cat:'Cosmetics',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Famalia Lotion',           cat:'Cosmetics',  unit:'piece', retail:2550,  cost:c85(2550)},
-    {name:'Body Treat Medium',        cat:'Cosmetics',  unit:'piece', retail:5600,  cost:c85(5600)},
-    {name:'GT Plus Lotion',           cat:'Cosmetics',  unit:'piece', retail:3600,  cost:c85(3600)},
-    {name:'Body Fashion Lotion',      cat:'Cosmetics',  unit:'piece', retail:5900,  cost:c85(5900)},
-    {name:'BB Clear Lotion',          cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Gold Skin Lotion',         cat:'Cosmetics',  unit:'piece', retail:2900,  cost:c85(2900)},
-    {name:'Bronzetone Small Lot',     cat:'Cosmetics',  unit:'piece', retail:3400,  cost:c85(3400)},
-    {name:'White & Lovely Lot',       cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Soft Flower Lot',          cat:'Cosmetics',  unit:'piece', retail:2700,  cost:c85(2700)},
-    {name:'Zoe Lotion',               cat:'Cosmetics',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Extract Lotion',           cat:'Cosmetics',  unit:'piece', retail:5000,  cost:c85(5000)},
-    // ── IMAGE 6 RIGHT — Lotions continued (SN 218-248, price only) ───────────
-    {name:'Clair Argan Lot',          cat:'Cosmetics',  unit:'piece', retail:4600,  cost:c85(4600)},
-    {name:'Natural White Lotion',     cat:'Cosmetics',  unit:'piece', retail:4200,  cost:c85(4200)},
-    {name:'Nature Magnet',            cat:'Cosmetics',  unit:'piece', retail:4800,  cost:c85(4800)},
-    {name:'Visitor Lotion',           cat:'Cosmetics',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Nivea Big R&B',            cat:'Cosmetics',  unit:'piece', retail:6000,  cost:c85(6000)},
-    {name:'Nivea Big P&R',            cat:'Cosmetics',  unit:'piece', retail:5000,  cost:c85(5000)},
-    {name:'Precious Small Lot',       cat:'Cosmetics',  unit:'piece', retail:2200,  cost:c85(2200)},
-    {name:'Nivea Big Deep',           cat:'Cosmetics',  unit:'piece', retail:5300,  cost:c85(5300)},
-    {name:'Excellent Whites',         cat:'Cosmetics',  unit:'piece', retail:3200,  cost:c85(3200)},
-    {name:'Rich Spare Lot',           cat:'Cosmetics',  unit:'piece', retail:5500,  cost:c85(5500)},
-    {name:'Nesus Lotion',             cat:'Cosmetics',  unit:'piece', retail:2100,  cost:c85(2100)},
-    {name:'Calida White Lot',         cat:'Cosmetics',  unit:'piece', retail:4900,  cost:c85(4900)},
-    {name:'Olivera Lotion',           cat:'Cosmetics',  unit:'piece', retail:2700,  cost:c85(2700)},
-    {name:'Carotone Small Lot',       cat:'Cosmetics',  unit:'piece', retail:2400,  cost:c85(2400)},
-    {name:'Carotone Big Lot',         cat:'Cosmetics',  unit:'piece', retail:4950,  cost:c85(4950)},
-    {name:'Nive P&R Small',           cat:'Cosmetics',  unit:'piece', retail:3400,  cost:c85(3400)},
-    {name:'Carowhite Small Lot',      cat:'Cosmetics',  unit:'piece', retail:2400,  cost:c85(2400)},
-    {name:'Carowhite Medium Lot',     cat:'Cosmetics',  unit:'piece', retail:3600,  cost:c85(3600)},
-    {name:'Carowhite Big Lot',        cat:'Cosmetics',  unit:'piece', retail:4900,  cost:c85(4900)},
-    {name:'Clear & Smooth Lot',       cat:'Cosmetics',  unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Epiderm Cream',            cat:'Cosmetics',  unit:'piece', retail:1000,  cost:c85(1000)},
-    {name:'Newtone White',            cat:'Cosmetics',  unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Tempovate Cream',          cat:'Cosmetics',  unit:'piece', retail:1700,  cost:c85(1700)},
-    {name:'Fashion Fair Gel',         cat:'Cosmetics',  unit:'piece', retail:1400,  cost:c85(1400)},
-    {name:'Neoskin Tube',             cat:'Cosmetics',  unit:'piece', retail:1000,  cost:c85(1000)},
-    {name:'Funbact A Tube',           cat:'Cosmetics',  unit:'piece', retail:1000,  cost:c85(1000)},
-    {name:'Fashion Fair Cream',       cat:'Cosmetics',  unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Aquasulf Tube',            cat:'Cosmetics',  unit:'piece', retail:1200,  cost:c85(1200)},
-    // ── IMAGE 7 LEFT — Soaps & Stationery (SN 63-93, price only) ────────────
-    {name:'Canoe Soap',               cat:'Soap',       unit:'piece', retail:180,   cost:c85(180)},
-    {name:'80 Leaves',                cat:'Household',  unit:'pack',  retail:500,   cost:c85(500)},
-    {name:'60 Leaves',                cat:'Household',  unit:'pack',  retail:300,   cost:c85(300)},
-    {name:'Higher Education',         cat:'Household',  unit:'pack',  retail:1500,  cost:c85(1500)},
-    {name:'Short Hardcopy',           cat:'Household',  unit:'pack',  retail:1500,  cost:c85(1500)},
-    {name:'Long Hardcopy',            cat:'Household',  unit:'pack',  retail:2500,  cost:c85(2500)},
-    {name:'20 Leaves',                cat:'Household',  unit:'pack',  retail:180,   cost:c85(180)},
-    {name:'Gibegun',                  cat:'Household',  unit:'piece', retail:200,   cost:c85(200)},
-    {name:'Squadron Sachets',         cat:'Spirits',    unit:'sachet',retail:1700,  cost:c85(1700)},
-    {name:'Eagle Sachets',            cat:'Spirits',    unit:'sachet',retail:1700,  cost:c85(1700)},
-    {name:'Striker Sachets',          cat:'Spirits',    unit:'sachet',retail:2000,  cost:c85(2000)},
-    {name:'Action Bitter Sachet',     cat:'Spirits',    unit:'sachet',retail:3000,  cost:c85(3000)},
-    {name:'Chelsea Sachets',          cat:'Spirits',    unit:'sachet',retail:1700,  cost:c85(1700)},
-    {name:'Golden 300g',              cat:'Beverages',  unit:'tin',   retail:2500,  cost:c85(2500)},
-    {name:'Ballmour Bitters',         cat:'Spirits',    unit:'bottle',retail:500,   cost:c85(500)},
-    {name:'Golden Morn 90g',          cat:'Beverages',  unit:'pack',  retail:5000,  cost:c85(5000)},
-    {name:'Cold Water Starch Soap',   cat:'Household',  unit:'piece', retail:250,   cost:c85(250)},
-    {name:'Tetmosol Small',           cat:'Toiletries', unit:'piece', retail:700,   cost:c85(700)},
-    {name:'Skindoctor Soap',          cat:'Soap',       unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Fair Child Soap',          cat:'Soap',       unit:'piece', retail:1900,  cost:c85(1900)},
-    {name:'Onik Baby Soap',           cat:'Baby',       unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Big Dettol Soap',          cat:'Soap',       unit:'piece', retail:1000,  cost:c85(1000)},
-    {name:'Brongtone Soap',           cat:'Soap',       unit:'piece', retail:1900,  cost:c85(1900)},
-    {name:'Dave Soap',                cat:'Soap',       unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Stansins Soap',            cat:'Soap',       unit:'piece', retail:1600,  cost:c85(1600)},
-    {name:'Lemma Roll-on',            cat:'Cosmetics',  unit:'piece', retail:2200,  cost:c85(2200)},
-    {name:'Hang Freshner',            cat:'Household',  unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Pigment Face Oil',         cat:'Cosmetics',  unit:'bottle',retail:3500,  cost:c85(3500)},
-    // ── IMAGE 7 RIGHT — Soaps & Toiletries (SN 94-124, price only) ───────────
-    {name:'Sunshine Freshner',        cat:'Household',  unit:'piece', retail:700,   cost:c85(700)},
-    {name:'Cup Wind Freshner Big',    cat:'Household',  unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Cup Wind Freshner Small',  cat:'Household',  unit:'piece', retail:1000,  cost:c85(1000)},
-    {name:'Cussons Soap',             cat:'Soap',       unit:'piece', retail:800,   cost:c85(800)},
-    {name:'K-Brothers Soap',          cat:'Soap',       unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'TCP Soap',                 cat:'Soap',       unit:'piece', retail:700,   cost:c85(700)},
-    {name:'Tura Soap Small',          cat:'Soap',       unit:'piece', retail:700,   cost:c85(700)},
-    {name:'White Secret Soap',        cat:'Soap',       unit:'piece', retail:1700,  cost:c85(1700)},
-    {name:'Carotone Soap',            cat:'Soap',       unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Tumeric Soap',             cat:'Soap',       unit:'piece', retail:1600,  cost:c85(1600)},
-    {name:'She Soap',                 cat:'Soap',       unit:'piece', retail:600,   cost:c85(600)},
-    {name:'Small Premier Soap',       cat:'Soap',       unit:'piece', retail:250,   cost:c85(250)},
-    {name:'Perfect White Soap',       cat:'Soap',       unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Unik Adult Soap',          cat:'Soap',       unit:'piece', retail:1200,  cost:c85(1200)},
-    {name:'Paw Paw Soap',             cat:'Soap',       unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Hawaii Soap Small',        cat:'Soap',       unit:'piece', retail:1500,  cost:c85(1500)},
-    {name:'Close Up Toothpaste Small',cat:'Toiletries', unit:'piece', retail:700,   cost:c85(700)},
-    {name:'Pepsodent Toothpaste',     cat:'Toiletries', unit:'piece', retail:1600,  cost:c85(1600)},
-    {name:'Big Oral B Toothpaste',    cat:'Toiletries', unit:'piece', retail:2100,  cost:c85(2100)},
-    {name:'Small Oracare',            cat:'Toiletries', unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Colgate Cavity',           cat:'Toiletries', unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Colgate Herbal',           cat:'Toiletries', unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Rezona Spray',             cat:'Cosmetics',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Bouquet Powder Big',       cat:'Baby',       unit:'piece', retail:3500,  cost:c85(3500)},
-    // ── IMAGE 8 LEFT — Stationery & Household (SN 1-31, price only) ──────────
-    {name:'Tissue',                   cat:'Household',  unit:'pack',  retail:700,   cost:c85(700)},
-    {name:'Brown Envelope',           cat:'Household',  unit:'piece', retail:100,   cost:c85(100)},
-    {name:'White Envelope',           cat:'Household',  unit:'piece', retail:100,   cost:c85(100)},
-    {name:'Graph Book',               cat:'Household',  unit:'piece', retail:360,   cost:c85(360)},
-    {name:'Big Drawing Book',         cat:'Household',  unit:'piece', retail:400,   cost:c85(400)},
-    {name:'Dorco 5in1',               cat:'Toiletries', unit:'pack',  retail:200,   cost:c85(200)},
-    {name:'Dorco 10x8',               cat:'Toiletries', unit:'pack',  retail:1000,  cost:c85(1000)},
-    {name:'Lipton Tea',               cat:'Beverages',  unit:'box',   retail:4700,  cost:c85(4700)},
-    {name:'Tin Small Bournvita',      cat:'Beverages',  unit:'tin',   retail:2500,  cost:c85(2500)},
-    {name:'Big Tin Glucose B',        cat:'Beverages',  unit:'tin',   retail:14800, cost:c85(14800)},
-    {name:'Big Tin Ovaltine',         cat:'Beverages',  unit:'tin',   retail:2500,  cost:c85(2500)},
-    {name:'Small Bucket Custard',     cat:'Beverages',  unit:'piece', retail:6500,  cost:c85(6500)},
-    {name:'Big Bucket Custard',       cat:'Beverages',  unit:'piece', retail:8500,  cost:c85(8500)},
-    {name:'Tin Cerelac',              cat:'Beverages',  unit:'tin',   retail:11500, cost:c85(11500)},
-    {name:'SMA Gold Tin',             cat:'Beverages',  unit:'tin',   retail:14500, cost:c85(14500)},
-    {name:'Tin Ovaltine Small',       cat:'Beverages',  unit:'tin',   retail:8500,  cost:c85(8500)},
-    {name:'Smautin Glucose B',        cat:'Beverages',  unit:'tin',   retail:1820,  cost:c85(1820)},
-    {name:'Tin Loya Milk',            cat:'Beverages',  unit:'tin',   retail:5500,  cost:c85(5500)},
-    {name:'Kids Toothbrush',          cat:'Toiletries', unit:'piece', retail:800,   cost:c85(800)},
-    {name:'My Boy Eldovin',           cat:'Beverages',  unit:'piece', retail:200,   cost:c85(200)},
-    {name:'Ekin Lip Balm',            cat:'Cosmetics',  unit:'piece', retail:8100,  cost:c85(8100)},
-    {name:'Saviette',                 cat:'Household',  unit:'pack',  retail:600,   cost:c85(600)},
-    {name:'Transparent Bag',          cat:'Household',  unit:'pack',  retail:500,   cost:c85(500)},
-    {name:'Big Brown File',           cat:'Household',  unit:'piece', retail:300,   cost:c85(300)},
-    {name:'Carbon Paper',             cat:'Household',  unit:'pack',  retail:100,   cost:c85(100)},
-    {name:'Big White File',           cat:'Household',  unit:'piece', retail:160,   cost:c85(160)},
-    {name:'Fraser Small',             cat:'Household',  unit:'piece', retail:300,   cost:c85(300)},
-    {name:'Big Pen Blue & Black',     cat:'Household',  unit:'pack',  retail:50,    cost:c85(50)},
-    {name:'Avanti Pen',               cat:'Household',  unit:'piece', retail:200,   cost:c85(200)},
-    {name:'Stapler',                  cat:'Household',  unit:'piece', retail:100,   cost:c85(100)},
-    // ── IMAGE 8 RIGHT — Stationery continued (SN 32-62, price only) ──────────
-    {name:'Top Gum',                  cat:'Household',  unit:'piece', retail:1700,  cost:c85(1700)},
-    {name:'Stapler Pin',              cat:'Household',  unit:'box',   retail:600,   cost:c85(600)},
-    {name:'Sharpener',                cat:'Household',  unit:'piece', retail:300,   cost:c85(300)},
-    {name:'Water Gum',                cat:'Household',  unit:'piece', retail:80,    cost:c85(80)},
-    {name:'Trust Fonta Pad',          cat:'Household',  unit:'piece', retail:260,   cost:c85(260)},
-    {name:'Big Viking Pad',           cat:'Household',  unit:'piece', retail:2000,  cost:c85(2000)},
-    {name:'Pencil Crayon',            cat:'Household',  unit:'piece', retail:3500,  cost:c85(3500)},
-    {name:'Pencil',                   cat:'Household',  unit:'piece', retail:300,   cost:c85(300)},
-    {name:'Plastic Big Cellotape',    cat:'Household',  unit:'roll',  retail:50,    cost:c85(50)},
-    {name:'Rubber Cotton Braid',      cat:'Household',  unit:'piece', retail:1800,  cost:c85(1800)},
-    {name:'Small BNC Spray',          cat:'Household',  unit:'piece', retail:100,   cost:c85(100)},
-    {name:'Big BNC Spray',            cat:'Household',  unit:'piece', retail:2500,  cost:c85(2500)},
-    {name:'Plastic Small Celotape',   cat:'Household',  unit:'roll',  retail:3000,  cost:c85(3000)},
-    {name:'Paper Cellotape',          cat:'Household',  unit:'roll',  retail:500,   cost:c85(500)},
-    {name:'Softcare Pad Big',         cat:'Household',  unit:'pack',  retail:700,   cost:c85(700)},
-    {name:'Wipes Softcare',           cat:'Household',  unit:'pack',  retail:1000,  cost:c85(1000)},
-    {name:'Hair Brush',               cat:'Cosmetics',  unit:'piece', retail:1350,  cost:c85(1350)},
-    {name:'Shoe Polish Brown',        cat:'Household',  unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Dorco Titan Razor',        cat:'Toiletries', unit:'piece', retail:700,   cost:c85(700)},
-    {name:'Small Superglue',          cat:'Household',  unit:'piece', retail:200,   cost:c85(200)},
-    {name:'Card Brush',               cat:'Household',  unit:'piece', retail:150,   cost:c85(150)},
-    {name:'Tiger Head Small',         cat:'Household',  unit:'piece', retail:200,   cost:c85(200)},
-    {name:'Tiger Head Big',           cat:'Household',  unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Lighter',                  cat:'Household',  unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Hi-Watt Battery',          cat:'Household',  unit:'piece', retail:150,   cost:c85(150)},
-    {name:'Cup',                      cat:'Household',  unit:'piece', retail:800,   cost:c85(800)},
-    {name:'Ear Brush',                cat:'Household',  unit:'piece', retail:850,   cost:c85(850)},
-    {name:'Candle Big',               cat:'Household',  unit:'piece', retail:200,   cost:c85(200)},
-    {name:'Nibot',                    cat:'Household',  unit:'piece', retail:300,   cost:c85(300)},
-    {name:'Shampoo Dye',              cat:'Cosmetics',  unit:'piece', retail:3000,  cost:c85(3000)},
-    {name:'White Board Marker',       cat:'Household',  unit:'piece', retail:3000,  cost:c85(3000)},
-    {name:'Local Gin',                cat:'Spirits',    unit:'bottle',retail:2000,  cost:c85(2000)},
-    // ── IMAGE 10 — Items with BOTH unit cost & unit sold (use exact prices) ──
-    // These already exist in V2 with correct costs — skip duplicates via name check
-    // Adding only the ones with corrected exact cost/retail from this ledger page:
-    {name:'Isiagu 75cl Unit',         cat:'Spirits',    unit:'bottle',retail:1000,  cost:625},
-  ];
-
-  const ts=Date.now();
-  let added=0;
-  _newProds.forEach((p,i)=>{
-    const exists=DB.products.find(x=>x.name.toLowerCase().trim()===p.name.toLowerCase().trim());
-    if(exists) return;
-    const id=ts+i+2000000; // offset to avoid collision with V1/V2 IDs
-    const retail=p.retail||0;
-    const cost=p.cost!==undefined ? p.cost : Math.round(retail*0.85);
-    const prod={
-      id, name:p.name, category:p.cat, emoji:'', image:'',
-      retail, wholesale:retail, costPrice:cost,
-      unit:p.unit, stock:0, lowStock:10,
-      sellingUnits:[{name:p.unit, qty:1, retail, wholesale:retail}],
-      conversions:{}
-    };
-    DB.products.push(prod);
-    DB.inventory.push({...prod});
-    added++;
-  });
-
-  if(added>0){
-    persist('products');
-    persist('inventory');
-    logActivity('Product',`Bulk import v3: ${added} new products added to inventory`);
-    showToast(`✅ ${added} new products imported (May 2026 batch)!`);
-  }
-
-  DB.bizSettings.bulkImportV3Done=true;
-  persist('bizSettings');
 }
 
 // Logout
@@ -3257,37 +2470,6 @@ async function checkSession(){
 }
 
 
-// ── STOCK HELPERS ───────────────────────────────────────────────────────────
-// Single source of truth for "is this product out of stock?". Treats anything
-// that isn't a real, finite number (null, undefined, NaN, a string, etc.) as
-// UNKNOWN stock, not zero stock. A bug elsewhere that corrupts the stock field
-// should never silently present as "everything sold out" — that is itself a
-// sign of broken data, and the UI should be able to tell the two apart.
-function stockOf(p){
-  // p may be an inventory row, a product row, or undefined/null entirely.
-  const v = p ? p.stock : undefined;
-  return (typeof v === 'number' && Number.isFinite(v)) ? v : null; // null = unknown
-}
-function isOutOfStock(p){
-  const v = stockOf(p);
-  return v !== null && v <= 0; // unknown stock is NOT treated as out of stock
-}
-function isUnknownStock(p){
-  return stockOf(p) === null;
-}
-// Safely add a delta (positive or negative) to a product/inventory row's stock.
-// Mutates p.stock in place and returns the new value. If p.stock is currently
-// not a clean number (the exact condition that silently produced NaN/null
-// stock via bare `p.stock += delta` in the past), this treats it as 0 instead
-// of letting the corruption propagate — so a single bad row self-heals on its
-// next stock movement instead of staying broken forever.
-function adjustStock(p, delta){
-  const current = stockOf(p) ?? 0;
-  const d = (typeof delta === 'number' && Number.isFinite(delta)) ? delta : 0;
-  p.stock = current + d;
-  return p.stock;
-}
-
 const KEYS = {
   products: 'env_products',
   debt: 'env_debt',
@@ -3303,7 +2485,6 @@ const KEYS = {
   notifications: 'env_notifications',
   bizSettings: 'env_biz_settings',
   pendingOrders: 'env_pending_orders',
-  deletedProductIds: 'env_deleted_product_ids',
 };
 
 function seedProducts() {
@@ -3354,19 +2535,28 @@ async function sbLoad(key, seed){
   }
 }
 
+// Shared guard: refuse to treat an empty products/inventory array as a real
+// write when we already hold several real items locally. Used everywhere a
+// write could reach Supabase — sbSave() (normal path) and flushOfflineQueue()
+// (queued writes made while offline), since either could otherwise push a
+// corrupted local wipe to the server.
+function _isUnsafeWipe(key, data){
+  if(key!==KEYS.products && key!==KEYS.inventory) return false;
+  if(!Array.isArray(data) || data.length!==0) return false;
+  const prev=_cache[key];
+  return Array.isArray(prev) && prev.length>=3;
+}
+
 function sbSave(key,data){
   if(!currentUser) return;
   // SAFETY NET: block an accidental mass-wipe of products/inventory.
   // Deleting one product at a time is normal; suddenly persisting an empty
   // array when we previously had several items is the signature of the
   // "failed load → sync wipe" bug, not a deliberate user action.
-  if((key===KEYS.products || key===KEYS.inventory) && Array.isArray(data) && data.length===0){
-    const prev=_cache[key];
-    if(Array.isArray(prev) && prev.length>=3){
-      console.warn('sbSave blocked: refusing to overwrite',key,'(had',prev.length,'items) with an empty array. This looks like a sync error, not an intentional bulk delete.');
-      showToast('Sync safety check: prevented an unexpected data wipe. Please refresh and try again.', false);
-      return;
-    }
+  if(_isUnsafeWipe(key,data)){
+    console.warn('sbSave blocked: refusing to overwrite',key,'(had',_cache[key].length,'items) with an empty array. This looks like a sync error, not an intentional bulk delete.');
+    showToast('Sync safety check: prevented an unexpected data wipe. Please refresh and try again.', false);
+    return;
   }
   _cache[key]=data; // update in-memory immediately — UI never stalls
   if(!navigator.onLine){
@@ -3404,6 +2594,10 @@ async function flushOfflineQueue(){
   _offlineQueue.length=0;
   const entries=Object.entries(latest);
   for(const [key,data] of entries){
+    if(_isUnsafeWipe(key,data)){
+      console.warn('flushOfflineQueue: skipped an unsafe empty write for',key,'— server data will be reloaded instead.');
+      continue; // don't push this entry — loadAllData() below restores the true server state
+    }
     try{
       await _sb.from('app_data').upsert({key,value:data,updated_at:new Date().toISOString()},{onConflict:'key'});
     }catch(e){
@@ -3451,7 +2645,6 @@ let DB = {
     bankAccounts:[],
   })),
   pendingOrders: load(KEYS.pendingOrders, ()=>[]),
-  deletedProductIds: load(KEYS.deletedProductIds, ()=>[]),
 };
 
 function persist(key){save(KEYS[key],DB[key]);}
@@ -3499,7 +2692,6 @@ const _DB_SEEDS = {
     paystackKey:'',colorGreen:'#1a5c2e',colorGold:'#b8860b',bankAccounts:[],
   }),
   pendingOrders: ()=>[],
-  deletedProductIds: ()=>[],
 };
 
 // Load ALL business data from Supabase after auth
@@ -3557,7 +2749,19 @@ function setupRealtime(){
       const {key,value}=payload.new;
       if(value===undefined) return;
       const dbKey=Object.keys(KEYS).find(k=>KEYS[k]===key);
-      if(dbKey){ DB[dbKey]=value; _cache[key]=value; showModuleInternal(currentModule); return; }
+      if(dbKey){
+        // SAFETY: this channel pushes live changes to every open tab/device.
+        // Never let an incoming push blank out products/inventory that this
+        // session currently holds with real data — a genuine bulk-clear isn't
+        // a feature this app has; an incomplete/failed write on SOME client is
+        // the far more likely explanation, and applying it here would instantly
+        // propagate that corruption to every other connected device.
+        if((dbKey==='products'||dbKey==='inventory') && Array.isArray(DB[dbKey]) && DB[dbKey].length>=3 && (!Array.isArray(value)||value.length===0)){
+          console.warn('Realtime update for',dbKey,'ignored — incoming value is empty/invalid while local data has',DB[dbKey].length,'item(s).');
+          return;
+        }
+        DB[dbKey]=value; _cache[key]=value; showModuleInternal(currentModule); return;
+      }
       const rKey=Object.keys(KEYS_R).find(k=>KEYS_R[k]===key);
       if(rKey){ DB_R[rKey]=value; _cache[key]=value; showModuleInternal(currentModule); }
     })
@@ -3631,8 +2835,8 @@ document.addEventListener('click',e=>{
 
 // ── CHECK LOW STOCK & PUSH NOTIFS ──
 function checkLowStockNotifs(){
-  const low=DB.inventory.filter(p=>isOutOfStock(p));
-  const warn=DB.inventory.filter(p=>!isUnknownStock(p)&&p.stock>0&&p.stock<=(p.lowStock||0));
+  const low=DB.inventory.filter(p=>p.stock<=0);
+  const warn=DB.inventory.filter(p=>p.stock>0&&p.stock<=(p.lowStock||0));
   if(low.length>0) pushNotif('low_stock',`${low.length} product(s) are OUT OF STOCK!`,'fa-triangle-exclamation');
   else if(warn.length>0) pushNotif('low_stock',`${warn.length} product(s) running low on stock`,'fa-triangle-exclamation');
 }
@@ -3691,14 +2895,8 @@ function syncInventoryFromProducts(){
       inv.lowStock=p.lowStock||inv.lowStock||10;
     }
   });
-  // Remove inventory items ONLY when their product was explicitly deleted
-  // (tracked in DB.deletedProductIds by deleteProduct()). Previously this
-  // inferred "deleted" from "missing from DB.products", which also fires
-  // when products loads partially/incompletely — silently wiping real
-  // inventory items whose products simply hadn't synced yet.
-  if(DB.inventory.some(inv=>DB.deletedProductIds.includes(inv.id))){
-    DB.inventory=DB.inventory.filter(inv=>!DB.deletedProductIds.includes(inv.id));
-  }
+  // Remove inventory items whose products no longer exist
+  DB.inventory=DB.inventory.filter(inv=>DB.products.find(p=>p.id===inv.id));
   persist('inventory');
 }
 
@@ -3895,21 +3093,17 @@ function renderProductGrid(list){
   if(!list.length){g.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><p>No products found</p></div>';return;}
   g.innerHTML = list.map(p=>{
     const inv = DB.inventory.find(i=>i.id===p.id);
-    const invOrP = inv || p;
-    const stock = stockOf(invOrP);
+    const stock = inv?inv.stock:p.stock;
     // Determine display price from first selling unit, or fallback
     const sellingUnits = p.sellingUnits || [];
     const displayUnit = sellingUnits.find(u=>u.qty===1) || sellingUnits[0];
     const price = displayUnit ? (isWholesale?(displayUnit.wholesale||displayUnit.retail):displayUnit.retail) : (isWholesale?p.wholesale:p.retail);
-    const isOut = isOutOfStock(invOrP);
-    const isUnknown = isUnknownStock(invOrP);
+    const isOut = stock<=0;
     const cartQty = cart.filter(x=>x.id===p.id).reduce((s,x)=>s+x.qty,0);
-    const cardStyle = isOut ? 'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed' : isUnknown ? 'border-color:var(--amber);background:rgba(184,134,11,.08)' : '';
+    const cardStyle = isOut ? 'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed' : '';
     const unitsStr = sellingUnits.length > 1 ? sellingUnits.map(u=>u.name).join(' · ') : (displayUnit?.name || p.unit);
     const stockLabel = isOut
       ? `<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`
-      : isUnknown
-      ? `<span style="color:var(--amber);font-weight:700;font-size:.7rem" title="Stock data missing — not the same as zero. Open this product and re-save its stock.">STOCK UNKNOWN</span>`
       : `<div class="product-ws">${stock} ${p.unit} left${cartQty>0?` · ${cartQty} in cart`:''}</div>`;
     return `<div class="product-card" style="${cardStyle}" onclick="${isOut?'showToast(\"Out of stock!\",false)':'openPosUnitSheet('+p.id+')'}">
       ${productThumb(p)}
@@ -3959,9 +3153,8 @@ let _posSheetSelectedUnit = null;
 function openPosUnitSheet(id){
   const p = DB.products.find(x=>x.id===id); if(!p) return;
   const inv = DB.inventory.find(i=>i.id===id);
-  const invOrP = inv!==undefined ? inv : p;
-  if(isOutOfStock(invOrP)){ showToast(`"${p.name}" is out of stock!`, false); return; }
-  const stock = stockOf(invOrP) ?? 0; // unknown stock: don't let a bad number drive "max you can buy"
+  const stock = inv!==undefined ? inv.stock : p.stock;
+  if(stock <= 0){ showToast(`"${p.name}" is out of stock!`, false); return; }
 
   _posSheetProduct = p;
   _posSheetSelectedUnit = null;
@@ -5509,8 +4702,8 @@ function savePurchase(){
 
     // Update inventory stock
     const inv=DB.inventory.find(i=>i.id===productId);
-    if(inv){adjustStock(inv,qty);}
-    adjustStock(p,qty);
+    if(inv){inv.stock+=qty;}
+    p.stock=(p.stock||0)+qty;
     persist('products'); persist('inventory');
 
     // Record stock history
@@ -5609,6 +4802,7 @@ function savePurchase(){
 // MODULE 3 — INVENTORY
 // ══════════════════════════════════════════════════════════════════════════════
 let invTab='inventory';
+let invSelected=new Set();
 let stockModalMode='add';
 let stockModalProduct=null;
 
@@ -5627,11 +4821,14 @@ function renderInventory(){
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <input id="invSearch" placeholder="Search product…" oninput="renderInvTab()" style="width:180px;padding:8px 14px">
+        ${isSuperAdmin()?`<button class="btn btn-sm btn-danger" id="invDeleteSelectedBtn" onclick="deleteSelectedProducts()" style="display:none"><i class="fas fa-trash"></i> Delete Selected (<span id="invSelectedCount">0</span>)</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAllProducts()" title="Delete ALL products from inventory" style="background:rgba(192,57,43,.9)"><i class="fas fa-triangle-exclamation"></i> Delete All Products</button>`:''}
         <button class="btn btn-primary" onclick="openAddProductModal('inventory')"><i class="fas fa-plus"></i> Add Product</button>
       </div>
     </div>
     <div id="invTabContent" class="tbl-wrap"></div>
   </div>`;
+  invSelected=new Set();
   syncInventoryFromProducts();
   updateInvStats();
   renderInvTab();
@@ -5655,19 +4852,23 @@ function renderInvTab(){
 function renderInvTable(search){
   const el=document.getElementById('invTabContent');if(!el)return;
   const list=DB.inventory.filter(p=>p.name.toLowerCase().includes(search));
+  const sa=isSuperAdmin();
+  // Drop selections for products no longer in the filtered list's universe
+  if(sa){ const validIds=new Set(DB.inventory.map(p=>p.id)); invSelected.forEach(id=>{if(!validIds.has(id))invSelected.delete(id);}); }
+  const allChecked=sa&&list.length>0&&list.every(p=>invSelected.has(p.id));
   el.innerHTML=`<table>
-    <thead><tr><th>Product</th><th>Base Unit</th><th>Selling Units</th><th>Stock (Base)</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
+    <thead><tr>${sa?`<th style="width:34px"><input type="checkbox" id="invSelectAllChk" ${allChecked?'checked':''} onchange="toggleSelectAllProducts(this.checked)"></th>`:''}<th>Product</th><th>Base Unit</th><th>Selling Units</th><th>Stock (Base)</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>
     <tbody>${list.map(p=>{
-      const unknown=isUnknownStock(p);
-      const low=isOutOfStock(p);const warn=!unknown&&p.stock<=(p.lowStock||0);
+      const low=p.stock<=0;const warn=p.stock<=(p.lowStock||0);
       const su=(p.sellingUnits||[]);
       const unitsStr=su.length?su.map(u=>`${u.name}`).join(' · '):'—';
-      return `<tr class="${low?'out-stock-row':warn?'low-stock-row':unknown?'low-stock-row':''}">
+      return `<tr class="${low?'out-stock-row':warn?'low-stock-row':''}">
+        ${sa?`<td onclick="event.stopPropagation()"><input type="checkbox" ${invSelected.has(p.id)?'checked':''} onchange="toggleSelectProduct(${p.id},this.checked)"></td>`:''}
         <td class="td-name">${p.name}<div style="font-size:.68rem;color:var(--text3)">${p.category}</div></td>
         <td style="color:var(--text3);font-size:.78rem">${p.unit}</td>
         <td style="font-size:.72rem;color:var(--text2);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${unitsStr}</td>
-        <td class="mono" style="color:${low?'var(--red)':warn?'var(--amber)':unknown?'var(--amber)':'var(--text)'}">${unknown?'—':p.stock} ${p.unit}</td>
-        <td><span class="badge ${low?'badge-red':warn?'badge-amber':unknown?'badge-amber':'badge-green'}">${low?'Out of Stock':warn?'Low Stock':unknown?'Stock Unknown':'In Stock'}</span></td>
+        <td class="mono" style="color:${low?'var(--red)':warn?'var(--amber)':'var(--text)'}">${p.stock} ${p.unit}</td>
+        <td><span class="badge ${low?'badge-red':warn?'badge-amber':'badge-green'}">${low?'Out of Stock':warn?'Low Stock':'In Stock'}</span></td>
         <td style="text-align:right" onclick="event.stopPropagation()">
           <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
             <button class="btn btn-sm btn-ghost" onclick="openEditProductModal(${p.id},'inventory')" title="Edit product"><i class="fas fa-pen"></i>Edit</button>
@@ -5678,9 +4879,84 @@ function renderInvTable(search){
             ${isAdmin()?`<button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id},'inventory')" title="Delete Product"><i class="fas fa-trash"></i></button>`:''}
           </div>
         </td>
-      </tr>`;}).join('')||`<tr><td colspan="6"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products</p></div></td></tr>`}
+      </tr>`;}).join('')||`<tr><td colspan="${sa?7:6}"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products</p></div></td></tr>`}
     </tbody>
   </table>`;
+  if(sa) updateInvSelectionUI();
+}
+
+// ── Super-Admin-only: select all / delete all products in Inventory ──
+function toggleSelectProduct(id,checked){
+  if(!isSuperAdmin())return;
+  if(checked)invSelected.add(id);else invSelected.delete(id);
+  updateInvSelectionUI();
+  const chk=document.getElementById('invSelectAllChk');
+  if(chk){
+    const search=(document.getElementById('invSearch')?.value||'').toLowerCase();
+    const list=DB.inventory.filter(p=>p.name.toLowerCase().includes(search));
+    chk.checked=list.length>0&&list.every(p=>invSelected.has(p.id));
+  }
+}
+
+function toggleSelectAllProducts(checked){
+  if(!isSuperAdmin())return;
+  const search=(document.getElementById('invSearch')?.value||'').toLowerCase();
+  const list=DB.inventory.filter(p=>p.name.toLowerCase().includes(search));
+  if(checked)list.forEach(p=>invSelected.add(p.id));
+  else list.forEach(p=>invSelected.delete(p.id));
+  renderInvTable(search);
+}
+
+function updateInvSelectionUI(){
+  const btn=document.getElementById('invDeleteSelectedBtn');
+  const countEl=document.getElementById('invSelectedCount');
+  if(countEl)countEl.textContent=invSelected.size;
+  if(btn)btn.style.display=invSelected.size>0?'':'none';
+}
+
+function deleteSelectedProducts(){
+  if(!isSuperAdmin()){showToast('Only Super Admin can bulk-delete products.', false);return;}
+  const ids=Array.from(invSelected);
+  if(!ids.length)return;
+  const names=ids.map(id=>DB.products.find(p=>p.id===id)?.name||DB.inventory.find(p=>p.id===id)?.name).filter(Boolean);
+  if(!confirm(`Delete ${ids.length} selected product(s)?\n\n${names.slice(0,8).join(', ')}${names.length>8?', …':''}\n\nThis removes them from Inventory, POS and Price Config. Sales and purchase records are kept for accounting. This cannot be undone.`))return;
+  bulkDeleteProducts(ids);
+  invSelected=new Set();
+  showToast(`${ids.length} product(s) deleted.`);
+  renderInventory();
+}
+
+function deleteAllProducts(){
+  if(!isSuperAdmin()){showToast('Only Super Admin can delete all products.', false);return;}
+  const ids=DB.inventory.map(p=>p.id);
+  if(!ids.length){showToast('Inventory is already empty.', false);return;}
+  if(!confirm(`⚠️ DELETE ALL ${ids.length} PRODUCTS from Inventory?\n\nThis removes every product from Inventory, POS and Price Config. Sales and purchase records are kept for accounting. This cannot be undone.`))return;
+  if(!confirm('This is your final confirmation. Type OK to permanently delete every product.'))return;
+  bulkDeleteProducts(ids);
+  invSelected=new Set();
+  showToast('All products deleted from inventory.');
+  renderInventory();
+}
+
+// Shared deletion routine (mirrors deleteProduct, without the per-item confirm)
+function bulkDeleteProducts(ids){
+  if(!isSuperAdmin())return;
+  const idSet=new Set(ids);
+  ids.forEach(id=>{
+    const p=DB.products.find(x=>x.id===id);
+    if(p&&p.image&&p.image.includes('/product-images/')){
+      _sb.storage.from('product-images').remove([p.image.split('/product-images/')[1]]).catch(()=>{});
+    }
+  });
+  DB.products  = DB.products.filter(x=>!idSet.has(x.id));
+  DB.inventory = DB.inventory.filter(x=>!idSet.has(x.id));
+  DB.stockHistory = DB.stockHistory.filter(x=>!idSet.has(x.productId));
+  DB.priceHistory = DB.priceHistory.filter(x=>!idSet.has(x.productId));
+  persist('products');
+  persist('inventory');
+  persist('stockHistory');
+  persist('priceHistory');
+  logActivity('Product', `Bulk delete: ${ids.length} product(s) removed from inventory — by ${currentUserName||'Super Admin'}`);
 }
 
 function renderStockHistory(search){
@@ -5796,12 +5072,11 @@ function confirmStockAction(){
     const unitName=unitSel?.value||p.unit;
     delta=qty*factor;reason=`Added ${qty} ${unitName} (= ${delta} ${p.unit})`;
   } else {
-    const currentStock=stockOf(p) ?? 0;
-    if(qty>currentStock){alert('Quantity exceeds current stock.');return;}
+    if(qty>p.stock){alert('Quantity exceeds current stock.');return;}
     delta=-qty;
     reason=stockModalMode==='damage'?(document.getElementById('stockReason').value||'Damaged goods'):'Manual deduction';
   }
-  adjustStock(p,delta);
+  p.stock+=delta;
   // Sync to products
   const prod=DB.products.find(x=>x.id===p.id);if(prod)prod.stock=p.stock;
   persist('inventory');persist('products');
@@ -5826,11 +5101,10 @@ function openRemoveStockModal(id){
 function updateRemoveStockPreview(){
   const p=removeStockProduct;if(!p)return;
   const qty=parseInt(document.getElementById('removeStockQty').value)||0;
-  const currentStock=stockOf(p) ?? 0;
-  const newStock=Math.max(0,currentStock-qty);
+  const newStock=Math.max(0,p.stock-qty);
   const box=document.getElementById('removeStockPreview');
   box.className=`balance-box ${newStock<=0?'balance-owe':newStock<=(p.lowStock||0)?'balance-owe':'balance-change'}`;
-  box.innerHTML=`Stock after removal: <strong>${newStock}</strong> ${p.unit}${qty>currentStock?` <span style="color:var(--red);font-size:.75rem">(exceeds current stock!)</span>`:''}`;
+  box.innerHTML=`Stock after removal: <strong>${newStock}</strong> ${p.unit}${qty>p.stock?` <span style="color:var(--red);font-size:.75rem">(exceeds current stock!)</span>`:''}`;
 }
 
 function confirmRemoveStock(){
@@ -5838,10 +5112,9 @@ function confirmRemoveStock(){
   const p=removeStockProduct;if(!p)return;
   const qty=parseInt(document.getElementById('removeStockQty').value)||0;
   if(qty<=0){alert('Enter a valid quantity to remove.');return;}
-  const currentStock=stockOf(p) ?? 0;
-  if(qty>currentStock){alert(`Cannot remove ${qty} — only ${currentStock} ${p.unit} in stock.`);return;}
+  if(qty>p.stock){alert(`Cannot remove ${qty} — only ${p.stock} ${p.unit} in stock.`);return;}
   // Silently subtract from stock — NO activity log, NO stockHistory entry
-  adjustStock(p,-qty);
+  p.stock-=qty;
   const prod=DB.products.find(x=>x.id===p.id);if(prod)prod.stock=p.stock;
   persist('inventory');persist('products');
   closeModal('removeStockModal');
@@ -6054,7 +5327,7 @@ function renderDashboard(){
   }));
   const topProds=Object.values(prodMap).sort((a,b)=>b.revenue-a.revenue).slice(0,5);
   // Low stock
-  const lowStockItems=DB.inventory.filter(p=>!isUnknownStock(p)&&p.stock<=(p.lowStock||0)).slice(0,5);
+  const lowStockItems=DB.inventory.filter(p=>p.stock<=(p.lowStock||0)).slice(0,5);
 
   document.getElementById('content').innerHTML=`
   <div style="display:flex;flex-direction:column;gap:16px">
@@ -6132,11 +5405,11 @@ function renderDashboard(){
       <div class="card">
         <h3 class="section-title" style="margin-bottom:14px"><i class="fas fa-triangle-exclamation" style="color:var(--amber)"></i>Low Stock Alerts</h3>
         ${lowStockItems.length?`<div style="display:flex;flex-direction:column;gap:8px">
-          ${lowStockItems.map(p=>`<div class="flex-between card-sm" style="border-color:${isOutOfStock(p)?'var(--red)':'var(--amber)'}">
+          ${lowStockItems.map(p=>`<div class="flex-between card-sm" style="border-color:${p.stock<=0?'var(--red)':'var(--amber)'}">
             <div><div style="font-size:.82rem;font-weight:600">${p.name}</div><div style="font-size:.65rem;color:var(--text3)">${p.unit}</div></div>
-            <span class="badge ${isOutOfStock(p)?'badge-red':'badge-amber'}">${isOutOfStock(p)?'Out':''+p.stock+' left'}</span>
+            <span class="badge ${p.stock<=0?'badge-red':'badge-amber'}">${p.stock<=0?'Out':''+p.stock+' left'}</span>
           </div>`).join('')}
-          ${DB.inventory.filter(p=>!isUnknownStock(p)&&p.stock<=(p.lowStock||0)).length>5?`<div style="font-size:.75rem;color:var(--text3);text-align:center">+${DB.inventory.filter(p=>!isUnknownStock(p)&&p.stock<=(p.lowStock||0)).length-5} more — <button class="btn btn-sm btn-ghost" onclick="showModule('inventory')">View All</button></div>`:''}
+          ${DB.inventory.filter(p=>p.stock<=(p.lowStock||0)).length>5?`<div style="font-size:.75rem;color:var(--text3);text-align:center">+${DB.inventory.filter(p=>p.stock<=(p.lowStock||0)).length-5} more — <button class="btn btn-sm btn-ghost" onclick="showModule('inventory')">View All</button></div>`:''}
         </div>`:`<div class="empty-state" style="padding:24px"><i class="fas fa-check-circle" style="color:var(--green-light)"></i><p style="color:var(--green-light)">All products well stocked!</p></div>`}
       </div>
     </div>
@@ -6541,9 +5814,9 @@ function deleteSale(saleId){
     const baseUnitsPerUnit = item._baseQtyPerUnit || 1;
     const baseUnitsToRestore = item.qty * baseUnitsPerUnit;
     const inv=DB.inventory.find(i=>i.id===item.id);
-    if(inv){adjustStock(inv,baseUnitsToRestore);}
+    if(inv){inv.stock+=baseUnitsToRestore;}
     const prod=DB.products.find(p=>p.id===item.id);
-    if(prod){adjustStock(prod,baseUnitsToRestore);}
+    if(prod){prod.stock+=baseUnitsToRestore;}
     DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,timestamp:new Date().toISOString(),action:'sale_deleted',delta:+baseUnitsToRestore,newStock:(inv?inv.stock:0),unit:item.unit||'',reason:'Sale deleted: '+s.code+' by '+currentUserName});
   });
   persist('inventory');persist('products');persist('stockHistory');
@@ -6583,9 +5856,9 @@ function deleteDebtRecord(id){
     const baseUnitsPerUnit=item._baseQtyPerUnit||1;
     const baseUnitsToRestore=item.qty*baseUnitsPerUnit;
     const inv=DB.inventory.find(i=>i.id===item.id);
-    if(inv)adjustStock(inv,baseUnitsToRestore);
+    if(inv)inv.stock+=baseUnitsToRestore;
     const prod=DB.products.find(p=>p.id===item.id);
-    if(prod)adjustStock(prod,baseUnitsToRestore);
+    if(prod)prod.stock+=baseUnitsToRestore;
     DB.stockHistory.unshift({id:uid(),productId:item.id,productName:item.name,
       timestamp:new Date().toISOString(),action:'debt_deleted',
       delta:+baseUnitsToRestore,newStock:(inv?inv.stock:0),
@@ -7145,34 +6418,17 @@ function addSellingUnitRow(containerId, baseUnitSelId, name='', qty='', retail='
 
 /**
  * Read all selling-unit rows from a container and return an array.
- * Only rows with a name AND qty ≥ 1 AND retail > 0 are included — but unlike
- * before, a row that fails this check is no longer dropped silently. This was
- * the root cause of multi-unit products quietly reverting to a single unit on
- * every save: a row could fail validation for any small reason (stray empty
- * field, browser autofill, etc.) and just vanish from the array with no
- * warning, and the save would proceed as if that unit never existed.
- * Now: if ANY row gets dropped, the user sees exactly which one and why,
- * before the save silently shrinks their product's unit list.
+ * Only rows with a name AND qty ≥ 1 AND retail > 0 are included.
  */
 function getSellingUnitsFromContainer(containerId){
   const cont = document.getElementById(containerId);
   if(!cont) return [];
-  const rawRows = Array.from(cont.querySelectorAll('.su-row')).map(row=>({
+  return Array.from(cont.querySelectorAll('.su-row')).map(row=>({
     name:      (row.querySelector('.su-name')?.value      || '').trim(),
     qty:       parseFloat(row.querySelector('.su-qty')?.value)       || 0,
     retail:    parseFloat(row.querySelector('.su-retail')?.value)    || 0,
     wholesale: parseFloat(row.querySelector('.su-wholesale')?.value) || 0,
-  }));
-  const valid = rawRows.filter(u => u.name && u.qty >= 1 && u.retail > 0);
-  if(valid.length < rawRows.length){
-    const dropped = rawRows.filter(u => !(u.name && u.qty >= 1 && u.retail > 0));
-    const reasons = dropped.map(u=>{
-      const why = !u.name ? 'missing a name' : u.qty<1 ? 'quantity must be ≥ 1' : 'retail price must be > 0';
-      return `"${u.name||'(unnamed row)'}" — ${why}`;
-    });
-    alert(`${dropped.length} selling unit row(s) will be REMOVED because they're incomplete:\n\n${reasons.join('\n')}\n\nFix these rows before saving, or they will be silently dropped from this product.`);
-  }
-  return valid;
+  })).filter(u => u.name && u.qty >= 1 && u.retail > 0);
 }
 
 function openAddProductModal(from){
@@ -7313,7 +6569,6 @@ function deleteProduct(id, from){
   if(!p){
     // Ghost: clean orphaned inventory entry only
     DB.inventory = DB.inventory.filter(x => x.id !== id);
-    if(!DB.deletedProductIds.includes(id)){ DB.deletedProductIds.push(id); persist('deletedProductIds'); }
     persist('inventory');
     showToast('Orphaned inventory entry removed.', true);
     if(from === 'price') renderPrice(); else renderInventory();
@@ -7331,11 +6586,6 @@ function deleteProduct(id, from){
   DB.products  = DB.products.filter(x => x.id !== id);
   DB.inventory = DB.inventory.filter(x => x.id !== id);
 
-  // 2b. Tombstone: record this ID as deliberately deleted so a future sync
-  // never re-infers "deleted" just because a product is missing from a
-  // partial/failed load — only an explicit deleteProduct() call adds here.
-  if(!DB.deletedProductIds.includes(id)) DB.deletedProductIds.push(id);
-
   // 3. Remove operational/catalogue history only
   DB.stockHistory = DB.stockHistory.filter(x => x.productId !== id);
   DB.priceHistory = DB.priceHistory.filter(x => x.productId !== id);
@@ -7346,7 +6596,6 @@ function deleteProduct(id, from){
   persist('inventory');
   persist('stockHistory');
   persist('priceHistory');
-  persist('deletedProductIds');
 
   logActivity('Product', `Product deleted: ${p.name} — by ${currentUserName||'Admin'}`);
   showToast(`"${p.name}" deleted. Sales and purchase records preserved.`);
@@ -7433,6 +6682,7 @@ let rEditingPriceId=null;
 let rPurchTab='new';
 let rDebtFilter='all';
 let rInvTab='products';
+let rInvSelected=new Set();
 let rPriceTab='products';
 let rAccTab='overview';
 
@@ -7486,12 +6736,11 @@ function renderProductGridR(){
   if(!list.length){g.innerHTML='<div class="empty-state"><i class="fas fa-box-open"></i><p>No products found. Add products via Retail Inventory.</p></div>';return;}
   g.innerHTML=list.map(p=>{
     const inv=DB_R.inventory.find(i=>i.id===p.id);
-    const invOrP=inv!==undefined?inv:p;
-    const stock=stockOf(invOrP);
+    const stock=inv!==undefined?inv.stock:(p.stock||0);
     const ci=cartR.find(x=>x.id===p.id);const cq=ci?ci.qty:0;
-    const isOut=isOutOfStock(invOrP);const isUnknown=isUnknownStock(invOrP);const isMaxed=!isOut&&!isUnknown&&cq>=stock;
-    const cs=isOut?'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed':isMaxed?'border-color:var(--red);background:rgba(192,57,43,.06)':isUnknown?'border-color:var(--amber);background:rgba(184,134,11,.08)':'';
-    const sl=isOut?`<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`:isMaxed?`<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`:isUnknown?`<span style="color:var(--amber);font-weight:700;font-size:.7rem">STOCK UNKNOWN</span>`:`<div class="product-ws">Retail · ${stock} left${cq>0?` (${cq} in cart)`:''}</div>`;
+    const isOut=stock<=0;const isMaxed=!isOut&&cq>=stock;
+    const cs=isOut?'border-color:var(--red);background:rgba(192,57,43,.08);opacity:.75;cursor:not-allowed':isMaxed?'border-color:var(--red);background:rgba(192,57,43,.06)':'';
+    const sl=isOut?`<span style="color:var(--red);font-weight:700;font-size:.7rem">OUT OF STOCK</span>`:isMaxed?`<span style="color:var(--red);font-size:.7rem;font-weight:600">Max in cart (${stock})</span>`:`<div class="product-ws">Retail · ${stock} left${cq>0?` (${cq} in cart)`:''}</div>`;
     return `<div class="product-card" style="${cs}" onclick="${isOut?`showToast('Out of stock!',false)`:`addToCartR(${p.id})`}">
       ${productThumb(p)}
       <div class="product-name">${p.name}</div>
@@ -7506,9 +6755,8 @@ function renderProductGridR(){
 function addToCartR(id){
   const p=DB_R.products.find(x=>x.id===id);if(!p)return;
   const inv=DB_R.inventory.find(i=>i.id===id);
-  const invOrP=inv!==undefined?inv:p;
-  if(isOutOfStock(invOrP)){showToast(`"${p.name}" is out of stock!`,false);return;}
-  const stock=stockOf(invOrP) ?? 0;
+  const stock=inv!==undefined?inv.stock:(p.stock||0);
+  if(stock<=0){showToast(`"${p.name}" is out of stock!`,false);return;}
   const ex=cartR.find(x=>x.id===id);
   if(ex){if(ex.qty>=stock){showToast(`Only ${stock} available`,false);return;}ex.qty++;}
   else{cartR.push({...p,qty:1,price:p.retail||0});}
@@ -7682,8 +6930,8 @@ function renderR_Dashboard(){
   const moCogs=moSales.reduce((s,sale)=>s+(sale.cogs||0),0);
   const totalExp=DB_R.expenses.filter(e=>new Date(e.date)>=mo).reduce((s,e)=>s+e.amount,0);
   const moProfit=moRev-moCogs-totalExp;
-  const lowStock=DB_R.inventory.filter(p=>!isUnknownStock(p)&&p.stock>0&&p.stock<=(p.lowStock||5));
-  const outStock=DB_R.inventory.filter(p=>isOutOfStock(p));
+  const lowStock=DB_R.inventory.filter(p=>p.stock>0&&p.stock<=(p.lowStock||5));
+  const outStock=DB_R.inventory.filter(p=>p.stock<=0);
   const productSales={};
   moSales.forEach(s=>(s.items||[]).forEach(i=>{if(!productSales[i.name])productSales[i.name]={name:i.name,qty:0,rev:0};productSales[i.name].qty+=i.qty;productSales[i.name].rev+=i.price*i.qty;}));
   const topProds=Object.values(productSales).sort((a,b)=>b.rev-a.rev).slice(0,5);
@@ -7864,9 +7112,13 @@ function clearRDebt(id){
 function renderR_Inventory(){
   document.getElementById('content').innerHTML=`
   <div style="display:flex;flex-direction:column;gap:16px">
-    <div class="flex-between">
+    <div class="flex-between" style="flex-wrap:wrap;gap:10px">
       <h2 class="section-title"><i class="fas fa-boxes-stacked"></i>Retail Inventory</h2>
-      <button class="btn btn-primary" onclick="openRAddProductModal()"><i class="fas fa-plus"></i>Add Product</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        ${isSuperAdmin()?`<button class="btn btn-sm btn-danger" id="rInvDeleteSelectedBtn" onclick="deleteSelectedRProducts()" style="display:none"><i class="fas fa-trash"></i> Delete Selected (<span id="rInvSelectedCount">0</span>)</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteAllRProducts()" title="Delete ALL products from retail inventory" style="background:rgba(192,57,43,.9)"><i class="fas fa-triangle-exclamation"></i> Delete All Products</button>`:''}
+        <button class="btn btn-primary" onclick="openRAddProductModal()"><i class="fas fa-plus"></i>Add Product</button>
+      </div>
     </div>
     <div class="settings-tab-bar">
       <button class="btn btn-sm ${rInvTab==='products'?'btn-primary':'btn-ghost'}" onclick="rInvTab='products';renderR_Inventory()"><i class="fas fa-boxes-stacked"></i>Products</button>
@@ -7874,20 +7126,24 @@ function renderR_Inventory(){
     </div>
     <div id="rInvContent"></div>
   </div>`;
+  rInvSelected=new Set();
   rInvTab==='products'?renderRInvProducts():renderRInvHistory();
 }
 
 function renderRInvProducts(){
   const el=document.getElementById('rInvContent');if(!el)return;
-  if(!DB_R.inventory.length){el.innerHTML=`<div class="card"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products in retail inventory</p><button class="btn btn-primary" style="margin-top:12px" onclick="openRAddProductModal()"><i class="fas fa-plus"></i>Add First Product</button></div></div>`;return;}
-  el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr><th>Product</th><th>Category</th><th>Unit</th><th>Stock</th><th>Low Alert</th><th>Retail Price</th><th>Cost Price</th><th>Actions</th></tr></thead><tbody>
+  const sa=isSuperAdmin();
+  if(sa){ const validIds=new Set(DB_R.inventory.map(p=>p.id)); rInvSelected.forEach(id=>{if(!validIds.has(id))rInvSelected.delete(id);}); }
+  if(!DB_R.inventory.length){el.innerHTML=`<div class="card"><div class="empty-state"><i class="fas fa-box-open"></i><p>No products in retail inventory</p><button class="btn btn-primary" style="margin-top:12px" onclick="openRAddProductModal()"><i class="fas fa-plus"></i>Add First Product</button></div></div>`;if(sa)updateRInvSelectionUI();return;}
+  const allChecked=sa&&DB_R.inventory.every(p=>rInvSelected.has(p.id));
+  el.innerHTML=`<div class="card"><div class="table-wrap"><table class="data-table"><thead><tr>${sa?`<th style="width:34px"><input type="checkbox" id="rInvSelectAllChk" ${allChecked?'checked':''} onchange="toggleSelectAllRProducts(this.checked)"></th>`:''}<th>Product</th><th>Category</th><th>Unit</th><th>Stock</th><th>Low Alert</th><th>Retail Price</th><th>Cost Price</th><th>Actions</th></tr></thead><tbody>
   ${DB_R.inventory.map(p=>{
-    const isUnknown=isUnknownStock(p);
-    const isLow=!isUnknown&&p.stock>0&&p.stock<=(p.lowStock||5);const isOut=isOutOfStock(p);
-    return `<tr style="${isOut?'background:rgba(192,57,43,.04)':isLow?'background:rgba(184,134,11,.03)':isUnknown?'background:rgba(184,134,11,.03)':''}">
+    const isLow=p.stock>0&&p.stock<=(p.lowStock||5);const isOut=p.stock<=0;
+    return `<tr style="${isOut?'background:rgba(192,57,43,.04)':isLow?'background:rgba(184,134,11,.03)':''}">
+      ${sa?`<td><input type="checkbox" ${rInvSelected.has(p.id)?'checked':''} onchange="toggleSelectRProduct(${p.id},this.checked)"></td>`:''}
       <td><strong>${p.name}</strong></td>
       <td>${p.category||'—'}</td><td>${p.unit||'—'}</td>
-      <td><span style="font-weight:700;color:${isOut?'var(--red)':isLow?'var(--amber)':isUnknown?'var(--amber)':'var(--green-light)'}">${isUnknown?'—':p.stock}</span>${isOut?' <span style="font-size:.65rem;color:var(--red)">(OUT)</span>':isLow?' <span style="font-size:.65rem;color:var(--amber)">(LOW)</span>':isUnknown?' <span style="font-size:.65rem;color:var(--amber)">(UNKNOWN — re-save stock)</span>':''}</td>
+      <td><span style="font-weight:700;color:${isOut?'var(--red)':isLow?'var(--amber)':'var(--green-light)'}">${p.stock||0}</span>${isOut?' <span style="font-size:.65rem;color:var(--red)">(OUT)</span>':isLow?' <span style="font-size:.65rem;color:var(--amber)">(LOW)</span>':''}</td>
       <td>${p.lowStock||5}</td>
       <td style="font-family:var(--mono)">${N(p.retail||0)}</td>
       <td style="font-family:var(--mono)">${N(p.costPrice||0)}</td>
@@ -7898,6 +7154,83 @@ function renderRInvProducts(){
     </tr>`;
   }).join('')}
   </tbody></table></div></div>`;
+  if(sa) updateRInvSelectionUI();
+}
+
+// ── Super-Admin-only: select all / delete all products in Retail Inventory ──
+function toggleSelectRProduct(id,checked){
+  if(!isSuperAdmin())return;
+  if(checked)rInvSelected.add(id);else rInvSelected.delete(id);
+  updateRInvSelectionUI();
+  const chk=document.getElementById('rInvSelectAllChk');
+  if(chk) chk.checked=DB_R.inventory.length>0&&DB_R.inventory.every(p=>rInvSelected.has(p.id));
+}
+
+function toggleSelectAllRProducts(checked){
+  if(!isSuperAdmin())return;
+  if(checked)DB_R.inventory.forEach(p=>rInvSelected.add(p.id));
+  else rInvSelected.clear();
+  renderRInvProducts();
+}
+
+function updateRInvSelectionUI(){
+  const btn=document.getElementById('rInvDeleteSelectedBtn');
+  const countEl=document.getElementById('rInvSelectedCount');
+  if(countEl)countEl.textContent=rInvSelected.size;
+  if(btn)btn.style.display=rInvSelected.size>0?'':'none';
+}
+
+function deleteSelectedRProducts(){
+  if(!isSuperAdmin()){showToast('Only Super Admin can bulk-delete products.', false);return;}
+  const ids=Array.from(rInvSelected);
+  if(!ids.length)return;
+  const names=ids.map(id=>DB_R.products.find(p=>p.id===id)?.name).filter(Boolean);
+  if(!confirm(`Delete ${ids.length} selected product(s) from retail inventory?\n\n${names.slice(0,8).join(', ')}${names.length>8?', …':''}\n\nThis permanently removes all related stock history, price history, and purchase records. Cannot be undone.`))return;
+  bulkDeleteRProducts(ids);
+  rInvSelected=new Set();
+  showToast(`${ids.length} product(s) deleted.`);
+  renderR_Inventory();
+}
+
+function deleteAllRProducts(){
+  if(!isSuperAdmin()){showToast('Only Super Admin can delete all products.', false);return;}
+  const ids=DB_R.inventory.map(p=>p.id);
+  if(!ids.length){showToast('Retail inventory is already empty.', false);return;}
+  if(!confirm(`⚠️ DELETE ALL ${ids.length} PRODUCTS from Retail Inventory?\n\nThis permanently removes all related stock history, price history, and purchase records. Cannot be undone.`))return;
+  if(!confirm('This is your final confirmation. Type OK to permanently delete every retail product.'))return;
+  bulkDeleteRProducts(ids);
+  rInvSelected=new Set();
+  showToast('All products deleted from retail inventory.');
+  renderR_Inventory();
+}
+
+// Shared deletion routine (mirrors deleteRProduct, without the per-item confirm)
+function bulkDeleteRProducts(ids){
+  if(!isSuperAdmin())return;
+  const idSet=new Set(ids);
+  ids.forEach(id=>{
+    const p=DB_R.products.find(x=>x.id===id);
+    if(p&&p.image&&p.image.includes('/product-images/')){
+      _sb.storage.from('product-images').remove([p.image.split('/product-images/')[1]]).catch(()=>{});
+    }
+  });
+  DB_R.products  = DB_R.products.filter(x=>!idSet.has(x.id));
+  DB_R.inventory = DB_R.inventory.filter(x=>!idSet.has(x.id));
+  if(DB_R.stockHistory) DB_R.stockHistory = DB_R.stockHistory.filter(x=>!idSet.has(x.productId));
+  if(DB_R.priceHistory) DB_R.priceHistory = DB_R.priceHistory.filter(x=>!idSet.has(x.productId));
+  if(DB_R.purchases){
+    const linkedRefs=new Set(DB_R.purchases.filter(x=>idSet.has(x.productId)).map(x=>x.ref));
+    DB_R.purchases = DB_R.purchases.filter(x=>!idSet.has(x.productId));
+    if(linkedRefs.size&&DB_R.expenses){
+      DB_R.expenses = DB_R.expenses.filter(x=>!linkedRefs.has(x.ref));
+      persistR('expenses');
+    }
+    persistR('purchases');
+  }
+  persistR('products');
+  persistR('inventory');
+  if(DB_R.stockHistory) persistR('stockHistory');
+  if(DB_R.priceHistory) persistR('priceHistory');
 }
 
 function renderRInvHistory(){
@@ -7991,12 +7324,11 @@ function productThumb(p){
 
 function openRAdjustStock(id){
   const p=DB_R.inventory.find(x=>x.id===id);if(!p)return;
-  const input=prompt(`Adjust stock for "${p.name}"\nCurrent: ${stockOf(p) ?? 'unknown'}\n\nEnter amount (+add / -remove):`);
+  const input=prompt(`Adjust stock for "${p.name}"\nCurrent: ${p.stock||0}\n\nEnter amount (+add / -remove):`);
   if(input===null||input.trim()==='')return;
   const delta=parseInt(input);
   if(isNaN(delta)||delta===0){alert('Enter a non-zero number.');return;}
-  adjustStock(p,delta);
-  p.stock=Math.max(0,p.stock);
+  p.stock=Math.max(0,(p.stock||0)+delta);
   const prod=DB_R.products.find(x=>x.id===id);if(prod)prod.stock=p.stock;
   DB_R.stockHistory.unshift({id:uid(),productId:id,productName:p.name,timestamp:new Date().toISOString(),action:'adjustment',delta,newStock:p.stock,unit:p.unit,reason:'Manual adjustment'});
   persistR('inventory');persistR('products');persistR('stockHistory');
