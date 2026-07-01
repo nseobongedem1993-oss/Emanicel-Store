@@ -1991,14 +1991,15 @@ function applyRoleUI(){
 
 // ══════════════════════════════════════════════════════════════════════════════
 // ONE-TIME BULK IMPORT v4 — runs once after login, adds Feb 2026 drinks/provisions batch
-// Flag: DB.bizSettings.bulkImportV4Done — set true after first run, never repeats
+// Flag: DB.bizSettings.bulkImportV5Done — set true after first run, never repeats
+// (bumped from V4 to force a fresh re-run after inventory was wiped)
 // Base unit price (costPrice/retail) = per Piece/Bottle. Each product also carries
 // a "Carton" selling unit (qty + full-carton price) except Milo/Hot Chocolate which
 // carry both "Roll" (12 sachets) and "Carton" (120 sachets). Jameson is excluded.
 // ══════════════════════════════════════════════════════════════════════════════
 async function runBulkImportV4(){
   if(!DB.bizSettings) DB.bizSettings={};
-  if(DB.bizSettings.bulkImportV4Done) return;
+  if(DB.bizSettings.bulkImportV5Done) return;
 
   const _newProdsV4=[
     {name:'Seaman\'s Premium', cat:'Spirits', baseUnit:'Bottle', cost:3017, retail:3700, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:44400}]},
@@ -2075,7 +2076,7 @@ async function runBulkImportV4(){
     showToast(`✅ ${added} new products imported (Feb 2026 batch)!`);
   }
 
-  DB.bizSettings.bulkImportV4Done=true;
+  DB.bizSettings.bulkImportV5Done=true;
   persist('bizSettings');
 }
 
