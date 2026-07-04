@@ -2578,6 +2578,7 @@ const KEYS = {
   notifications: 'env_notifications',
   bizSettings: 'env_biz_settings',
   pendingOrders: 'env_pending_orders',
+  deletedProductIds: 'env_deleted_product_ids',
 };
 
 function seedProducts() {
@@ -2741,6 +2742,7 @@ let DB = {
     bankAccounts:[],
   })),
   pendingOrders: load(KEYS.pendingOrders, ()=>[]),
+  deletedProductIds: load(KEYS.deletedProductIds, ()=>[]),
 };
 
 function persist(key,allowWipe){save(KEYS[key],DB[key],allowWipe);}
@@ -2823,15 +2825,25 @@ async function loadAllData(){
       }
     }
 
-    // ── Defensive image restore: ensure inventory always mirrors product images ──
-    // This guards against any path where inventory was saved without the image field.
-    let inventoryDirty=false;
+    // ── Bidirectional defensive image restore ──────────────────────────────────
+    // If product has image → push to inventory (guards against inventory losing it).
+    // If product LACKS image but inventory has one → push back to product (guards
+    // against the main wipe path: product loads without image → sync clears inventory).
+    // Running both directions means whichever copy survived a bad save is authoritative.
+    let inventoryDirty=false, productsDirty=false;
     DB.products.forEach(p=>{
-      if(!p.image) return;
       const inv=DB.inventory.find(i=>i.id===p.id);
-      if(inv && inv.image!==p.image){ inv.image=p.image; inventoryDirty=true; }
+      if(!inv) return;
+      if(p.image && inv.image!==p.image){
+        // Product has image, inventory is stale — restore inventory
+        inv.image=p.image; inventoryDirty=true;
+      } else if(!p.image && inv.image){
+        // Inventory has image, product lost it — restore product from inventory
+        p.image=inv.image; productsDirty=true;
+      }
     });
     if(inventoryDirty) persist('inventory');
+    if(productsDirty) persist('products');
   }catch(e){ console.warn('loadAllData error:',e); }
 }
 
@@ -2985,14 +2997,23 @@ function syncInventoryFromProducts(){
       inv.name=p.name;inv.category=p.category;inv.unit=p.unit;
       inv.conversions=p.conversions;
       if(p.sellingUnits) inv.sellingUnits=p.sellingUnits;
-      // Always keep image in sync — this was the root cause of images disappearing
-      inv.image=p.image||'';
+      // Only sync image from product → inventory when product actually has one.
+      // Using p.image||'' would actively wipe the inventory image whenever the
+      // product loaded without its image (network hiccup, partial sync, etc.).
+      // If the product image is empty, leave inventory's existing image intact.
+      if(p.image) inv.image=p.image;
       inv.costPrice=p.costPrice||inv.costPrice||0;
       inv.lowStock=p.lowStock||inv.lowStock||10;
     }
   });
-  // Remove inventory items whose products no longer exist
-  DB.inventory=DB.inventory.filter(inv=>DB.products.find(p=>p.id===inv.id));
+  // Remove inventory items ONLY for products that were explicitly deleted
+  // (recorded in DB.deletedProductIds by deleteProduct()). The old approach
+  // inferred "deleted" from "missing in DB.products" — which also fired when
+  // products loaded partially/incompletely, silently wiping real inventory.
+  const tombstoned=DB.deletedProductIds||[];
+  if(tombstoned.length && DB.inventory.some(inv=>tombstoned.includes(inv.id))){
+    DB.inventory=DB.inventory.filter(inv=>!tombstoned.includes(inv.id));
+  }
   persist('inventory');
 }
 
@@ -6668,6 +6689,9 @@ function deleteProduct(id, from){
   if(!p){
     // Ghost: clean orphaned inventory entry only
     DB.inventory = DB.inventory.filter(x => x.id !== id);
+    // Tombstone so sync never re-infers this as a partial-load miss
+    if(!DB.deletedProductIds) DB.deletedProductIds=[];
+    if(!DB.deletedProductIds.includes(id)){ DB.deletedProductIds.push(id); persist('deletedProductIds'); }
     persist('inventory');
     showToast('Orphaned inventory entry removed.', true);
     if(from === 'price') renderPrice(); else renderInventory();
@@ -6685,6 +6709,11 @@ function deleteProduct(id, from){
   DB.products  = DB.products.filter(x => x.id !== id);
   DB.inventory = DB.inventory.filter(x => x.id !== id);
 
+  // 2b. Tombstone — record this ID as deliberately deleted so syncInventoryFromProducts
+  // never confuses "missing from a partial load" with "user deleted this product".
+  if(!DB.deletedProductIds) DB.deletedProductIds=[];
+  if(!DB.deletedProductIds.includes(id)) DB.deletedProductIds.push(id);
+
   // 3. Remove operational/catalogue history only
   DB.stockHistory = DB.stockHistory.filter(x => x.productId !== id);
   DB.priceHistory = DB.priceHistory.filter(x => x.productId !== id);
@@ -6695,6 +6724,7 @@ function deleteProduct(id, from){
   persist('inventory');
   persist('stockHistory');
   persist('priceHistory');
+  persist('deletedProductIds');
 
   logActivity('Product', `Product deleted: ${p.name} — by ${currentUserName||'Admin'}`);
   showToast(`"${p.name}" deleted. Sales and purchase records preserved.`);
