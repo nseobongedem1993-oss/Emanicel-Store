@@ -2002,40 +2002,10 @@ async function runBulkImportV4(){
   if(DB.bizSettings.bulkImportV5Done) return;
 
   const _newProdsV4=[
-    {name:'Seaman\'s Premium', cat:'Spirits', baseUnit:'Bottle', cost:3017, retail:3700, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:44400}]},
-    {name:'Eagle', cat:'Spirits', baseUnit:'Bottle', cost:2975, retail:3700, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:44400}]},
-    {name:'8pm Tin', cat:'Spirits', baseUnit:'Bottle', cost:6059, retail:7500, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:90000}]},
-    {name:'Kalahari', cat:'Spirits', baseUnit:'Bottle', cost:4392, retail:5500, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:66000}]},
-    {name:'Royal Standard', cat:'Spirits', baseUnit:'Bottle', cost:2975, retail:3700, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:44400}]},
-    {name:'Best Cream (75cl)', cat:'Spirits', baseUnit:'Bottle', cost:5892, retail:7000, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:84000}]},
-    {name:'Best Cream (200ml)', cat:'Spirits', baseUnit:'Bottle', cost:1571, retail:2000, stock:48, lowStock:24, units:[{name:'Carton',qty:24,retail:48000}]},
-    {name:'Gordons (75cl)', cat:'Spirits', baseUnit:'Bottle', cost:4891, retail:6000, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:72000}]},
-    {name:'Campari', cat:'Spirits', baseUnit:'Bottle', cost:21784, retail:27000, stock:12, lowStock:10, units:[{name:'Carton',qty:6,retail:162000}]},
-    {name:'Apperito', cat:'Spirits', baseUnit:'Bottle', cost:2017, retail:2500, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:30000}]},
-    {name:'Squadron Minis', cat:'Spirits', baseUnit:'Bottle', cost:1836, retail:2200, stock:28, lowStock:14, units:[{name:'Carton',qty:14,retail:30800}]},
-    {name:'Big Ben (75cl)', cat:'Spirits', baseUnit:'Bottle', cost:2225, retail:2800, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:33600}]},
-    {name:'Magic Moment', cat:'Spirits', baseUnit:'Bottle', cost:6175, retail:7500, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:90000}]},
-    {name:'Chelsea Minis', cat:'Spirits', baseUnit:'Bottle', cost:1836, retail:2200, stock:28, lowStock:14, units:[{name:'Carton',qty:14,retail:30800}]},
-    {name:'33 Export', cat:'Spirits', baseUnit:'Bottle', cost:833, retail:1000, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:12000}]},
-    {name:'Big Legend', cat:'Spirits', baseUnit:'Bottle', cost:1050, retail:1300, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:15600}]},
-    {name:'Smirnoff Ice', cat:'Spirits', baseUnit:'Bottle', cost:1250, retail:1500, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:18000}]},
-    {name:'Captain Jack', cat:'Spirits', baseUnit:'Bottle', cost:2642, retail:3200, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:38400}]},
-    {name:'Biggu 75cl', cat:'Spirits', baseUnit:'Bottle', cost:2392, retail:3000, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:36000}]},
-    {name:'Action Bitters (37.5cl)', cat:'Spirits', baseUnit:'Bottle', cost:1392, retail:1700, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:20400}]},
-    {name:'Pure Heaven', cat:'Spirits', baseUnit:'Bottle', cost:4559, retail:5500, stock:12, lowStock:10, units:[{name:'Carton',qty:6,retail:33000}]},
-    {name:'Expression', cat:'Spirits', baseUnit:'Bottle', cost:7559, retail:9500, stock:12, lowStock:10, units:[{name:'Carton',qty:6,retail:57000}]},
-    {name:'8pm Fire & Honey', cat:'Spirits', baseUnit:'Bottle', cost:5808, retail:7000, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:84000}]},
-    {name:'Golden Morn 900g', cat:'Beverages', baseUnit:'Piece', cost:4034, retail:5000, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:60000}]},
-    {name:'My Boy', cat:'Beverages', baseUnit:'Piece', cost:7392, retail:9000, stock:24, lowStock:12, units:[{name:'Carton',qty:12,retail:108000}]},
-    {name:'Lactogen', cat:'Beverages', baseUnit:'Piece', cost:6784, retail:8500, stock:12, lowStock:10, units:[{name:'Carton',qty:6,retail:51000}]},
-    {name:'Peak Full Cream Evaporated', cat:'Beverages', baseUnit:'Piece', cost:1030, retail:1300, stock:48, lowStock:24, units:[{name:'Carton',qty:24,retail:31200}]},
-    {name:'Peak Filled Cream Evaporated', cat:'Beverages', baseUnit:'Piece', cost:621, retail:800, stock:48, lowStock:24, units:[{name:'Carton',qty:24,retail:19200}]},
   ];
 
   // Milo / Hot Chocolate — sold as Piece (sachet), Roll (12 sachets), Carton (120 sachets)
   const _newProdsV4Sachet=[
-    {name:'Hot Chocolate', cat:'Beverages', baseUnit:'Piece', cost:2933, retail:350, stock:240, lowStock:120, units:[{name:'Roll',qty:12,retail:4200},{name:'Carton',qty:120,retail:42000}]},
-    {name:'Milo 3 in 1', cat:'Beverages', baseUnit:'Piece', cost:2975, retail:300, stock:240, lowStock:120, units:[{name:'Roll',qty:12,retail:3600},{name:'Carton',qty:120,retail:36000}]},
   ];
 
   const _allV4=[..._newProdsV4, ..._newProdsV4Sachet];
