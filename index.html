@@ -3102,7 +3102,13 @@ async function _sbSaveWithStalenessCheck(key,data,allowWipe){
   if(isCriticalKey && !allowWipe){
     try{
       const {data:serverRow,error:checkErr}=await _sb.from('app_data').select('updated_at').eq('key',key).maybeSingle();
-      if(!checkErr && serverRow && _loadedVersion[key] && serverRow.updated_at!==_loadedVersion[key]){
+      // Compare as actual points in time, not raw text. The server (Postgres)
+      // and this browser (JS Date.toISOString()) format timestamps slightly
+      // differently even for the exact same instant — comparing them as plain
+      // strings was causing false "stale write" warnings on nearly every save.
+      const serverTime=serverRow?new Date(serverRow.updated_at).getTime():null;
+      const localTime=_loadedVersion[key]?new Date(_loadedVersion[key]).getTime():null;
+      if(!checkErr && serverRow && localTime!==null && serverTime!==localTime){
         console.warn('sbSave blocked: stale write detected for',key,'— server has newer data than this session loaded.');
         showToast('⚠️ Newer data exists on the server (from another tab/device). Your last change was NOT saved — refreshing now, please redo it.', false);
         await loadAllData();
