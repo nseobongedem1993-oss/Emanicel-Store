@@ -2042,9 +2042,9 @@ async function runBulkImportV4(){
   });
 
   if(added>0){
-    persist('products');
-    persist('inventory');
-    persist('stockHistory');
+    await persistAwaitable('products');
+    await persistAwaitable('inventory');
+    await persistAwaitable('stockHistory');
     logActivity('Product',`Bulk import v4: ${added} new products added to inventory (Feb 2026 batch)`);
     showToast(`✅ ${added} new products imported (Feb 2026 batch)!`);
   }
@@ -2125,9 +2125,9 @@ async function runBulkImportV6(){
   });
 
   if(added>0 || updated>0){
-    persist('products');
-    persist('inventory');
-    persist('stockHistory');
+    await persistAwaitable('products');
+    await persistAwaitable('inventory');
+    await persistAwaitable('stockHistory');
     logActivity('Product',`Bulk import v6: ${added} new products added, ${updated} existing products corrected (July 2026 batch)`);
     showToast(`✅ ${added} added, ${updated} corrected (July 2026 batch)!`);
   }
@@ -2378,9 +2378,9 @@ async function runBulkImportV7(){
   });
 
   if(added>0 || updated>0){
-    persist('products');
-    persist('inventory');
-    persist('stockHistory');
+    await persistAwaitable('products');
+    await persistAwaitable('inventory');
+    await persistAwaitable('stockHistory');
     logActivity('Product',`Bulk import v7: ${added} new products added, ${updated} existing products corrected (items 121-285)`);
     showToast(`✅ ${added} added, ${updated} corrected (items 121-285)!`);
   }
@@ -2550,9 +2550,9 @@ async function runBulkImportV8Restore(){
   });
 
   if(added>0){
-    persist('products');
-    persist('inventory');
-    persist('stockHistory');
+    await persistAwaitable('products');
+    await persistAwaitable('inventory');
+    await persistAwaitable('stockHistory');
     logActivity('Product',`Restore: ${added} products recovered after data-loss incident`);
     showToast(`✅ ${added} products restored!`);
   }
@@ -3152,6 +3152,26 @@ function sbSave(key,data,allowWipe){
     return;
   }
   _sbSaveWithStalenessCheck(key,data,allowWipe);
+  return; // callers can use saveAwaitable() below when serialization matters
+}
+// Awaitable variant — use when the caller needs to guarantee this write has
+// actually landed before firing another write to the same key (e.g. chained
+// one-time import functions writing 'products' back-to-back on login).
+function saveAwaitable(key,data,allowWipe){
+  if(!currentUser) return Promise.resolve();
+  if(!allowWipe && _isUnsafeWipe(key,data)){
+    console.warn('sbSave blocked: refusing to overwrite',key,'(had',_cache[key].length,'items) with an empty array.');
+    showToast('Sync safety check: prevented an unexpected data wipe. Please refresh and try again.', false);
+    return Promise.resolve();
+  }
+  _cache[key]=data;
+  if(!navigator.onLine){
+    const idx=_offlineQueue.findIndex(x=>x.key===key);
+    if(idx>=0){ _offlineQueue[idx].data=data; _offlineQueue[idx].allowWipe=allowWipe; }
+    else _offlineQueue.push({key,data,allowWipe});
+    return Promise.resolve();
+  }
+  return _sbSaveWithStalenessCheck(key,data,allowWipe);
 }
 
 // STALE-TAB PROTECTION: for products/inventory (the two keys repeatedly hit by the
@@ -3178,19 +3198,26 @@ async function _sbSaveWithStalenessCheck(key,data,allowWipe){
     }
   }
   const newTimestamp=new Date().toISOString();
+  // Update our own version marker BEFORE the network call resolves. This is what
+  // prevents a false positive when THIS SAME SESSION fires several saves to the
+  // same key back-to-back (e.g. two bulk-import functions running one after another
+  // on login) — each subsequent check now correctly sees our own pending write as
+  // the expected baseline, instead of comparing against a stale pre-write timestamp.
+  const previousVersion=_loadedVersion[key];
+  _loadedVersion[key]=newTimestamp;
   _sb.from('app_data')
     .upsert({key,value:data,updated_at:newTimestamp},{onConflict:'key'})
     .then(({error})=>{
-      if(error){ // Supabase returned error — queue for retry
+      if(error){ // Supabase returned error — queue for retry, and don't claim a version we never actually wrote
         console.warn('sbSave fail, queuing:',key,error.message);
+        _loadedVersion[key]=previousVersion;
         const idx=_offlineQueue.findIndex(x=>x.key===key);
         if(idx>=0){ _offlineQueue[idx].data=data; _offlineQueue[idx].allowWipe=allowWipe; }
         else _offlineQueue.push({key,data,allowWipe});
-      } else {
-        _loadedVersion[key]=newTimestamp; // this session is now the "latest" writer
       }
     })
     .catch(()=>{
+      _loadedVersion[key]=previousVersion;
       const idx=_offlineQueue.findIndex(x=>x.key===key);
       if(idx>=0){ _offlineQueue[idx].data=data; _offlineQueue[idx].allowWipe=allowWipe; }
       else _offlineQueue.push({key,data,allowWipe});
@@ -3229,7 +3256,7 @@ async function flushOfflineQueue(){
 }
 // load() returns seed — real data loaded async via loadAllData() after auth
 function load(key,seed){ return seed(); }
-function save(key,data,allowWipe){ sbSave(key,data,allowWipe); }
+function save(key,data,allowWipe){ return sbSave(key,data,allowWipe); }
 
 let DB = {
   products: load(KEYS.products, seedProducts),
@@ -3263,6 +3290,7 @@ let DB = {
 };
 
 function persist(key,allowWipe){save(KEYS[key],DB[key],allowWipe);}
+async function persistAwaitable(key,allowWipe){ return saveAwaitable(KEYS[key],DB[key],allowWipe); }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // RETAIL STORE — STANDALONE DATA LAYER (no sync with main store)
