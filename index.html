@@ -2884,6 +2884,11 @@ const _loadFailed = {};
 // if another tab/session has saved a NEWER version since we loaded, our local copy
 // is outdated and must not blindly overwrite the server's newer data.
 const _loadedVersion = {};
+// Tracks the in-flight write promise per key, so a save fired while a
+// previous save to the SAME key is still landing on the server can wait for
+// it instead of racing a staleness check against a server row that hasn't
+// been updated yet.
+const _pendingWrite = {};
 async function sbLoad(key, seed){
   try{
     const {data,error}=await _sb.from('app_data').select('value, updated_at').eq('key',key).maybeSingle();
@@ -2979,6 +2984,13 @@ function saveAwaitable(key,data,allowWipe){
 // to redo their last change on the up-to-date data instead.
 async function _sbSaveWithStalenessCheck(key,data,allowWipe){
   const isCriticalKey = (key===KEYS.products || key===KEYS.inventory);
+  // If a previous save to this SAME key is still in flight, wait for it to
+  // land before checking staleness — otherwise our server SELECT below can
+  // see the old row (write hasn't landed yet) while our local version marker
+  // has already moved on, producing a false "newer data on server" alarm.
+  if(isCriticalKey && _pendingWrite[key]){
+    try{ await _pendingWrite[key]; }catch(e){}
+  }
   if(isCriticalKey && !allowWipe){
     try{
       const {data:serverRow,error:checkErr}=await _sb.from('app_data').select('updated_at').eq('key',key).maybeSingle();
@@ -3000,30 +3012,35 @@ async function _sbSaveWithStalenessCheck(key,data,allowWipe){
     }
   }
   const newTimestamp=new Date().toISOString();
-  // Update our own version marker BEFORE the network call resolves. This is what
-  // prevents a false positive when THIS SAME SESSION fires several saves to the
-  // same key back-to-back (e.g. two bulk-import functions running one after another
-  // on login) — each subsequent check now correctly sees our own pending write as
-  // the expected baseline, instead of comparing against a stale pre-write timestamp.
-  const previousVersion=_loadedVersion[key];
-  _loadedVersion[key]=newTimestamp;
-  _sb.from('app_data')
+  // NOTE: we deliberately do NOT set _loadedVersion[key]=newTimestamp here
+  // anymore. Doing it optimistically (before the write confirms) let a
+  // second save fired moments later race ahead of this one: its own server
+  // SELECT would still see the OLD row (this write hadn't landed yet) while
+  // its local comparison used the already-advanced marker, producing a
+  // false "newer data on the server" alarm on virtually every quick save.
+  // We now only advance the marker once Supabase confirms the write landed.
+  const writePromise = _sb.from('app_data')
     .upsert({key,value:data,updated_at:newTimestamp},{onConflict:'key'})
     .then(({error})=>{
       if(error){ // Supabase returned error — queue for retry, and don't claim a version we never actually wrote
         console.warn('sbSave fail, queuing:',key,error.message);
-        _loadedVersion[key]=previousVersion;
         const idx=_offlineQueue.findIndex(x=>x.key===key);
         if(idx>=0){ _offlineQueue[idx].data=data; _offlineQueue[idx].allowWipe=allowWipe; }
         else _offlineQueue.push({key,data,allowWipe});
+        return;
       }
+      _loadedVersion[key]=newTimestamp;
     })
     .catch(()=>{
-      _loadedVersion[key]=previousVersion;
       const idx=_offlineQueue.findIndex(x=>x.key===key);
       if(idx>=0){ _offlineQueue[idx].data=data; _offlineQueue[idx].allowWipe=allowWipe; }
       else _offlineQueue.push({key,data,allowWipe});
+    })
+    .finally(()=>{
+      if(_pendingWrite[key]===writePromise) delete _pendingWrite[key];
     });
+  if(isCriticalKey) _pendingWrite[key]=writePromise;
+  return writePromise;
 }
 
 // ── Flush offline queue when connection returns ───────────────────
