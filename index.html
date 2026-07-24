@@ -3517,6 +3517,7 @@ function showModuleInternal(m){
 // ══════════════════════════════════════════════════════════════════════════════
 let cart = [];
 let isWholesale = false;
+let posActiveCategory = 'All';
 let selectedPayType = 'cash';
 let lastReceipt = null;
 let currentPayTotal = 0;
@@ -3536,6 +3537,7 @@ function renderPOS(){
           <button class="price-toggle-btn" id="btnWholesale" onclick="setPriceMode(true)">Wholesale</button>
         </div>
       </div>
+      <div id="categoryChips" style="display:flex;gap:8px;overflow-x:auto;padding:10px 2px;margin-bottom:2px"></div>
       <div id="productGrid" class="product-grid"></div>
     </div>
     <div class="cart-panel">
@@ -3563,9 +3565,51 @@ function renderPOS(){
       </div>
     </div>
   </div>`;
-  renderProductGrid(DB.products);
+  renderCategoryChips();
+  applyPosFilters();
   renderCart();  // also refreshes pending orders badge
   document.addEventListener('click', hideLiveSearch);
+}
+
+// Groups raw product categories (e.g. "Spirits","Beer","Wine") under broader
+// buckets so a "Drinks" chip catches all of them, while anything that doesn't
+// match a known bucket falls under "Others". Add more keywords here as new
+// product types are introduced.
+const CATEGORY_GROUPS = {
+  'Drinks': ['drink','spirit','beer','wine','whisky','whiskey','vodka','liquor','beverage','soft drink','juice','water'],
+  'Cosmetics': ['cosmetic','makeup','make-up','beauty','skincare','skin care','perfume','fragrance'],
+  'Toiletries': ['toiletr','soap','detergent','tissue','sanitary','hygiene']
+};
+function categoryGroupFor(rawCategory){
+  const c = (rawCategory||'').toLowerCase();
+  for(const [group,keywords] of Object.entries(CATEGORY_GROUPS)){
+    if(keywords.some(k=>c.includes(k))) return group;
+  }
+  return 'Others';
+}
+function renderCategoryChips(){
+  const wrap = document.getElementById('categoryChips');
+  if(!wrap) return;
+  const groupsPresent = new Set(DB.products.map(p=>categoryGroupFor(p.category)));
+  const order = ['Drinks','Cosmetics','Toiletries','Others'];
+  const chips = ['All', ...order.filter(g=>groupsPresent.has(g))];
+  wrap.innerHTML = chips.map(c=>{
+    const active = posActiveCategory===c;
+    return `<button type="button" onclick="setPosCategory('${c}')" style="flex:0 0 auto;padding:7px 16px;border-radius:999px;border:1px solid ${active?'var(--green-light)':'var(--border)'};background:${active?'var(--green-light)':'transparent'};color:${active?'#fff':'var(--text2)'};font-size:.78rem;font-weight:600;white-space:nowrap;cursor:pointer">${c}</button>`;
+  }).join('');
+}
+function setPosCategory(cat){
+  posActiveCategory = cat;
+  renderCategoryChips();
+  applyPosFilters();
+}
+// Combines the active category chip with whatever's typed in the search box.
+function applyPosFilters(){
+  const term = (document.getElementById('posSearch')?.value||'').toLowerCase().trim();
+  let list = DB.products;
+  if(posActiveCategory !== 'All') list = list.filter(p=>categoryGroupFor(p.category)===posActiveCategory);
+  if(term) list = list.filter(p=>p.name.toLowerCase().includes(term)||p.category.toLowerCase().includes(term));
+  renderProductGrid(list);
 }
 
 function renderProductGrid(list){
@@ -3604,8 +3648,9 @@ function posSearch(val){
   const term = val.toLowerCase().trim();
   const res = document.getElementById('posLiveResults');
   if(!res) return;
-  if(!term){res.classList.remove('open');renderProductGrid(DB.products);return;}
-  const filtered = DB.products.filter(p=>p.name.toLowerCase().includes(term)||p.category.toLowerCase().includes(term));
+  if(!term){res.classList.remove('open');applyPosFilters();return;}
+  const base = posActiveCategory==='All' ? DB.products : DB.products.filter(p=>categoryGroupFor(p.category)===posActiveCategory);
+  const filtered = base.filter(p=>p.name.toLowerCase().includes(term)||p.category.toLowerCase().includes(term));
   renderProductGrid(filtered);
   if(!filtered.length){res.innerHTML='<div style="padding:12px 16px;color:var(--text3)">No results</div>';res.classList.add('open');return;}
   res.innerHTML = filtered.map(p=>{
@@ -3739,7 +3784,7 @@ function confirmPosUnitAdd(){
 
   closePosUnitSheet();
   renderCart();
-  renderProductGrid(DB.products);
+  applyPosFilters();
   showToast(`${qty} ${u.name} added to cart`, true);
 }
 
@@ -3759,7 +3804,7 @@ function setPriceMode(ws){
   const r=document.getElementById('btnRetail'),w=document.getElementById('btnWholesale');
   if(r&&w){r.classList.toggle('active',!ws);w.classList.toggle('active',ws);}
   cart.forEach(item=>{item.price=isWholesale?(item.wholesale||item.retail):item.retail;});
-  renderProductGrid(DB.products);renderCart();
+  applyPosFilters();renderCart();
 }
 
 
@@ -3816,7 +3861,7 @@ function changeQty(i,d){
   }
   cart[i].qty=Math.max(1,cart[i].qty+d);
   renderCart();
-  renderProductGrid(DB.products);
+  applyPosFilters();
 }
 function removeFromCart(i){cart.splice(i,1);renderCart();}
 function clearCart(){if(!canDelete()&&cart.length){if(!confirm('Clear the entire cart?')){return;}}else if(!cart.length){return;}if(confirm('Clear the entire cart?')){cart=[];renderCart();}}
@@ -3891,7 +3936,7 @@ function confirmParkOrder(){
     const discEl = document.getElementById('discountInput');
     if(discEl) discEl.value = '';
     renderCart();
-    renderProductGrid(DB.products);
+    applyPosFilters();
   }
   _parkingRetail = false;
   closeModal('parkOrderModal');
@@ -4012,7 +4057,7 @@ function resumePendingOrder(id, isRetail){
   closePendingOrdersSheet();
 
   if(isRetail){ renderCartR(); renderProductGridR(); }
-  else { renderCart(); renderProductGrid(DB.products); }
+  else { renderCart(); applyPosFilters(); }
 
   logActivity('POS', `${isRetail?'Retail ':''} Resumed parked order: "${order.label}" · by ${currentUserName||'Staff'}`);
 }
